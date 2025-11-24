@@ -73,17 +73,19 @@ def read_olade_config(editor_path):
 
     ws = wb['OLADE_Config']
 
-    # Read configuration values (B5, B6, B7)
+    # Read configuration values (B5, B6, B7, B8)
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
     growth_rate = float(ws['B6'].value) if ws['B6'].value else 5.0
     growth_type = str(ws['B7'].value) if ws['B7'].value else 'Compound'
+    petroleum_split_mode = str(ws['B8'].value) if ws['B8'].value else 'Split_PET_OIL'
 
     wb.close()
 
     return {
         'enabled': enabled,
         'growth_rate': growth_rate,
-        'growth_type': growth_type
+        'growth_type': growth_type,
+        'petroleum_split_mode': petroleum_split_mode
     }
 
 
@@ -682,7 +684,7 @@ class SecondaryTechsUpdater:
         for country_iso3, techs in self.olade_data['data'].items():
             for tech_code, base_capacity in techs.items():
 
-                # Special handling for PETROLEUM: split into PET (Diésel) and OIL (Fuel oil)
+                # Special handling for PETROLEUM
                 if tech_code == 'PETROLEUM':
                     # Calculate petroleum capacity for each year with growth
                     petroleum_year_values = {}
@@ -696,68 +698,90 @@ class SecondaryTechsUpdater:
                         )
                         petroleum_year_values[year] = petroleum_capacity
 
-                    # Split petroleum into PET and OIL for each scenario
-                    for scenario in self.scenarios:
-                        # Get shares for this scenario and country
-                        pet_year_values = {}
-                        oil_year_values = {}
+                    # Check split mode
+                    split_mode = self.olade_config.get('petroleum_split_mode', 'Split_PET_OIL')
 
-                        for year in all_years:
-                            petroleum_capacity = petroleum_year_values[year]
+                    if split_mode == 'OIL_only':
+                        # Option 1: Assign all petroleum to OIL only
+                        for scenario in self.scenarios:
+                            oil_year_values = {}
+                            for year in all_years:
+                                oil_year_values[year] = round(petroleum_year_values[year], 2)
 
-                            # Get shares from shares_data
-                            diesel_share = 0.0
-                            fuel_oil_share = 0.0
+                            instruction_oil = {
+                                'row': 'OLADE',
+                                'scenario': scenario,
+                                'country': country_iso3,
+                                'tech_name': 'PWR-OIL',
+                                'tech': 'OIL',
+                                'parameter': 'ResidualCapacity',
+                                'year_values': oil_year_values,
+                                'is_olade': True
+                            }
+                            instructions.append(instruction_oil)
 
-                            if (self.shares_data and
-                                scenario in self.shares_data and
-                                country_iso3 in self.shares_data[scenario] and
-                                year in self.shares_data[scenario][country_iso3]):
+                    else:
+                        # Option 2: Split petroleum into PET and OIL using shares
+                        for scenario in self.scenarios:
+                            pet_year_values = {}
+                            oil_year_values = {}
 
-                                year_shares = self.shares_data[scenario][country_iso3][year]
-                                diesel_share = year_shares.get('Diésel', 0.0)
-                                fuel_oil_share = year_shares.get('Fuel oil', 0.0)
+                            for year in all_years:
+                                petroleum_capacity = petroleum_year_values[year]
 
-                            # Calculate denominator (Diésel + Fuel oil)
-                            total_share = diesel_share + fuel_oil_share
+                                # Get shares from shares_data
+                                diesel_share = 0.0
+                                fuel_oil_share = 0.0
 
-                            if total_share > 0:
-                                # Apply formula: PET = Petroleum × (Diésel / (Diésel + Fuel oil))
-                                pet_capacity = petroleum_capacity * (diesel_share / total_share)
-                                oil_capacity = petroleum_capacity * (fuel_oil_share / total_share)
-                            else:
-                                # If no shares available, split 50/50 as fallback
-                                pet_capacity = petroleum_capacity * 0.5
-                                oil_capacity = petroleum_capacity * 0.5
+                                if (self.shares_data and
+                                    scenario in self.shares_data and
+                                    country_iso3 in self.shares_data[scenario] and
+                                    year in self.shares_data[scenario][country_iso3]):
 
-                            pet_year_values[year] = round(pet_capacity, 2)
-                            oil_year_values[year] = round(oil_capacity, 2)
+                                    year_shares = self.shares_data[scenario][country_iso3][year]
+                                    diesel_share = year_shares.get('Diésel', 0.0)
+                                    fuel_oil_share = year_shares.get('Fuel oil', 0.0)
 
-                        # Create instruction for PET (Diésel)
-                        instruction_pet = {
-                            'row': 'OLADE',
-                            'scenario': scenario,
-                            'country': country_iso3,
-                            'tech_name': 'PWR-PET',
-                            'tech': 'PET',
-                            'parameter': 'ResidualCapacity',
-                            'year_values': pet_year_values,
-                            'is_olade': True
-                        }
-                        instructions.append(instruction_pet)
+                                # Calculate denominator (Diésel + Fuel oil)
+                                total_share = diesel_share + fuel_oil_share
 
-                        # Create instruction for OIL (Fuel oil)
-                        instruction_oil = {
-                            'row': 'OLADE',
-                            'scenario': scenario,
-                            'country': country_iso3,
-                            'tech_name': 'PWR-OIL',
-                            'tech': 'OIL',
-                            'parameter': 'ResidualCapacity',
-                            'year_values': oil_year_values,
-                            'is_olade': True
-                        }
-                        instructions.append(instruction_oil)
+                                if total_share > 0:
+                                    # Apply formula: PET = Petroleum × (Diésel / (Diésel + Fuel oil))
+                                    pet_capacity = petroleum_capacity * (diesel_share / total_share)
+                                    oil_capacity = petroleum_capacity * (fuel_oil_share / total_share)
+                                else:
+                                    # If no shares available, split 50/50 as fallback
+                                    pet_capacity = petroleum_capacity * 0.5
+                                    oil_capacity = petroleum_capacity * 0.5
+
+                                pet_year_values[year] = round(pet_capacity, 2)
+                                oil_year_values[year] = round(oil_capacity, 2)
+
+                            # Create instruction for PET (Diésel)
+                            instruction_pet = {
+                                'row': 'OLADE',
+                                'scenario': scenario,
+                                'country': country_iso3,
+                                'tech_name': 'PWR-PET',
+                                'tech': 'PET',
+                                'parameter': 'ResidualCapacity',
+                                'year_values': pet_year_values,
+                                'is_olade': True
+                            }
+                            instructions.append(instruction_pet)
+
+                            # Create instruction for OIL (Fuel oil)
+                            instruction_oil = {
+                                'row': 'OLADE',
+                                'scenario': scenario,
+                                'country': country_iso3,
+                                'tech_name': 'PWR-OIL',
+                                'tech': 'OIL',
+                                'parameter': 'ResidualCapacity',
+                                'year_values': oil_year_values,
+                                'is_olade': True
+                            }
+                            instructions.append(instruction_oil)
 
                 else:
                     # Normal handling for other technologies

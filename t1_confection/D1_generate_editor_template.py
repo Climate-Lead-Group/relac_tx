@@ -344,15 +344,23 @@ def create_editor_template(data, output_path):
     ws_olade.add_data_validation(dv_growth)
     dv_growth.add('B7')
 
+    # PetroleumSplitMode
+    ws_olade.cell(8, 1, "PetroleumSplitMode").border = border_style
+    ws_olade.cell(8, 2, "Split_PET_OIL").border = border_style
+    dv_petroleum = DataValidation(type="list", formula1='"OIL_only,Split_PET_OIL"', allow_blank=False)
+    ws_olade.add_data_validation(dv_petroleum)
+    dv_petroleum.add('B8')
+
     # Add descriptions
-    ws_olade.cell(9, 1, "DESCRIPTIONS:")
-    ws_olade.cell(9, 1).font = Font(bold=True, size=11)
-    ws_olade.merge_cells('A9:B9')
+    ws_olade.cell(10, 1, "DESCRIPTIONS:")
+    ws_olade.cell(10, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells('A10:B10')
 
     descriptions = [
         ("ResidualCapacitiesFromOLADE:", "Set to YES to automatically populate ResidualCapacity parameter from OLADE data. This applies only to PWR technologies (power generation). OLADE data is automatically converted from MW to GW."),
         ("CapacityFactorGrowth (%):", "Growth rate to apply for years before and after the OLADE reference year (2023). Example: 5.0 means 5% growth per year."),
         ("GrowthType:", "Compound: Exponential growth (e.g., 2024 = 2023 × (1+rate)^1). Simple: Linear growth (e.g., 2024 = 2023 + 2023×rate)."),
+        ("PetroleumSplitMode:", "OIL_only: Assign all petroleum to OIL (Fuel oil). Split_PET_OIL: Split between PET (Diésel) and OIL (Fuel oil) using scenario-specific shares from Shares.xlsx."),
     ]
 
     current_row = 11
