@@ -13,16 +13,17 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 
-# OLADE country name to ISO-3 code mapping
+# OLADE country name to model country code mapping
+# Note: Model uses JAM for Barbados (not standard ISO-3)
 OLADE_COUNTRY_MAPPING = {
     'Argentina': 'ARG',
-    'Barbados': 'BAR',
+    'Barbados': 'JAM',  # Model convention: JAM represents Barbados
     'Belice': 'BLZ',
     'Bolivia': 'BOL',
     'Brasil': 'BRA',
-    'Chile': 'CHI',
+    'Chile': 'CHL',  # Model uses CHL (not CHI)
     'Colombia': 'COL',
-    'Costa Rica': 'CRC',
+    'Costa Rica': 'CRI',  # Model uses CRI (not CRC)
     'Cuba': 'CUB',
     'Ecuador': 'ECU',
     'El Salvador': 'SLV',
