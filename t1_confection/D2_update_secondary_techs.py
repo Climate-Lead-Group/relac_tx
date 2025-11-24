@@ -87,6 +87,98 @@ def read_olade_config(editor_path):
     }
 
 
+def read_shares_data(shares_file_path):
+    """
+    Read Shares.xlsx file to get Diésel and Fuel oil shares by scenario, country, and year
+
+    Returns:
+        dict: {
+            scenario: {
+                country_iso3: {
+                    year: {
+                        'Diésel': share_value,
+                        'Fuel oil': share_value
+                    }
+                }
+            }
+        }
+    """
+    if not shares_file_path.exists():
+        raise FileNotFoundError(f"Shares file not found: {shares_file_path}")
+
+    wb = openpyxl.load_workbook(shares_file_path, data_only=True)
+
+    shares_data = {}
+
+    # Map sheet names to scenario codes
+    sheet_scenario_map = {
+        'SharesBAU': 'BAU',
+        'SharesNDC': 'NDC',
+        'SharesNDC_NoRPO': 'NDC_NoRPO',
+        'SharesNDC+ELC': 'NDC+ELC'
+    }
+
+    for sheet_name, scenario_code in sheet_scenario_map.items():
+        if sheet_name not in wb.sheetnames:
+            continue
+
+        ws = wb[sheet_name]
+        shares_data[scenario_code] = {}
+
+        # Read years from row 1 (starting from column 2)
+        years = []
+        for col_idx in range(2, ws.max_column + 1):
+            year_val = ws.cell(1, col_idx).value
+            if year_val and str(year_val).isdigit():
+                years.append((col_idx, int(year_val)))
+
+        # Process rows: each country has a block of rows
+        current_country = None
+        row_idx = 2
+
+        while row_idx <= ws.max_row:
+            # First column: could be country name or technology name
+            cell_value = ws.cell(row_idx, 1).value
+
+            if not cell_value:
+                row_idx += 1
+                continue
+
+            cell_str = str(cell_value).strip()
+
+            # Check if this is a country row (sum should be ~1.0)
+            # Country names from OLADE_COUNTRY_MAPPING
+            if cell_str in OLADE_COUNTRY_MAPPING.values():
+                current_country = cell_str
+                shares_data[scenario_code][current_country] = {}
+                row_idx += 1
+                continue
+
+            # If we have a current country, check for Diésel or Fuel oil
+            if current_country and cell_str in ['Diésel', 'Fuel oil']:
+                tech_name = cell_str
+
+                # Read shares for all years
+                for col_idx, year in years:
+                    share_value = ws.cell(row_idx, col_idx).value
+
+                    if year not in shares_data[scenario_code][current_country]:
+                        shares_data[scenario_code][current_country][year] = {}
+
+                    if share_value is not None:
+                        try:
+                            shares_data[scenario_code][current_country][year][tech_name] = float(share_value)
+                        except (ValueError, TypeError):
+                            shares_data[scenario_code][current_country][year][tech_name] = 0.0
+                    else:
+                        shares_data[scenario_code][current_country][year][tech_name] = 0.0
+
+            row_idx += 1
+
+    wb.close()
+    return shares_data
+
+
 def read_olade_data(olade_file_path):
     """
     Read OLADE capacity data from Excel file
@@ -150,6 +242,10 @@ def read_olade_data(olade_file_path):
             tech_code = 'BIO'
         elif tech_name_str == 'Biomasa sólida':
             tech_code = 'BIO'
+
+        # Special handling for Petróleo y derivados (will be split into PET and OIL later)
+        elif tech_name_str == 'Petróleo y derivados':
+            tech_code = 'PETROLEUM'  # Temporary code, will be split later
 
         if not tech_code:
             continue
@@ -218,16 +314,18 @@ def calculate_capacity_for_year(base_capacity, base_year, target_year, growth_ra
 
 
 class SecondaryTechsUpdater:
-    def __init__(self, editor_path, base_path, olade_file_path=None):
+    def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None):
         self.editor_path = editor_path
         self.base_path = base_path
         self.olade_file_path = olade_file_path
+        self.shares_file_path = shares_file_path
         self.scenarios = ["BAU", "NDC", "NDC+ELC", "NDC_NoRPO"]
         self.log_lines = []
         self.changes_applied = 0
         self.rows_failed = 0
         self.olade_config = None
         self.olade_data = None
+        self.shares_data = None
 
     def log(self, message, level="INFO"):
         """Add message to log"""
@@ -583,31 +681,111 @@ class SecondaryTechsUpdater:
         # Generate instructions for each country and technology
         for country_iso3, techs in self.olade_data['data'].items():
             for tech_code, base_capacity in techs.items():
-                # Calculate capacity for each year
-                year_values = {}
-                for year in all_years:
-                    capacity = calculate_capacity_for_year(
-                        base_capacity,
-                        ref_year,
-                        year,
-                        self.olade_config['growth_rate'],
-                        self.olade_config['growth_type']
-                    )
-                    year_values[year] = round(capacity, 2)
 
-                # Create instruction for each scenario
-                for scenario in self.scenarios:
-                    instruction = {
-                        'row': 'OLADE',
-                        'scenario': scenario,
-                        'country': country_iso3,
-                        'tech_name': f'PWR-{tech_code}',
-                        'tech': tech_code,  # This will be used to match PWR technologies
-                        'parameter': 'ResidualCapacity',
-                        'year_values': year_values,
-                        'is_olade': True
-                    }
-                    instructions.append(instruction)
+                # Special handling for PETROLEUM: split into PET (Diésel) and OIL (Fuel oil)
+                if tech_code == 'PETROLEUM':
+                    # Calculate petroleum capacity for each year with growth
+                    petroleum_year_values = {}
+                    for year in all_years:
+                        petroleum_capacity = calculate_capacity_for_year(
+                            base_capacity,
+                            ref_year,
+                            year,
+                            self.olade_config['growth_rate'],
+                            self.olade_config['growth_type']
+                        )
+                        petroleum_year_values[year] = petroleum_capacity
+
+                    # Split petroleum into PET and OIL for each scenario
+                    for scenario in self.scenarios:
+                        # Get shares for this scenario and country
+                        pet_year_values = {}
+                        oil_year_values = {}
+
+                        for year in all_years:
+                            petroleum_capacity = petroleum_year_values[year]
+
+                            # Get shares from shares_data
+                            diesel_share = 0.0
+                            fuel_oil_share = 0.0
+
+                            if (self.shares_data and
+                                scenario in self.shares_data and
+                                country_iso3 in self.shares_data[scenario] and
+                                year in self.shares_data[scenario][country_iso3]):
+
+                                year_shares = self.shares_data[scenario][country_iso3][year]
+                                diesel_share = year_shares.get('Diésel', 0.0)
+                                fuel_oil_share = year_shares.get('Fuel oil', 0.0)
+
+                            # Calculate denominator (Diésel + Fuel oil)
+                            total_share = diesel_share + fuel_oil_share
+
+                            if total_share > 0:
+                                # Apply formula: PET = Petroleum × (Diésel / (Diésel + Fuel oil))
+                                pet_capacity = petroleum_capacity * (diesel_share / total_share)
+                                oil_capacity = petroleum_capacity * (fuel_oil_share / total_share)
+                            else:
+                                # If no shares available, split 50/50 as fallback
+                                pet_capacity = petroleum_capacity * 0.5
+                                oil_capacity = petroleum_capacity * 0.5
+
+                            pet_year_values[year] = round(pet_capacity, 2)
+                            oil_year_values[year] = round(oil_capacity, 2)
+
+                        # Create instruction for PET (Diésel)
+                        instruction_pet = {
+                            'row': 'OLADE',
+                            'scenario': scenario,
+                            'country': country_iso3,
+                            'tech_name': 'PWR-PET',
+                            'tech': 'PET',
+                            'parameter': 'ResidualCapacity',
+                            'year_values': pet_year_values,
+                            'is_olade': True
+                        }
+                        instructions.append(instruction_pet)
+
+                        # Create instruction for OIL (Fuel oil)
+                        instruction_oil = {
+                            'row': 'OLADE',
+                            'scenario': scenario,
+                            'country': country_iso3,
+                            'tech_name': 'PWR-OIL',
+                            'tech': 'OIL',
+                            'parameter': 'ResidualCapacity',
+                            'year_values': oil_year_values,
+                            'is_olade': True
+                        }
+                        instructions.append(instruction_oil)
+
+                else:
+                    # Normal handling for other technologies
+                    # Calculate capacity for each year
+                    year_values = {}
+                    for year in all_years:
+                        capacity = calculate_capacity_for_year(
+                            base_capacity,
+                            ref_year,
+                            year,
+                            self.olade_config['growth_rate'],
+                            self.olade_config['growth_type']
+                        )
+                        year_values[year] = round(capacity, 2)
+
+                    # Create instruction for each scenario
+                    for scenario in self.scenarios:
+                        instruction = {
+                            'row': 'OLADE',
+                            'scenario': scenario,
+                            'country': country_iso3,
+                            'tech_name': f'PWR-{tech_code}',
+                            'tech': tech_code,  # This will be used to match PWR technologies
+                            'parameter': 'ResidualCapacity',
+                            'year_values': year_values,
+                            'is_olade': True
+                        }
+                        instructions.append(instruction)
 
         self.log(f"Generated {len(instructions)} OLADE instructions")
         self.log("")
@@ -639,6 +817,22 @@ class SecondaryTechsUpdater:
                     try:
                         self.olade_data = read_olade_data(self.olade_file_path)
                         self.log(f"OLADE data loaded: {len(self.olade_data['data'])} countries")
+
+                        # Load Shares data for petroleum split
+                        if self.shares_file_path and self.shares_file_path.exists():
+                            self.log(f"Shares file: {self.shares_file_path}")
+                            try:
+                                self.shares_data = read_shares_data(self.shares_file_path)
+                                self.log(f"Shares data loaded: {len(self.shares_data)} scenarios")
+                            except Exception as e:
+                                self.log(f"ERROR loading Shares data: {e}", "ERROR")
+                                self.log("Petroleum will be split 50/50 between PET and OIL", "WARNING")
+                                self.shares_data = None
+                        else:
+                            self.log(f"WARNING: Shares file not found: {self.shares_file_path}", "WARNING")
+                            self.log("Petroleum will be split 50/50 between PET and OIL", "WARNING")
+                            self.shares_data = None
+
                     except Exception as e:
                         self.log(f"ERROR loading OLADE data: {e}", "ERROR")
                         self.log("Continuing without OLADE data...", "WARNING")
@@ -738,9 +932,10 @@ def main():
         editor_path = script_dir / "Secondary_Techs_Editor.xlsx"
         base_path = script_dir / "A1_Outputs"
         olade_file_path = script_dir / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
+        shares_file_path = script_dir / "Shares.xlsx"
 
         # Create updater and run
-        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path)
+        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path)
         return updater.run()
 
     except Exception as e:
