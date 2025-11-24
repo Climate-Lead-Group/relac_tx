@@ -542,51 +542,21 @@ class SecondaryTechsUpdater:
         else:
             return True, f"Row {rows_updated[0]} updated with {total_values_updated} year values", total_values_updated
 
-    def apply_instruction_to_scenario(self, instruction, scenario):
+    def apply_instruction_to_scenario(self, instruction, scenario, ws, year_col_map, projection_mode_col):
         """
-        Apply a single edit instruction to a specific scenario
+        Apply a single edit instruction to an already-open worksheet
+
+        Args:
+            instruction: instruction dict
+            scenario: scenario name
+            ws: openpyxl worksheet (already open)
+            year_col_map: dict mapping years to column indices
+            projection_mode_col: column index for Projection.Mode
 
         Returns:
             (success, message)
         """
-        scenario_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
-
-        if not scenario_path.exists():
-            return False, f"File not found: {scenario_path}"
-
-        # Create backup
-        backup_path = self.create_backup(scenario_path)
-        self.log(f"  Backup created: {backup_path.name}", "DEBUG")
-
         try:
-            # Open workbook
-            wb = openpyxl.load_workbook(scenario_path)
-
-            if 'Secondary Techs' not in wb.sheetnames:
-                wb.close()
-                return False, f"'Secondary Techs' sheet not found in {scenario}"
-
-            ws = wb['Secondary Techs']
-
-            # Build year column map and find Projection.Mode column
-            headers = [cell.value for cell in ws[1]]
-            year_col_map = {}
-            projection_mode_col = None
-
-            for col_idx, header in enumerate(headers, 1):
-                if header:
-                    # Check for year columns
-                    if str(header).isdigit():
-                        try:
-                            year = int(header)
-                            if 2000 <= year <= 2100:
-                                year_col_map[year] = col_idx
-                        except:
-                            pass
-                    # Check for Projection.Mode column
-                    elif str(header).strip() == "Projection.Mode":
-                        projection_mode_col = col_idx
-
             # Apply update
             is_olade = instruction.get('is_olade', False)
             country = instruction.get('country')
@@ -603,57 +573,119 @@ class SecondaryTechsUpdater:
             )
 
             if success:
-                wb.save(scenario_path)
-                wb.close()
                 self.changes_applied += 1
                 return True, f"{scenario}: {message}"
             else:
-                wb.close()
                 return False, f"{scenario}: {message}"
 
         except Exception as e:
             return False, f"{scenario}: Error - {str(e)}"
 
-    def apply_instruction(self, instruction):
+    def apply_instructions_batch(self, instructions):
         """
-        Apply a single edit instruction to the appropriate scenario(s)
+        Apply all instructions grouped by scenario (batch processing)
+        This opens each workbook only once, creates one backup, and saves only once.
         """
-        row_num = instruction['row']
-        self.log(f"\nProcessing Row {row_num}:", "INFO")
-        self.log(f"  Scenario: {instruction['scenario']}", "DEBUG")
-        self.log(f"  Country: {instruction['country']}", "DEBUG")
-        self.log(f"  Tech.Name: {instruction['tech_name']}", "DEBUG")
-        self.log(f"  Tech: {instruction['tech']}", "DEBUG")
-        self.log(f"  Parameter: {instruction['parameter']}", "DEBUG")
-        self.log(f"  Year values: {len(instruction['year_values'])} years", "DEBUG")
+        # Group instructions by scenario
+        from collections import defaultdict
+        scenario_instructions = defaultdict(list)
 
-        # Validate
-        is_valid, error_msg = self.validate_instruction(instruction)
-        if not is_valid:
-            self.log(f"  ✗ FAILED: {error_msg}", "ERROR")
-            self.rows_failed += 1
-            return
+        for instruction in instructions:
+            # Validate first
+            is_valid, error_msg = self.validate_instruction(instruction)
+            if not is_valid:
+                row_num = instruction['row']
+                self.log(f"\nRow {row_num} FAILED: {error_msg}", "ERROR")
+                self.rows_failed += 1
+                continue
 
-        # Determine which scenarios to apply to
-        if instruction['scenario'] == 'ALL':
-            target_scenarios = self.scenarios
-            self.log(f"  Applying to ALL scenarios", "DEBUG")
-        else:
-            target_scenarios = [instruction['scenario']]
-
-        # Apply to each target scenario
-        all_success = True
-        for scenario in target_scenarios:
-            success, message = self.apply_instruction_to_scenario(instruction, scenario)
-
-            if success:
-                self.log(f"  ✓ {message}", "SUCCESS")
+            # Determine target scenarios
+            if instruction['scenario'] == 'ALL':
+                target_scenarios = self.scenarios
             else:
-                self.log(f"  ✗ {message}", "ERROR")
-                all_success = False
+                target_scenarios = [instruction['scenario']]
 
-        if not all_success:
-            self.rows_failed += 1
+            # Add to each target scenario's list
+            for scenario in target_scenarios:
+                scenario_instructions[scenario].append(instruction)
+
+        # Process each scenario
+        for scenario in self.scenarios:
+            if scenario not in scenario_instructions:
+                self.log(f"\nScenario {scenario}: No instructions to apply")
+                continue
+
+            instructions_for_scenario = scenario_instructions[scenario]
+            self.log(f"\nProcessing scenario {scenario}: {len(instructions_for_scenario)} instructions")
+
+            scenario_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
+
+            if not scenario_path.exists():
+                self.log(f"  ✗ File not found: {scenario_path}", "ERROR")
+                self.rows_failed += len(instructions_for_scenario)
+                continue
+
+            # Create backup ONCE for this scenario
+            backup_path = self.create_backup(scenario_path)
+            self.log(f"  Backup created: {backup_path.name}")
+
+            try:
+                # Open workbook ONCE
+                wb = openpyxl.load_workbook(scenario_path)
+
+                if 'Secondary Techs' not in wb.sheetnames:
+                    wb.close()
+                    self.log(f"  ✗ 'Secondary Techs' sheet not found", "ERROR")
+                    self.rows_failed += len(instructions_for_scenario)
+                    continue
+
+                ws = wb['Secondary Techs']
+
+                # Build year column map and find Projection.Mode column ONCE
+                headers = [cell.value for cell in ws[1]]
+                year_col_map = {}
+                projection_mode_col = None
+
+                for col_idx, header in enumerate(headers, 1):
+                    if header:
+                        if str(header).isdigit():
+                            try:
+                                year = int(header)
+                                if 2000 <= year <= 2100:
+                                    year_col_map[year] = col_idx
+                            except:
+                                pass
+                        elif str(header).strip() == "Projection.Mode":
+                            projection_mode_col = col_idx
+
+                # Apply all instructions for this scenario
+                for instruction in instructions_for_scenario:
+                    row_num = instruction['row']
+                    self.log(f"  Row {row_num}: {instruction['tech']} - {instruction['parameter']}")
+
+                    success, message = self.apply_instruction_to_scenario(
+                        instruction, scenario, ws, year_col_map, projection_mode_col
+                    )
+
+                    if success:
+                        self.log(f"    ✓ {message}", "SUCCESS")
+                    else:
+                        self.log(f"    ✗ {message}", "ERROR")
+                        self.rows_failed += 1
+
+                # Save ONCE after all instructions
+                self.log(f"  Saving {scenario}...")
+                wb.save(scenario_path)
+                wb.close()
+                self.log(f"  ✓ {scenario} saved successfully")
+
+            except Exception as e:
+                self.log(f"  ✗ Error processing {scenario}: {e}", "ERROR")
+                self.rows_failed += len(instructions_for_scenario)
+                try:
+                    wb.close()
+                except:
+                    pass
 
     def generate_olade_instructions(self, all_years):
         """
@@ -917,9 +949,8 @@ class SecondaryTechsUpdater:
                 self.log("No data found to process. Nothing to update.", "WARNING")
                 return 0
 
-            # Apply each instruction
-            for instruction in instructions:
-                self.apply_instruction(instruction)
+            # Apply instructions in batch mode (one file open per scenario)
+            self.apply_instructions_batch(instructions)
 
             # Summary
             self.log("")
