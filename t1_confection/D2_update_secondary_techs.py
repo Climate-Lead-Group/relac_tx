@@ -661,7 +661,8 @@ class SecondaryTechsUpdater:
                 # Apply all instructions for this scenario
                 for instruction in instructions_for_scenario:
                     row_num = instruction['row']
-                    self.log(f"  Row {row_num}: {instruction['tech']} - {instruction['parameter']}")
+                    country = instruction.get('country', 'N/A')
+                    self.log(f"  Row {row_num} [{country}]: {instruction['tech']} - {instruction['parameter']}")
 
                     success, message = self.apply_instruction_to_scenario(
                         instruction, scenario, ws, year_col_map, projection_mode_col
@@ -714,6 +715,7 @@ class SecondaryTechsUpdater:
 
         # Generate instructions for each country and technology
         for country_iso3, techs in self.olade_data['data'].items():
+            self.log(f"Processing country: {country_iso3}")
             for tech_code, base_capacity in techs.items():
 
                 # Special handling for PETROLEUM
