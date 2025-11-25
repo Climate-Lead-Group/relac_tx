@@ -34,6 +34,7 @@ OUTPUT_FOLDER = SCRIPT_DIR / "A1_Outputs"
 MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
 A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
 REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "region_consolidation.yaml"
+TECH_COUNTRY_MATRIX_FILE = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
 
 # ISO-3 country code to country name mapping for Latin America and the Caribbean
 iso_country_map = {
@@ -45,8 +46,8 @@ iso_country_map = {
     "PER": "Peru",
     "CHL": "Chile",
     "MEX": "Mexico",
-    "VEN": "Venezuela",
-    "CUB": "Cuba",
+    # "VEN": "Venezuela",
+    # "CUB": "Cuba",
     "DOM": "Dominican Republic",
     "PAN": "Panama",
     "GTM": "Guatemala",
@@ -83,6 +84,7 @@ code_to_energy = {
     'CCG': 'Combined Cycle Natural Gas',
     'COG': 'Cogeneration',
     'CSP': 'Concentrated Solar Power',
+    'NGS': 'Natural Gas',
     'OCG': 'Open Cycle Natural Gas',
     'TRN': 'Transmission technology',
     'LDS': 'Long duration storage',
@@ -589,6 +591,275 @@ def clean_pwr_technologies(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.Dat
     return og_data
 
 
+#-------------------------------------Tech-Country Matrix Functions---------------------------------#
+def load_tech_country_matrix() -> Dict[str, Any]:
+    """
+    Load the technology-country matrix configuration from Excel file.
+
+    Returns:
+        Dictionary with:
+        - 'enabled': bool - whether matrix filtering is enabled
+        - 'matrix': dict - {tech: {country: bool}} mapping
+        - 'ngs_enabled': bool - whether NGS unification is enabled
+        - 'aggregation_rules': dict - aggregation rules for NGS unification
+    """
+    if not TECH_COUNTRY_MATRIX_FILE.exists():
+        print(f"[Info] Tech-Country Matrix file not found: {TECH_COUNTRY_MATRIX_FILE}")
+        return {"enabled": False}
+
+    try:
+        # Read the Matrix sheet
+        df_matrix = pd.read_excel(TECH_COUNTRY_MATRIX_FILE, sheet_name="Matrix", index_col=0)
+
+        # Convert to dict: {tech: {country: True/False}}
+        matrix = {}
+        for tech in df_matrix.index:
+            matrix[tech] = {}
+            for country in df_matrix.columns:
+                value = df_matrix.loc[tech, country]
+                matrix[tech][country] = str(value).upper() == "YES"
+
+        # Read NGS_Unification sheet
+        df_ngs = pd.read_excel(TECH_COUNTRY_MATRIX_FILE, sheet_name="NGS_Unification", header=None)
+        ngs_enabled = False
+        for idx, row in df_ngs.iterrows():
+            if pd.notna(row[0]) and "Enable NGS Unification" in str(row[0]):
+                ngs_enabled = str(row[1]).upper() == "YES"
+                break
+
+        # Read aggregation rules
+        df_agg = pd.read_excel(TECH_COUNTRY_MATRIX_FILE, sheet_name="Aggregation_Rules", skiprows=4)
+
+        agg_rules = {"avg": [], "sum": [], "disabled": []}
+        for _, row in df_agg.iterrows():
+            param = row.get("Parameter", "")
+            agg_type = str(row.get("Aggregation Type", "")).upper()
+            if pd.notna(param) and param:
+                if agg_type == "AVG":
+                    agg_rules["avg"].append(param)
+                elif agg_type == "SUM":
+                    agg_rules["sum"].append(param)
+                elif agg_type == "DISABLED":
+                    agg_rules["disabled"].append(param)
+
+        return {
+            "enabled": True,
+            "matrix": matrix,
+            "ngs_enabled": ngs_enabled,
+            "aggregation_rules": agg_rules
+        }
+
+    except Exception as e:
+        print(f"[Error] Failed to load Tech-Country Matrix: {e}")
+        return {"enabled": False}
+
+
+def extract_tech_country_from_code(code: str) -> tuple:
+    """
+    Extract technology sub-code and country from a technology code.
+
+    Args:
+        code: Technology code (e.g., PWRBIOARGXX, PWRCCGCOLXX)
+
+    Returns:
+        Tuple of (tech_subcode, country) or (None, None) if not parseable
+    """
+    code_upper = str(code).upper()
+
+    # PWR technologies: PWRXXXCCCRRSS (PWR + subcode(3) + country(3) + region(2) + suffix)
+    if code_upper.startswith("PWR") and len(code) >= 12:
+        sub_code = code_upper[3:6]  # e.g., BIO, CCG, OCG
+        country = code_upper[6:9]   # e.g., ARG, COL
+        return (sub_code, country)
+
+    return (None, None)
+
+
+def filter_by_tech_country_matrix(og_data: Dict[str, pd.DataFrame], matrix_config: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
+    """
+    Filter technologies based on the tech-country matrix configuration.
+
+    Args:
+        og_data: Dictionary of DataFrames
+        matrix_config: Configuration loaded from Tech_Country_Matrix.xlsx
+
+    Returns:
+        Filtered dictionary of DataFrames
+    """
+    if not matrix_config.get("enabled", False):
+        return og_data
+
+    matrix = matrix_config.get("matrix", {})
+    if not matrix:
+        return og_data
+
+    print("\n" + "=" * 70)
+    print("TECH-COUNTRY MATRIX FILTERING")
+    print("=" * 70)
+
+    total_filtered = 0
+
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" not in df.columns:
+            continue
+
+        # Skip empty DataFrames to preserve column structure
+        if df.empty:
+            continue
+
+        rows_before = len(df)
+
+        def is_allowed(tech):
+            sub_code, country = extract_tech_country_from_code(tech)
+            if sub_code is None or country is None:
+                return True  # Allow non-PWR technologies
+
+            # Map CCG/OCG to NGS for lookup
+            if sub_code in ["CCG", "OCG"]:
+                sub_code = "NGS"
+
+            # Check matrix
+            if sub_code in matrix and country in matrix[sub_code]:
+                return matrix[sub_code][country]
+
+            return True  # Default: allow if not in matrix
+
+        mask = df["TECHNOLOGY"].apply(is_allowed)
+        og_data[param_name] = df[mask].copy()
+
+        rows_filtered = rows_before - len(og_data[param_name])
+        if rows_filtered > 0:
+            total_filtered += rows_filtered
+            print(f"    {param_name}: filtered {rows_filtered} rows")
+
+    print(f"\n    Total rows filtered: {total_filtered}")
+    print("\n" + "=" * 70)
+    print("Tech-country matrix filtering completed.")
+    print("=" * 70 + "\n")
+
+    return og_data
+
+
+def unify_ngs_technologies(og_data: Dict[str, pd.DataFrame], matrix_config: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
+    """
+    Unify CCG (Combined Cycle) and OCG (Open Cycle) technologies into NGS (Natural Gas).
+
+    This follows the same aggregation pattern as region consolidation:
+    - avg parameters: values are averaged
+    - sum parameters: values are summed
+    - disabled parameters: skipped
+
+    Args:
+        og_data: Dictionary of DataFrames
+        matrix_config: Configuration loaded from Tech_Country_Matrix.xlsx
+
+    Returns:
+        Modified dictionary with unified NGS technologies
+    """
+    if not matrix_config.get("ngs_enabled", False):
+        print("[Info] NGS unification is disabled.")
+        return og_data
+
+    print("\n" + "=" * 70)
+    print("NGS UNIFICATION (CCG + OCG -> NGS)")
+    print("=" * 70)
+
+    agg_rules = matrix_config.get("aggregation_rules", {})
+    avg_params = set(agg_rules.get("avg", []))
+    sum_params = set(agg_rules.get("sum", []))
+    disabled_params = set(agg_rules.get("disabled", []))
+
+    if disabled_params:
+        print("\n[Info] Disabled parameters (no unification):")
+        for param in sorted(disabled_params):
+            if param in og_data:
+                print(f"    - {param}")
+
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" not in df.columns:
+            continue
+
+        if param_name in disabled_params:
+            continue
+
+        # Determine aggregation method
+        if param_name in avg_params:
+            agg_method = "avg"
+        elif param_name in sum_params:
+            agg_method = "sum"
+        else:
+            continue  # Parameter not in any list
+
+        # Find CCG and OCG technologies
+        ccg_mask = df["TECHNOLOGY"].str.contains("PWRCCG", na=False)
+        ocg_mask = df["TECHNOLOGY"].str.contains("PWROCG", na=False)
+
+        if not (ccg_mask.any() or ocg_mask.any()):
+            continue
+
+        # Separate gas and non-gas rows
+        gas_mask = ccg_mask | ocg_mask
+        df_gas = df[gas_mask].copy()
+        df_other = df[~gas_mask].copy()
+
+        if df_gas.empty:
+            continue
+
+        # Create NGS technology codes (replace CCG/OCG with NGS)
+        df_gas["_ngs_tech"] = df_gas["TECHNOLOGY"].str.replace("PWRCCG", "PWRNGS", regex=False)
+        df_gas["_ngs_tech"] = df_gas["_ngs_tech"].str.replace("PWROCG", "PWRNGS", regex=False)
+
+        # Also transform FUEL column if it contains CCG/OCG
+        if "FUEL" in df_gas.columns:
+            df_gas["_ngs_fuel"] = df_gas["FUEL"].str.replace("CCG", "NGS", regex=False)
+            df_gas["_ngs_fuel"] = df_gas["_ngs_fuel"].str.replace("OCG", "NGS", regex=False)
+
+        # Determine grouping columns
+        group_cols = ["_ngs_tech"]
+        for col in df_gas.columns:
+            if col in ["_ngs_tech", "_ngs_fuel", "TECHNOLOGY", "VALUE", "FUEL"]:
+                continue
+            if col in ["YEAR", "TIMESLICE", "MODE_OF_OPERATION", "EMISSION", "REGION"]:
+                group_cols.append(col)
+
+        if "_ngs_fuel" in df_gas.columns:
+            group_cols.append("_ngs_fuel")
+
+        # Aggregate
+        if "VALUE" in df_gas.columns:
+            agg_func = "mean" if agg_method == "avg" else "sum"
+            df_unified = df_gas.groupby(group_cols, as_index=False).agg({"VALUE": agg_func})
+            df_unified["TECHNOLOGY"] = df_unified["_ngs_tech"]
+            df_unified.drop(columns=["_ngs_tech"], inplace=True)
+
+            if "_ngs_fuel" in df_unified.columns:
+                df_unified["FUEL"] = df_unified["_ngs_fuel"]
+                df_unified.drop(columns=["_ngs_fuel"], inplace=True)
+        else:
+            df_unified = df_gas.drop_duplicates(subset=["_ngs_tech"]).copy()
+            df_unified["TECHNOLOGY"] = df_unified["_ngs_tech"]
+            df_unified.drop(columns=["_ngs_tech"], inplace=True)
+            if "_ngs_fuel" in df_unified.columns:
+                df_unified["FUEL"] = df_unified["_ngs_fuel"]
+                df_unified.drop(columns=["_ngs_fuel"], inplace=True)
+
+        # Combine with non-gas rows
+        result = pd.concat([df_other, df_unified], ignore_index=True)
+
+        original_gas_count = len(df_gas)
+        unified_count = len(df_unified)
+        if original_gas_count > unified_count:
+            print(f"    {param_name}: {original_gas_count} CCG/OCG rows -> {unified_count} NGS rows ({agg_method})")
+
+        og_data[param_name] = result
+
+    print("\n" + "=" * 70)
+    print("NGS unification completed.")
+    print("=" * 70 + "\n")
+
+    return og_data
+
+
 #--------------------------------------------------------------------------------------------------#
 
 def write_sheet(sheet_name, records, all_years, output_excel_path):
@@ -1042,8 +1313,11 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
             continue
         df = og_data[param]
         key_col = "FUEL" if param == "ReserveMarginTagFuel" else "TECHNOLOGY"
+        # Skip if DataFrame is empty or missing required columns
+        if df.empty or key_col not in df.columns:
+            continue
         techs_by_param[param] = set(df[key_col].unique())
-        if param != "ReserveMarginTagFuel":
+        if param != "ReserveMarginTagFuel" and "YEAR" in df.columns:
             all_years.update(df["YEAR"].unique())
 
     all_techs = set().union(*techs_by_param.values())
@@ -1068,6 +1342,9 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
 
             df = og_data[param]
             key_col = "FUEL" if param == "ReserveMarginTagFuel" else "TECHNOLOGY"
+            # Skip if DataFrame is empty or missing required columns
+            if df.empty or key_col not in df.columns:
+                continue
             group = df[df[key_col] == tech]
 
             if is_demand_tech and param in ["CapitalCost", "FixedCost", "ResidualCapacity"]:
@@ -2388,6 +2665,15 @@ def main():
     sort_csv_files_in_folder(INPUT_FOLDER)
     global OG_Input_Data
     OG_Input_Data = read_csv_files(INPUT_FOLDER)
+
+    # Load tech-country matrix configuration (runs BEFORE other processing)
+    matrix_config = load_tech_country_matrix()
+
+    # Apply tech-country matrix filtering (if enabled)
+    OG_Input_Data = filter_by_tech_country_matrix(OG_Input_Data, matrix_config)
+
+    # Unify CCG + OCG -> NGS (if enabled)
+    OG_Input_Data = unify_ngs_technologies(OG_Input_Data, matrix_config)
 
     # Apply region consolidation if enabled
     OG_Input_Data = consolidate_regions(OG_Input_Data)
