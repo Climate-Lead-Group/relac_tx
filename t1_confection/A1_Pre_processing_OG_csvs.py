@@ -12,8 +12,9 @@ import numpy as np
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import warnings
-from typing import List
+from typing import List, Dict, Any
 from pathlib import Path
+import yaml
 
 def list_scenario_suffixes(base_dir: Path) -> List[str]:
     """Return list like ['BAU_NoRPO','NDC','NDC+ELC'] from folders 'A1_Outputs_*'."""
@@ -26,13 +27,13 @@ def list_scenario_suffixes(base_dir: Path) -> List[str]:
     return suffixes
 
 
-# Define folder paths
-INPUT_FOLDER = "OG_csvs_inputs"
-script_dir = Path.cwd()
-# OUTPUT_FOLDER = script_dir / "A1_Outputs"
-# scenario_suffixes = list_scenario_suffixes(OUTPUT_FOLDER)
-# INPUT_EXCEL_PATH = os.path.join("Miscellaneous", "A-O_Demand.xlsx")
-# OUTPUT_EXCEL_PATH = os.path.join(OUTPUT_FOLDER, "A-O_Demand.xlsx")
+# Define folder paths relative to the script location (not cwd)
+SCRIPT_DIR = Path(__file__).resolve().parent  # t1_confection/
+INPUT_FOLDER = SCRIPT_DIR / "OG_csvs_inputs"
+OUTPUT_FOLDER = SCRIPT_DIR / "A1_Outputs"
+MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
+A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
+REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "region_consolidation.yaml"
 
 # ISO-3 country code to country name mapping for Latin America and the Caribbean
 iso_country_map = {
@@ -104,6 +105,492 @@ def read_csv_files(input_dir):
             data_dict[key] = df
     return data_dict
 
+
+#-------------------------------------Region Consolidation Functions---------------------------------#
+def load_region_consolidation_config() -> Dict[str, Any]:
+    """Load region consolidation configuration from YAML file."""
+    if not REGION_CONSOLIDATION_CONFIG.exists():
+        print(f"[Warning] Region consolidation config not found: {REGION_CONSOLIDATION_CONFIG}")
+        return {"enabled": False}
+
+    with open(REGION_CONSOLIDATION_CONFIG, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config
+
+
+def get_column_for_consolidation(df: pd.DataFrame) -> str:
+    """Determine which column contains technology/fuel/storage codes for consolidation."""
+    if "TECHNOLOGY" in df.columns:
+        return "TECHNOLOGY"
+    elif "FUEL" in df.columns:
+        return "FUEL"
+    elif "STORAGE" in df.columns:
+        return "STORAGE"
+    return None
+
+
+def find_country_region_in_code(code: str, country: str, regions: List[str]) -> str:
+    """
+    Find if a code contains a country+region pattern and return the region found.
+    Returns None if no match found.
+
+    Patterns checked:
+    - Position 3-5 for country (e.g., ELCBRACN01 -> BRA at pos 3-6, CN at pos 6-8)
+    - Position 6-8 for country (e.g., PWRGASBRACN00 -> BRA at pos 6-9, CN at pos 9-11)
+    - For TRN interconnections: check both endpoints
+    """
+    code_upper = code.upper()
+
+    # Pattern 1: Country at position 3-6 (e.g., ELCBRACN01, SDSBRAXX01)
+    if len(code) >= 8 and code_upper[3:6] == country:
+        region = code_upper[6:8]
+        if region in regions:
+            return region
+
+    # Pattern 2: Country at position 6-9 (e.g., PWRGASBRACN00)
+    if len(code) >= 11 and code_upper[6:9] == country:
+        region = code_upper[9:11]
+        if region in regions:
+            return region
+
+    # Pattern 3: TRN interconnections (TRN + 5chars + 5chars, e.g., TRNBRACNARGXX)
+    if code_upper.startswith("TRN") and len(code) >= 13:
+        # First endpoint: positions 3-8 (country 3-6, region 6-8)
+        if code_upper[3:6] == country:
+            region = code_upper[6:8]
+            if region in regions:
+                return region
+        # Second endpoint: positions 8-13 (country 8-11, region 11-13)
+        if code_upper[8:11] == country:
+            region = code_upper[11:13]
+            if region in regions:
+                return region
+
+    return None
+
+
+def replace_region_in_code(code: str, country: str, regions: List[str], unified: str) -> str:
+    """
+    Replace regional codes with unified region code.
+    Handles multiple patterns and TRN interconnections with both endpoints.
+    """
+    code_upper = code.upper()
+
+    # Pattern 3: TRN interconnections - replace both endpoints if needed (check first!)
+    if code_upper.startswith("TRN") and len(code) >= 13:
+        modified = list(code)
+        # First endpoint (positions 3-8: country at 3-6, region at 6-8)
+        if code_upper[3:6] == country and code_upper[6:8] in regions:
+            modified[6:8] = list(unified)
+        # Second endpoint (positions 8-13: country at 8-11, region at 11-13)
+        if code_upper[8:11] == country and code_upper[11:13] in regions:
+            modified[11:13] = list(unified)
+        return "".join(modified)
+
+    # Pattern 1: Country at position 3-6 (e.g., ELCBRACN01 -> ELCBRAXX01)
+    if len(code) >= 8 and code_upper[3:6] == country:
+        region = code_upper[6:8]
+        if region in regions:
+            return code[:6] + unified + code[8:]
+
+    # Pattern 2: Country at position 6-9 (e.g., PWRGASBRACN00 -> PWRGASBRAXX00)
+    if len(code) >= 11 and code_upper[6:9] == country:
+        region = code_upper[9:11]
+        if region in regions:
+            return code[:9] + unified + code[11:]
+
+    return code
+
+
+def create_grouping_key(code: str, country: str, regions: List[str], unified: str) -> str:
+    """Create a normalized key for grouping rows that should be consolidated."""
+    return replace_region_in_code(code, country, regions, unified)
+
+
+def consolidate_dataframe(
+    df: pd.DataFrame,
+    param_name: str,
+    column: str,
+    country: str,
+    regions: List[str],
+    unified: str,
+    agg_method: str
+) -> pd.DataFrame:
+    """
+    Consolidate a DataFrame by replacing regional codes with unified codes.
+
+    Args:
+        df: Input DataFrame
+        param_name: Parameter name (for logging)
+        column: Column containing codes to consolidate (TECHNOLOGY/FUEL/STORAGE)
+        country: Country code (e.g., "BRA")
+        regions: List of region codes to consolidate (e.g., ["CN", "NW", ...])
+        unified: Unified region code (e.g., "XX")
+        agg_method: Aggregation method ("avg" or "sum")
+
+    Returns:
+        Consolidated DataFrame
+    """
+    if df.empty:
+        return df
+
+    # First, transform FUEL column if it exists and has regional codes
+    # This ensures FUEL codes like BIOBRACN become BIOBRAXX before grouping
+    has_fuel_with_regions = False
+    if "FUEL" in df.columns and column != "FUEL":
+        fuel_mask = df["FUEL"].apply(
+            lambda x: find_country_region_in_code(str(x), country, regions) is not None if pd.notna(x) else False
+        )
+        if fuel_mask.any():
+            has_fuel_with_regions = True
+            df = df.copy()
+            df.loc[fuel_mask, "FUEL"] = df.loc[fuel_mask, "FUEL"].apply(
+                lambda x: replace_region_in_code(str(x), country, regions, unified)
+            )
+
+    # Identify rows that need consolidation (based on main column)
+    mask = df[column].apply(lambda x: find_country_region_in_code(str(x), country, regions) is not None)
+
+    # Also check if FUEL column has regional codes that need consolidation
+    if "FUEL" in df.columns and column != "FUEL":
+        fuel_mask = df["FUEL"].apply(
+            lambda x: find_country_region_in_code(str(x), country, regions) is not None if pd.notna(x) else False
+        )
+        mask = mask | fuel_mask
+
+    if not mask.any():
+        return df  # No rows to consolidate
+
+    # Separate rows: those to consolidate and those to keep as-is
+    df_to_consolidate = df[mask].copy()
+    df_unchanged = df[~mask].copy()
+
+    # Create grouping key (normalized code for main column)
+    df_to_consolidate["_group_key"] = df_to_consolidate[column].apply(
+        lambda x: create_grouping_key(str(x), country, regions, unified)
+    )
+
+    # Also normalize FUEL column for grouping if it exists
+    if "FUEL" in df_to_consolidate.columns and column != "FUEL":
+        df_to_consolidate["_fuel_key"] = df_to_consolidate["FUEL"].apply(
+            lambda x: replace_region_in_code(str(x), country, regions, unified) if pd.notna(x) else x
+        )
+
+    # Determine grouping columns (all columns except VALUE and the target column)
+    # For most CSVs, we group by all non-numeric columns except the one being consolidated
+    group_cols = ["_group_key"]
+
+    # Add other categorical columns to grouping
+    for col in df_to_consolidate.columns:
+        if col in ["_group_key", "_fuel_key", column, "VALUE", "FUEL"]:
+            continue
+        if col in ["YEAR", "TIMESLICE", "MODE_OF_OPERATION", "EMISSION", "DAILYTIMEBRACKET", "REGION", "STORAGE"]:
+            group_cols.append(col)
+
+    # Add normalized FUEL key to grouping if it exists
+    if "_fuel_key" in df_to_consolidate.columns:
+        group_cols.append("_fuel_key")
+
+    # Perform aggregation
+    if "VALUE" in df_to_consolidate.columns:
+        if agg_method == "avg":
+            agg_func = "mean"
+        else:  # sum
+            agg_func = "sum"
+
+        # Group and aggregate
+        df_consolidated = df_to_consolidate.groupby(group_cols, as_index=False).agg({"VALUE": agg_func})
+
+        # Restore the consolidated code
+        df_consolidated[column] = df_consolidated["_group_key"]
+        df_consolidated.drop(columns=["_group_key"], inplace=True)
+
+        # Restore FUEL from _fuel_key if it exists
+        if "_fuel_key" in df_consolidated.columns:
+            df_consolidated["FUEL"] = df_consolidated["_fuel_key"]
+            df_consolidated.drop(columns=["_fuel_key"], inplace=True)
+    else:
+        # For DataFrames without VALUE column, just deduplicate
+        df_consolidated = df_to_consolidate.drop_duplicates(subset=["_group_key"]).copy()
+        df_consolidated[column] = df_consolidated["_group_key"]
+        df_consolidated.drop(columns=["_group_key"], inplace=True)
+        if "_fuel_key" in df_consolidated.columns:
+            df_consolidated["FUEL"] = df_consolidated["_fuel_key"]
+            df_consolidated.drop(columns=["_fuel_key"], inplace=True)
+
+    # Combine unchanged and consolidated rows
+    result = pd.concat([df_unchanged, df_consolidated], ignore_index=True)
+
+    # Log consolidation
+    original_count = len(df_to_consolidate)
+    consolidated_count = len(df_consolidated)
+    if original_count > consolidated_count:
+        print(f"    {param_name}: {original_count} rows -> {consolidated_count} rows ({agg_method})")
+
+    return result
+
+
+def is_internal_interconnection(code: str, country: str, unified: str) -> bool:
+    """
+    Check if a TRN code represents an internal interconnection within the same country.
+
+    Internal interconnections are those where both endpoints are the same country
+    with the unified region code (e.g., TRNBRAXXBRAXX).
+
+    Args:
+        code: Technology code to check
+        country: Country code (e.g., "BRA")
+        unified: Unified region code (e.g., "XX")
+
+    Returns:
+        True if this is an internal interconnection that should be removed
+    """
+    code_upper = str(code).upper()
+
+    # Check if it's a TRN interconnection code
+    if not code_upper.startswith("TRN") or len(code) < 13:
+        return False
+
+    # Extract both endpoints
+    # Pattern: TRN + COUNTRY1(3) + REGION1(2) + COUNTRY2(3) + REGION2(2)
+    endpoint1_country = code_upper[3:6]
+    endpoint1_region = code_upper[6:8]
+    endpoint2_country = code_upper[8:11]
+    endpoint2_region = code_upper[11:13]
+
+    # Check if both endpoints are the same country with unified region
+    if (endpoint1_country == country and endpoint1_region == unified and
+        endpoint2_country == country and endpoint2_region == unified):
+        return True
+
+    return False
+
+
+def remove_internal_interconnections(
+    og_data: Dict[str, pd.DataFrame],
+    country: str,
+    unified: str
+) -> Dict[str, pd.DataFrame]:
+    """
+    Remove internal interconnections for a consolidated country.
+
+    Args:
+        og_data: Dictionary of DataFrames
+        country: Country code (e.g., "BRA")
+        unified: Unified region code (e.g., "XX")
+
+    Returns:
+        Modified dictionary with internal interconnections removed
+    """
+    total_removed = 0
+
+    for param_name, df in og_data.items():
+        column = get_column_for_consolidation(df)
+        if column is None:
+            continue
+
+        # Find internal interconnections
+        mask = df[column].apply(lambda x: is_internal_interconnection(str(x), country, unified))
+
+        if mask.any():
+            rows_before = len(df)
+            og_data[param_name] = df[~mask].copy()
+            rows_removed = rows_before - len(og_data[param_name])
+            if rows_removed > 0:
+                total_removed += rows_removed
+                print(f"    {param_name}: removed {rows_removed} internal interconnection rows")
+
+    return og_data, total_removed
+
+
+def consolidate_regions(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """
+    Consolidate multiple regions into unified regions based on configuration.
+
+    Args:
+        og_data: Dictionary of DataFrames from OG_csvs_inputs
+
+    Returns:
+        Modified dictionary with consolidated DataFrames
+    """
+    config = load_region_consolidation_config()
+
+    if not config.get("enabled", False):
+        print("[Info] Region consolidation is disabled.")
+        return og_data
+
+    print("\n" + "=" * 70)
+    print("REGION CONSOLIDATION")
+    print("=" * 70)
+
+    countries = config.get("countries", {})
+    agg_rules = config.get("aggregation_rules", {})
+
+    avg_params = set(agg_rules.get("avg", []))
+    sum_params = set(agg_rules.get("sum", []))
+    disabled_params = set(agg_rules.get("disabled", []))
+
+    # Print disabled parameters
+    if disabled_params:
+        print("\n[Info] Disabled parameters (no consolidation):")
+        for param in sorted(disabled_params):
+            if param in og_data:
+                print(f"    - {param}")
+
+    # Process each country
+    for country_code, country_config in countries.items():
+        regions = country_config.get("regions", [])
+        unified = country_config.get("unified_region", "XX")
+
+        print(f"\n[Processing] Country: {country_code}")
+        print(f"    Regions to consolidate: {regions} -> {unified}")
+
+        # Process each DataFrame
+        for param_name, df in og_data.items():
+            # Skip disabled parameters
+            if param_name in disabled_params:
+                continue
+
+            # Determine aggregation method
+            if param_name in avg_params:
+                agg_method = "avg"
+            elif param_name in sum_params:
+                agg_method = "sum"
+            else:
+                # Parameter not in any list - skip
+                continue
+
+            # Find the column to consolidate
+            column = get_column_for_consolidation(df)
+            if column is None:
+                continue
+
+            # Consolidate the DataFrame
+            og_data[param_name] = consolidate_dataframe(
+                df=df,
+                param_name=param_name,
+                column=column,
+                country=country_code,
+                regions=regions,
+                unified=unified,
+                agg_method=agg_method
+            )
+
+        # Remove internal interconnections for this country
+        print(f"\n    Removing internal interconnections ({country_code}{unified}{country_code}{unified}):")
+        og_data, removed_count = remove_internal_interconnections(og_data, country_code, unified)
+        if removed_count == 0:
+            print(f"    (no internal interconnections found)")
+
+    print("\n" + "=" * 70)
+    print("Region consolidation completed.")
+    print("=" * 70 + "\n")
+
+    return og_data
+
+
+def clean_pwr_technologies(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """
+    Clean PWR technology codes by:
+    1. Removing PWR technologies ending in '00' when a '01' version exists
+    2. Renaming PWR technologies ending in '01' to remove the suffix
+
+    Args:
+        og_data: Dictionary of DataFrames from OG_csvs_inputs
+
+    Returns:
+        Modified dictionary with cleaned PWR technology codes
+    """
+    print("\n" + "=" * 70)
+    print("PWR TECHNOLOGY CLEANUP")
+    print("=" * 70)
+
+    # First, collect all PWR technologies across all DataFrames
+    all_pwr_techs = set()
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" in df.columns:
+            pwr_techs = df[df["TECHNOLOGY"].str.startswith("PWR", na=False)]["TECHNOLOGY"].unique()
+            all_pwr_techs.update(pwr_techs)
+
+    # Find PWR00 technologies that have a PWR01 counterpart
+    pwr00_to_remove = set()
+    for tech in all_pwr_techs:
+        if tech.endswith("00"):
+            tech01 = tech[:-2] + "01"
+            if tech01 in all_pwr_techs:
+                pwr00_to_remove.add(tech)
+
+    if pwr00_to_remove:
+        print(f"\n[Step 1] Removing PWR00 technologies (PWR01 version exists):")
+        print(f"    Found {len(pwr00_to_remove)} PWR00 technologies to remove")
+        for tech in sorted(list(pwr00_to_remove))[:10]:
+            print(f"    - {tech}")
+        if len(pwr00_to_remove) > 10:
+            print(f"    ... and {len(pwr00_to_remove) - 10} more")
+    else:
+        print(f"\n[Step 1] No PWR00 technologies to remove (no PWR01 counterparts found)")
+
+    # Remove PWR00 technologies from all DataFrames
+    total_rows_removed = 0
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" in df.columns:
+            mask = df["TECHNOLOGY"].isin(pwr00_to_remove)
+            if mask.any():
+                rows_before = len(df)
+                og_data[param_name] = df[~mask].copy()
+                rows_removed = rows_before - len(og_data[param_name])
+                total_rows_removed += rows_removed
+
+    if total_rows_removed > 0:
+        print(f"    Total rows removed: {total_rows_removed}")
+
+    # Now rename PWR01 to PWR (remove '01' suffix)
+    print(f"\n[Step 2] Renaming PWR01 technologies (removing '01' suffix):")
+
+    # Find all PWR01 technologies (after removal of PWR00)
+    pwr01_techs = set()
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" in df.columns:
+            pwr_techs = df[df["TECHNOLOGY"].str.startswith("PWR", na=False) &
+                          df["TECHNOLOGY"].str.endswith("01", na=False)]["TECHNOLOGY"].unique()
+            pwr01_techs.update(pwr_techs)
+
+    if pwr01_techs:
+        print(f"    Found {len(pwr01_techs)} PWR01 technologies to rename")
+        for tech in sorted(list(pwr01_techs))[:10]:
+            print(f"    - {tech} -> {tech[:-2]}")
+        if len(pwr01_techs) > 10:
+            print(f"    ... and {len(pwr01_techs) - 10} more")
+    else:
+        print(f"    No PWR01 technologies found to rename")
+
+    # Create mapping for renaming
+    rename_map = {tech: tech[:-2] for tech in pwr01_techs}
+
+    # Apply renaming to all DataFrames
+    total_rows_renamed = 0
+    for param_name, df in og_data.items():
+        if "TECHNOLOGY" in df.columns:
+            mask = df["TECHNOLOGY"].isin(pwr01_techs)
+            if mask.any():
+                og_data[param_name] = df.copy()
+                og_data[param_name].loc[mask, "TECHNOLOGY"] = og_data[param_name].loc[mask, "TECHNOLOGY"].map(
+                    lambda x: rename_map.get(x, x)
+                )
+                total_rows_renamed += mask.sum()
+
+    if total_rows_renamed > 0:
+        print(f"    Total rows renamed: {total_rows_renamed}")
+
+    print("\n" + "=" * 70)
+    print("PWR technology cleanup completed.")
+    print("=" * 70 + "\n")
+
+    return og_data
+
+
+#--------------------------------------------------------------------------------------------------#
+
 def write_sheet(sheet_name, records, all_years, output_excel_path):
     if not records:
         print(f"[Info] No data to write to sheet '{sheet_name}' in Parametrization file. Skipping.")
@@ -148,16 +635,13 @@ def parse_tech_name(tech):
         country2 = iso_country_map.get(iso2, f"Unknown ({iso2})")
         return f"Transmission interconnection from {country1}, region {region1} to {country2}, region {region2}"
     
-    # Handle transmission interconnection codes
+    # Handle storage codes (SDS, LDS)
     if (main_code == "SDS" or main_code == "LDS") and len(tech) <= 10:
         iso1 = tech[3:6]
         region1 = tech[6:8]
-        final_code = tech[8:10]
         storage_code = code_to_energy.get(main_code, "specific technology")
         country1 = iso_country_map.get(iso1, f"Unknown ({iso1})")
-        if final_code == "01":
-            last_code = "(can be invested)"
-        return f"{storage_code} {country1}, region {region1} {last_code} "
+        return f"{storage_code} {country1}, region {region1}"
 
     iso = tech[6:9]
     region = tech[9:11]
@@ -175,17 +659,6 @@ def parse_tech_name(tech):
         name += f", region {region}"
     elif region == "XX":
         name += f", region XX"
-
-    # Add investability note for PWR ending in 00 or 01
-    if tech.startswith("PWR"):
-        if tech.endswith("00"):
-            name += " (can not be invested)"
-        elif tech.endswith("01"):
-            name += " (can be invested)"
-
-    # Add investability note for SDS or LDS techs ending in 01
-    if any(code in tech for code in ["SDS", "LDS"]) and tech.endswith("01"):
-        name += " (Investable technology)"
 
     return name
 
@@ -864,11 +1337,11 @@ def update_model_base_year_secondary(og_data, workbook):
 
     # Filter inputs and outputs by prefix and suffix rules
     df_input = df_input[
-        (~df_input["TECHNOLOGY"].str.startswith(("MIN", "RNW")))
+        (~df_input["TECHNOLOGY"].str.startswith(("MIN", "RNW"), na=False))
     ]
     df_output = df_output[
-        (~df_output["TECHNOLOGY"].str.startswith(("MIN", "RNW"))) &
-        (~df_output["FUEL"].str.endswith("02"))
+        (~df_output["TECHNOLOGY"].str.startswith(("MIN", "RNW"), na=False)) &
+        (~df_output["FUEL"].str.endswith("02", na=False))
     ]
 
     # Group and merge
@@ -1915,8 +2388,13 @@ def main():
     sort_csv_files_in_folder(INPUT_FOLDER)
     global OG_Input_Data
     OG_Input_Data = read_csv_files(INPUT_FOLDER)
-    
-    OUTPUT_FOLDER = script_dir / "A1_Outputs"
+
+    # Apply region consolidation if enabled
+    OG_Input_Data = consolidate_regions(OG_Input_Data)
+
+    # Clean PWR technologies (remove 00 when 01 exists, rename 01 to remove suffix)
+    OG_Input_Data = clean_pwr_technologies(OG_Input_Data)
+
     scenario_suffixes = list_scenario_suffixes(OUTPUT_FOLDER)
     for scen in scenario_suffixes:
         print('\nScenario process: ',scen)
@@ -1924,8 +2402,8 @@ def main():
         try:
             update_demand(
                 og_data=OG_Input_Data,
-                input_excel_path=os.path.join("Miscellaneous", "A-O_Demand.xlsx"),
-                output_excel_path=os.path.join(str(OUTPUT_FOLDER), 'A1_Outputs_'+scen, "A-O_Demand.xlsx")
+                input_excel_path=MISCELLANEOUS_FOLDER / "A-O_Demand.xlsx",
+                output_excel_path=OUTPUT_FOLDER / f"A1_Outputs_{scen}" / "A-O_Demand.xlsx"
             )
         except KeyError as e:
             print(f"[KeyError] Missing key in OG_Input_Data: {e}")
@@ -1936,8 +2414,8 @@ def main():
         try:
             update_parametrization(
                 og_data=OG_Input_Data,
-                input_excel_path=os.path.join("Miscellaneous", "A-O_Parametrization.xlsx"),
-                output_excel_path=os.path.join(str(OUTPUT_FOLDER), 'A1_Outputs_'+scen, "A-O_Parametrization.xlsx")
+                input_excel_path=MISCELLANEOUS_FOLDER / "A-O_Parametrization.xlsx",
+                output_excel_path=OUTPUT_FOLDER / f"A1_Outputs_{scen}" / "A-O_Parametrization.xlsx"
             )
         except KeyError as e:
             print(f"[KeyError] Missing key in OG_Input_Data: {e}")
@@ -1948,8 +2426,8 @@ def main():
         try:
             update_xtra_emissions(
                 og_data=OG_Input_Data,
-                input_excel_path=os.path.join("Miscellaneous", "A-Xtra_Emissions.xlsx"),
-                output_excel_path=os.path.join("A2_Extra_Inputs", "A-Xtra_Emissions.xlsx")
+                input_excel_path=MISCELLANEOUS_FOLDER / "A-Xtra_Emissions.xlsx",
+                output_excel_path=A2_EXTRA_INPUTS_FOLDER / "A-Xtra_Emissions.xlsx"
             )
         except KeyError as e:
             print(f"[KeyError] Missing key in OG_Input_Data: {e}")
@@ -1960,8 +2438,8 @@ def main():
         # try:
         df_input,df_output,merged=update_model_base_year(
             og_data=OG_Input_Data,
-            input_excel_path=os.path.join("Miscellaneous", "A-O_AR_Model_Base_Year.xlsx"),
-            output_excel_path=os.path.join(str(OUTPUT_FOLDER), 'A1_Outputs_'+scen, "A-O_AR_Model_Base_Year.xlsx")
+            input_excel_path=MISCELLANEOUS_FOLDER / "A-O_AR_Model_Base_Year.xlsx",
+            output_excel_path=OUTPUT_FOLDER / f"A1_Outputs_{scen}" / "A-O_AR_Model_Base_Year.xlsx"
         )
         # except KeyError as e:
         #     print(f"[KeyError] Missing key in OG_Input_Data: {e}")
@@ -1971,8 +2449,8 @@ def main():
         try:
             update_projections(
                 og_data=OG_Input_Data,
-                input_excel_path=os.path.join("Miscellaneous", "A-O_AR_Projections.xlsx"),
-                output_excel_path=os.path.join(str(OUTPUT_FOLDER), 'A1_Outputs_'+scen, "A-O_AR_Projections.xlsx")
+                input_excel_path=MISCELLANEOUS_FOLDER / "A-O_AR_Projections.xlsx",
+                output_excel_path=OUTPUT_FOLDER / f"A1_Outputs_{scen}" / "A-O_AR_Projections.xlsx"
             )
         except Exception as e:
             print(f"[Error] Failed to update projections file: {e}")
@@ -1980,7 +2458,7 @@ def main():
         try:
             update_yaml_structure(
                 og_data=OG_Input_Data,
-                yaml_path="MOMF_T1_A.yaml"
+                yaml_path=SCRIPT_DIR / "MOMF_T1_A.yaml"
             )
         except Exception as e:
             print(f"[Error] Failed to update YAML structure: {e}")
@@ -1989,8 +2467,8 @@ def main():
         try:
             update_xtra_storage(
                 og_data=OG_Input_Data,
-                input_excel_path=os.path.join("Miscellaneous", "A-Xtra_Storage.xlsx"),
-                output_excel_path=os.path.join("A2_Extra_Inputs", "A-Xtra_Storage.xlsx")
+                input_excel_path=MISCELLANEOUS_FOLDER / "A-Xtra_Storage.xlsx",
+                output_excel_path=A2_EXTRA_INPUTS_FOLDER / "A-Xtra_Storage.xlsx"
             )
         except Exception as e:
             print(f"[Error] Failed to update storage file: {e}")
