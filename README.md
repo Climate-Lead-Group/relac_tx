@@ -145,14 +145,18 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
    | Parámetro | Descripción |
    |-----------|-------------|
-   | `ResidualCapacitiesFromOLADE` | YES/NO - Habilitar integración OLADE |
-   | `CapacityFactorGrowth (%)` | Tasa de crecimiento anual (ej: 5.0) |
-   | `GrowthType` | Compound (exponencial) o Simple (lineal) |
+   | `ResidualCapacitiesFromOLADE` | YES/NO - Habilitar integración OLADE para capacidad instalada |
    | `PetroleumSplitMode` | OIL_only o Split_PET_OIL |
+   | `DemandFromOLADE` | YES/NO - Habilitar integración OLADE para demanda eléctrica |
 
    **PetroleumSplitMode**:
    - `OIL_only`: Asigna toda la capacidad de petróleo a OIL (Fuel oil)
-   - `Split_PET_OIL`: Divide entre PET (Diésel) y OIL (Fuel oil) usando proporciones del archivo `Shares.xlsx`
+   - `Split_PET_OIL`: Divide entre PET (Diésel) y OIL (Fuel oil + Búnker) usando proporciones del archivo `Shares.xlsx`
+
+   **DemandFromOLADE**:
+   - Cuando está habilitado, actualiza la demanda eléctrica en `A-O_Demand.xlsx` usando datos de generación de OLADE
+   - Configura las tasas de crecimiento por país en la hoja `Demand_Growth`
+   - Fórmula: `Demanda(año) = Demanda(2023) × (1 + tasa × (año - 2023))`
 
 4. **Aplicar cambios**:
    ```bash
@@ -163,9 +167,11 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 - **Listas desplegables**: Facilitan la selección de escenarios, países, tecnologías y parámetros
 - **Mapeo Tech.Name → Tech**: Conversión automática de nombres descriptivos a códigos técnicos
-- **Integración OLADE**: Población automática de ResidualCapacity desde datos de capacidad instalada
-- **Conversión MW → GW**: Los datos OLADE (en MW) se convierten automáticamente a GW
-- **Proyección temporal**: Aplica tasas de crecimiento para años antes y después del año base OLADE (2023)
+- **Integración OLADE Capacidad**: Población automática de ResidualCapacity desde datos de capacidad instalada
+- **Integración OLADE Demanda**: Población automática de demanda eléctrica desde datos de generación
+- **Conversión de unidades**: MW → GW (capacidad), GWh → PJ (demanda)
+- **Valores flat (capacidad)**: El mismo valor de capacidad se usa para todos los años
+- **Crecimiento lineal (demanda)**: Tasa de crecimiento configurable por país
 - **Respaldos automáticos**: Un backup por escenario antes de aplicar cambios
 - **Projection.Mode**: Se actualiza automáticamente a "User defined" al modificar valores
 - **Logs detallados**: Registro completo con identificación de país en cada operación
@@ -179,7 +185,8 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 | `D2_update_secondary_techs.py` | Aplica los cambios a los escenarios |
 | `Tech_Country_Matrix.xlsx` | Matriz tecnología-país (generada) |
 | `Secondary_Techs_Editor.xlsx` | Plantilla de edición (generada) |
-| `Capacidad instalada por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE |
+| `Capacidad instalada por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE (capacidad) |
+| `Generación eléctrica por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE (generación) |
 | `Shares.xlsx` | Proporciones para split de petróleo por escenario |
 
 ### Mapeo de Países OLADE → Modelo

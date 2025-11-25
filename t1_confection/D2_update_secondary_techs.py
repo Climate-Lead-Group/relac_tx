@@ -21,28 +21,21 @@ OLADE_COUNTRY_MAPPING = {
     'Belice': 'BLZ',
     'Bolivia': 'BOL',
     'Brasil': 'BRA',
-    'Chile': 'CHL',  # Model uses CHL (not CHI)
+    'Chile': 'CHL',
     'Colombia': 'COL',
-    'Costa Rica': 'CRI',  # Model uses CRI (not CRC)
-    'Cuba': 'CUB',
+    'Costa Rica': 'CRI',
     'Ecuador': 'ECU',
     'El Salvador': 'SLV',
-    'Grenada': 'GRD',
     'Guatemala': 'GTM',
-    'Guyana': 'GUY',
     'Haiti': 'HTI',
     'Honduras': 'HND',
-    'Jamaica': 'JAM',
     'México': 'MEX',
     'Nicaragua': 'NIC',
     'Panamá': 'PAN',
     'Paraguay': 'PRY',
     'Perú': 'PER',
     'República Dominicana': 'DOM',
-    'Suriname': 'SUR',
-    'Trinidad & Tobago': 'TTO',
-    'Uruguay': 'URY',
-    'Venezuela': 'VEN'
+    'Uruguay': 'URY'
 }
 
 # OLADE technology to model tech code (3 chars) mapping
@@ -64,35 +57,57 @@ def read_olade_config(editor_path):
     Read OLADE configuration from the editor Excel file
 
     Returns:
-        dict with config: {enabled, growth_rate, growth_type}
+        dict with config: {enabled, petroleum_split_mode, demand_enabled, demand_growth_rates}
     """
     wb = openpyxl.load_workbook(editor_path, data_only=True)
 
     if 'OLADE_Config' not in wb.sheetnames:
         wb.close()
-        return {'enabled': False, 'growth_rate': 0.0, 'growth_type': 'Compound'}
+        return {
+            'enabled': False,
+            'petroleum_split_mode': 'Split_PET_OIL',
+            'demand_enabled': False,
+            'demand_growth_rates': {}
+        }
 
     ws = wb['OLADE_Config']
 
-    # Read configuration values (B5, B6, B7, B8)
+    # Read configuration values
+    # Row 5 = ResidualCapacitiesFromOLADE, Row 6 = PetroleumSplitMode, Row 7 = DemandFromOLADE
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
-    growth_rate = float(ws['B6'].value) if ws['B6'].value else 5.0
-    growth_type = str(ws['B7'].value) if ws['B7'].value else 'Compound'
-    petroleum_split_mode = str(ws['B8'].value) if ws['B8'].value else 'Split_PET_OIL'
+    petroleum_split_mode = str(ws['B6'].value) if ws['B6'].value else 'Split_PET_OIL'
+    demand_enabled = str(ws['B7'].value).upper() == 'YES' if ws['B7'].value else False
+
+    # Read demand growth rates from Demand_Growth sheet
+    demand_growth_rates = {}
+    if 'Demand_Growth' in wb.sheetnames:
+        ws_demand = wb['Demand_Growth']
+        # Data starts at row 5, Column A = country code, Column C = growth rate
+        for row_idx in range(5, ws_demand.max_row + 1):
+            country_code = ws_demand.cell(row_idx, 1).value
+            growth_rate = ws_demand.cell(row_idx, 3).value
+            if country_code and growth_rate is not None:
+                try:
+                    # Convert percentage to decimal (e.g., 2.0 -> 0.02)
+                    demand_growth_rates[str(country_code).strip()] = float(growth_rate) / 100.0
+                except (ValueError, TypeError):
+                    pass
 
     wb.close()
 
     return {
         'enabled': enabled,
-        'growth_rate': growth_rate,
-        'growth_type': growth_type,
-        'petroleum_split_mode': petroleum_split_mode
+        'petroleum_split_mode': petroleum_split_mode,
+        'demand_enabled': demand_enabled,
+        'demand_growth_rates': demand_growth_rates
     }
 
 
 def read_shares_data(shares_file_path):
     """
-    Read Shares.xlsx file to get Diésel and Fuel oil shares by scenario, country, and year
+    Read Shares.xlsx file to get Diésel, Fuel oil, and Búnker shares by scenario, country, and year
+
+    The file should be normalized so that Diésel + Fuel oil + Búnker = 1.0
 
     Returns:
         dict: {
@@ -100,7 +115,8 @@ def read_shares_data(shares_file_path):
                 country_iso3: {
                     year: {
                         'Diésel': share_value,
-                        'Fuel oil': share_value
+                        'Fuel oil': share_value,
+                        'Búnker': share_value
                     }
                 }
             }
@@ -121,6 +137,26 @@ def read_shares_data(shares_file_path):
         'SharesNDC+ELC': 'NDC+ELC'
     }
 
+    # Map country names from Shares to ISO3 codes
+    shares_country_to_iso3 = {
+        'Barbados': 'JAM',  # Model convention
+        'Bolivia': 'BOL',
+        'Chile': 'CHL',
+        'Colombia': 'COL',
+        'Costa Rica': 'CRI',
+        'Ecuador': 'ECU',
+        'El Salvador': 'SLV',
+        'Guatemala': 'GTM',
+        'Haiti': 'HTI',
+        'Honduras': 'HND',
+        'Nicaragua': 'NIC',
+        'Panamá': 'PAN',
+        'Paraguay': 'PRY',
+        'Perú': 'PER',
+        'República Dominicana': 'DOM',
+        'Uruguay': 'URY'
+    }
+
     for sheet_name, scenario_code in sheet_scenario_map.items():
         if sheet_name not in wb.sheetnames:
             continue
@@ -132,15 +168,19 @@ def read_shares_data(shares_file_path):
         years = []
         for col_idx in range(2, ws.max_column + 1):
             year_val = ws.cell(1, col_idx).value
-            if year_val and str(year_val).isdigit():
-                years.append((col_idx, int(year_val)))
+            if year_val:
+                try:
+                    year = int(float(year_val))
+                    years.append((col_idx, year))
+                except:
+                    pass
 
         # Process rows: each country has a block of rows
-        current_country = None
+        current_country_iso3 = None
         row_idx = 2
 
         while row_idx <= ws.max_row:
-            # First column: could be country name or technology name
+            # First column: could be country name or fuel name
             cell_value = ws.cell(row_idx, 1).value
 
             if not cell_value:
@@ -149,32 +189,31 @@ def read_shares_data(shares_file_path):
 
             cell_str = str(cell_value).strip()
 
-            # Check if this is a country row (sum should be ~1.0)
-            # Country names from OLADE_COUNTRY_MAPPING
-            if cell_str in OLADE_COUNTRY_MAPPING.values():
-                current_country = cell_str
-                shares_data[scenario_code][current_country] = {}
+            # Check if this is a country row
+            if cell_str in shares_country_to_iso3:
+                current_country_iso3 = shares_country_to_iso3[cell_str]
+                shares_data[scenario_code][current_country_iso3] = {}
                 row_idx += 1
                 continue
 
-            # If we have a current country, check for Diésel or Fuel oil
-            if current_country and cell_str in ['Diésel', 'Fuel oil']:
-                tech_name = cell_str
+            # If we have a current country, check for fuel types
+            if current_country_iso3 and cell_str in ['Diésel', 'Fuel oil', 'Búnker']:
+                fuel_name = cell_str
 
                 # Read shares for all years
                 for col_idx, year in years:
                     share_value = ws.cell(row_idx, col_idx).value
 
-                    if year not in shares_data[scenario_code][current_country]:
-                        shares_data[scenario_code][current_country][year] = {}
+                    if year not in shares_data[scenario_code][current_country_iso3]:
+                        shares_data[scenario_code][current_country_iso3][year] = {}
 
                     if share_value is not None:
                         try:
-                            shares_data[scenario_code][current_country][year][tech_name] = float(share_value)
+                            shares_data[scenario_code][current_country_iso3][year][fuel_name] = float(share_value)
                         except (ValueError, TypeError):
-                            shares_data[scenario_code][current_country][year][tech_name] = 0.0
+                            shares_data[scenario_code][current_country_iso3][year][fuel_name] = 0.0
                     else:
-                        shares_data[scenario_code][current_country][year][tech_name] = 0.0
+                        shares_data[scenario_code][current_country_iso3][year][fuel_name] = 0.0
 
             row_idx += 1
 
@@ -288,40 +327,65 @@ def read_olade_data(olade_file_path):
     }
 
 
-def calculate_capacity_for_year(base_capacity, base_year, target_year, growth_rate, growth_type):
+def read_olade_generation_data(generation_file_path):
     """
-    Calculate capacity for a target year based on growth rate
+    Read OLADE electricity generation data from Excel file
 
-    Args:
-        base_capacity: Capacity at base year (GW)
-        base_year: Reference year
-        target_year: Year to calculate
-        growth_rate: Growth rate as percentage (e.g., 5.0 for 5%)
-        growth_type: 'Compound' or 'Simple'
+    Note: OLADE data is in GWh, converted to PJ for the model (1 GWh = 0.0036 PJ)
 
     Returns:
-        Calculated capacity (GW)
+        dict: {
+            'reference_year': int,
+            'data': {
+                country_iso3: generation_pj
+            }
+        }
     """
-    years_diff = target_year - base_year
-    rate = growth_rate / 100.0
+    if not generation_file_path.exists():
+        raise FileNotFoundError(f"OLADE generation file not found: {generation_file_path}")
 
-    if years_diff == 0:
-        return base_capacity
+    wb = openpyxl.load_workbook(generation_file_path, data_only=True)
+    ws = wb['1.2023']
 
-    if growth_type == 'Compound':
-        # Exponential growth: capacity = base * (1 + rate)^years_diff
-        return base_capacity * ((1 + rate) ** years_diff)
-    else:  # Simple
-        # Linear growth: capacity = base + (base * rate * years_diff)
-        return base_capacity + (base_capacity * rate * years_diff)
+    ref_year = 2023  # Reference year
+
+    # Get country columns from row 5 (starting at column 3)
+    country_columns = {}
+    for col_idx in range(3, ws.max_column + 1):
+        country_name = ws.cell(5, col_idx).value
+        if country_name and str(country_name) in OLADE_COUNTRY_MAPPING:
+            iso3_code = OLADE_COUNTRY_MAPPING[str(country_name)]
+            country_columns[col_idx] = iso3_code
+
+    # Read Total generation from row 21
+    data = {}
+    for col_idx, country_iso3 in country_columns.items():
+        total_gwh = ws.cell(21, col_idx).value  # Row 21 = "Total"
+
+        if total_gwh is not None and total_gwh != '':
+            try:
+                generation_gwh = float(total_gwh)
+                # Convert from GWh to PJ (1 GWh = 0.0036 PJ)
+                generation_pj = generation_gwh * 0.0036
+                data[country_iso3] = generation_pj
+            except ValueError:
+                pass
+
+    wb.close()
+
+    return {
+        'reference_year': ref_year,
+        'data': data
+    }
 
 
 class SecondaryTechsUpdater:
-    def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None):
+    def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None, generation_file_path=None):
         self.editor_path = editor_path
         self.base_path = base_path
         self.olade_file_path = olade_file_path
         self.shares_file_path = shares_file_path
+        self.generation_file_path = generation_file_path
         self.scenarios = ["BAU", "NDC", "NDC+ELC", "NDC_NoRPO"]
         self.log_lines = []
         self.changes_applied = 0
@@ -329,6 +393,7 @@ class SecondaryTechsUpdater:
         self.olade_config = None
         self.olade_data = None
         self.shares_data = None
+        self.generation_data = None
 
     def log(self, message, level="INFO"):
         """Add message to log"""
@@ -693,6 +758,12 @@ class SecondaryTechsUpdater:
         """
         Generate instructions from OLADE data
 
+        Uses flat capacity values (same for all years, no growth applied).
+
+        For PETROLEUM:
+        - PET = Petroleum × Diésel share
+        - OIL = Petroleum × (Fuel oil + Búnker) share
+
         Args:
             all_years: list of years from Secondary Techs
 
@@ -706,13 +777,12 @@ class SecondaryTechsUpdater:
         self.log("=" * 80)
         self.log("PROCESSING OLADE DATA")
         self.log("=" * 80)
-        self.log(f"Growth rate: {self.olade_config['growth_rate']}%")
-        self.log(f"Growth type: {self.olade_config['growth_type']}")
         self.log(f"Reference year: {self.olade_data['reference_year']}")
+        self.log(f"Petroleum split mode: {self.olade_config.get('petroleum_split_mode', 'Split_PET_OIL')}")
+        self.log("Using FLAT capacity values (same for all years)")
         self.log("")
 
         instructions = []
-        ref_year = self.olade_data['reference_year']
 
         # Generate instructions for each country and technology
         for country_iso3, techs in self.olade_data['data'].items():
@@ -721,27 +791,14 @@ class SecondaryTechsUpdater:
 
                 # Special handling for PETROLEUM
                 if tech_code == 'PETROLEUM':
-                    # Calculate petroleum capacity for each year with growth
-                    petroleum_year_values = {}
-                    for year in all_years:
-                        petroleum_capacity = calculate_capacity_for_year(
-                            base_capacity,
-                            ref_year,
-                            year,
-                            self.olade_config['growth_rate'],
-                            self.olade_config['growth_type']
-                        )
-                        petroleum_year_values[year] = petroleum_capacity
-
                     # Check split mode
                     split_mode = self.olade_config.get('petroleum_split_mode', 'Split_PET_OIL')
 
                     if split_mode == 'OIL_only':
                         # Option 1: Assign all petroleum to OIL only
                         for scenario in self.scenarios:
-                            oil_year_values = {}
-                            for year in all_years:
-                                oil_year_values[year] = round(petroleum_year_values[year], 2)
+                            # Flat value for all years
+                            oil_year_values = {year: round(base_capacity, 2) for year in all_years}
 
                             instruction_oil = {
                                 'row': 'OLADE',
@@ -757,16 +814,17 @@ class SecondaryTechsUpdater:
 
                     else:
                         # Option 2: Split petroleum into PET and OIL using shares
+                        # PET = Petroleum × Diésel
+                        # OIL = Petroleum × (Fuel oil + Búnker)
                         for scenario in self.scenarios:
                             pet_year_values = {}
                             oil_year_values = {}
 
                             for year in all_years:
-                                petroleum_capacity = petroleum_year_values[year]
-
                                 # Get shares from shares_data
                                 diesel_share = 0.0
                                 fuel_oil_share = 0.0
+                                bunker_share = 0.0
 
                                 if (self.shares_data and
                                     scenario in self.shares_data and
@@ -776,18 +834,13 @@ class SecondaryTechsUpdater:
                                     year_shares = self.shares_data[scenario][country_iso3][year]
                                     diesel_share = year_shares.get('Diésel', 0.0)
                                     fuel_oil_share = year_shares.get('Fuel oil', 0.0)
+                                    bunker_share = year_shares.get('Búnker', 0.0)
 
-                                # Calculate denominator (Diésel + Fuel oil)
-                                total_share = diesel_share + fuel_oil_share
-
-                                if total_share > 0:
-                                    # Apply formula: PET = Petroleum × (Diésel / (Diésel + Fuel oil))
-                                    pet_capacity = petroleum_capacity * (diesel_share / total_share)
-                                    oil_capacity = petroleum_capacity * (fuel_oil_share / total_share)
-                                else:
-                                    # If no shares available, split 50/50 as fallback
-                                    pet_capacity = petroleum_capacity * 0.5
-                                    oil_capacity = petroleum_capacity * 0.5
+                                # Shares should already be normalized (sum to 1.0)
+                                # PET = Petroleum × Diésel
+                                # OIL = Petroleum × (Fuel oil + Búnker)
+                                pet_capacity = base_capacity * diesel_share
+                                oil_capacity = base_capacity * (fuel_oil_share + bunker_share)
 
                                 pet_year_values[year] = round(pet_capacity, 2)
                                 oil_year_values[year] = round(oil_capacity, 2)
@@ -805,7 +858,7 @@ class SecondaryTechsUpdater:
                             }
                             instructions.append(instruction_pet)
 
-                            # Create instruction for OIL (Fuel oil)
+                            # Create instruction for OIL (Fuel oil + Búnker)
                             instruction_oil = {
                                 'row': 'OLADE',
                                 'scenario': scenario,
@@ -820,17 +873,8 @@ class SecondaryTechsUpdater:
 
                 else:
                     # Normal handling for other technologies
-                    # Calculate capacity for each year
-                    year_values = {}
-                    for year in all_years:
-                        capacity = calculate_capacity_for_year(
-                            base_capacity,
-                            ref_year,
-                            year,
-                            self.olade_config['growth_rate'],
-                            self.olade_config['growth_type']
-                        )
-                        year_values[year] = round(capacity, 2)
+                    # Flat capacity value for all years
+                    year_values = {year: round(base_capacity, 2) for year in all_years}
 
                     # Create instruction for each scenario
                     for scenario in self.scenarios:
@@ -855,6 +899,116 @@ class SecondaryTechsUpdater:
         """Save log to file"""
         with open(log_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(self.log_lines))
+
+    def update_demand_files(self, all_years):
+        """
+        Update A-O_Demand.xlsx files with electricity demand from OLADE generation data
+
+        Applies linear growth: Demand(year) = Demand(2023) × (1 + rate × (year - 2023))
+
+        Args:
+            all_years: list of years to populate
+        """
+        if not self.olade_config.get('demand_enabled') or not self.generation_data:
+            return
+
+        self.log("")
+        self.log("=" * 80)
+        self.log("UPDATING ELECTRICITY DEMAND")
+        self.log("=" * 80)
+
+        ref_year = self.generation_data['reference_year']
+        growth_rates = self.olade_config.get('demand_growth_rates', {})
+
+        self.log(f"Reference year: {ref_year}")
+        self.log(f"Growth type: Linear")
+        self.log("")
+
+        demand_changes = 0
+
+        for scenario in self.scenarios:
+            demand_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
+
+            if not demand_path.exists():
+                self.log(f"  ✗ Demand file not found: {demand_path}", "WARNING")
+                continue
+
+            self.log(f"Processing {scenario}...")
+
+            # Create backup
+            backup_path = self.create_backup(demand_path)
+            self.log(f"  Backup created: {backup_path.name}")
+
+            try:
+                wb = openpyxl.load_workbook(demand_path)
+
+                if 'Demand_Projection' not in wb.sheetnames:
+                    wb.close()
+                    self.log(f"  ✗ 'Demand_Projection' sheet not found", "ERROR")
+                    continue
+
+                ws = wb['Demand_Projection']
+
+                # Build year column map from headers
+                year_col_map = {}
+                for col_idx in range(1, ws.max_column + 1):
+                    header = ws.cell(1, col_idx).value
+                    if header and str(header).isdigit():
+                        try:
+                            year = int(header)
+                            if 2000 <= year <= 2100:
+                                year_col_map[year] = col_idx
+                        except:
+                            pass
+
+                # Find and update ELC*XX02 rows
+                for row_idx in range(2, ws.max_row + 1):
+                    fuel_code = ws.cell(row_idx, 2).value  # Column B: Fuel/Tech
+
+                    if not fuel_code:
+                        continue
+
+                    fuel_str = str(fuel_code).strip().upper()
+
+                    # Check if this is an electricity demand row (ELC*XX02)
+                    if fuel_str.startswith('ELC') and fuel_str.endswith('XX02') and len(fuel_str) == 11:
+                        # Extract country code (positions 3-5)
+                        country_code = fuel_str[3:6]
+
+                        # Check if we have generation data for this country
+                        if country_code not in self.generation_data['data']:
+                            continue
+
+                        base_demand_pj = self.generation_data['data'][country_code]
+                        growth_rate = growth_rates.get(country_code, 0.02)  # Default 2%
+
+                        self.log(f"  {country_code}: Base={base_demand_pj:.2f} PJ, Growth={growth_rate*100:.1f}%")
+
+                        # Update each year with linear growth
+                        for year in all_years:
+                            if year in year_col_map:
+                                # Linear growth: Demand(year) = Demand(ref_year) × (1 + rate × (year - ref_year))
+                                years_diff = year - ref_year
+                                demand_year = base_demand_pj * (1 + growth_rate * years_diff)
+                                demand_year = round(demand_year, 2)
+
+                                ws.cell(row_idx, year_col_map[year], demand_year)
+                                demand_changes += 1
+
+                # Save
+                wb.save(demand_path)
+                wb.close()
+                self.log(f"  ✓ {scenario} demand updated")
+
+            except Exception as e:
+                self.log(f"  ✗ Error updating {scenario}: {e}", "ERROR")
+                try:
+                    wb.close()
+                except:
+                    pass
+
+        self.log("")
+        self.log(f"Demand updates completed: {demand_changes} values written")
 
     def run(self):
         """Main execution"""
@@ -902,6 +1056,28 @@ class SecondaryTechsUpdater:
                     self.olade_config['enabled'] = False
             else:
                 self.log("OLADE integration: DISABLED")
+
+            # Check Demand integration
+            if self.olade_config.get('demand_enabled'):
+                self.log("")
+                self.log("Demand integration: ENABLED")
+                if self.generation_file_path and self.generation_file_path.exists():
+                    self.log(f"Generation file: {self.generation_file_path}")
+                    try:
+                        self.generation_data = read_olade_generation_data(self.generation_file_path)
+                        self.log(f"Generation data loaded: {len(self.generation_data['data'])} countries")
+                        self.log(f"Growth rates configured: {len(self.olade_config.get('demand_growth_rates', {}))} countries")
+                    except Exception as e:
+                        self.log(f"ERROR loading generation data: {e}", "ERROR")
+                        self.log("Continuing without demand update...", "WARNING")
+                        self.olade_config['demand_enabled'] = False
+                else:
+                    self.log(f"WARNING: Generation file not found: {self.generation_file_path}", "WARNING")
+                    self.log("Continuing without demand update...", "WARNING")
+                    self.olade_config['demand_enabled'] = False
+            else:
+                self.log("")
+                self.log("Demand integration: DISABLED")
 
             self.log("")
 
@@ -955,6 +1131,10 @@ class SecondaryTechsUpdater:
             # Apply instructions in batch mode (one file open per scenario)
             self.apply_instructions_batch(instructions)
 
+            # Update demand files if enabled
+            if self.olade_config.get('demand_enabled') and self.generation_data:
+                self.update_demand_files(sorted(all_years))
+
             # Summary
             self.log("")
             self.log("=" * 80)
@@ -991,9 +1171,10 @@ def main():
         base_path = script_dir / "A1_Outputs"
         olade_file_path = script_dir / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
         shares_file_path = script_dir / "Shares.xlsx"
+        generation_file_path = script_dir / "Generación eléctrica por fuente - Anual - OLADE.xlsx"
 
         # Create updater and run
-        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path)
+        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path, generation_file_path)
         return updater.run()
 
     except Exception as e:

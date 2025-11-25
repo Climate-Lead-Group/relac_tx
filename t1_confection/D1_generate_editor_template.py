@@ -332,38 +332,30 @@ def create_editor_template(data, output_path):
     ws_olade.add_data_validation(dv_yes_no)
     dv_yes_no.add('B5')
 
-    # CapacityFactorGrowth
-    ws_olade.cell(6, 1, "CapacityFactorGrowth (%)").border = border_style
-    ws_olade.cell(6, 2, 5.0).border = border_style
-    ws_olade.cell(6, 2).number_format = '0.00'
-
-    # GrowthType
-    ws_olade.cell(7, 1, "GrowthType").border = border_style
-    ws_olade.cell(7, 2, "Compound").border = border_style
-    dv_growth = DataValidation(type="list", formula1='"Compound,Simple"', allow_blank=False)
-    ws_olade.add_data_validation(dv_growth)
-    dv_growth.add('B7')
-
     # PetroleumSplitMode
-    ws_olade.cell(8, 1, "PetroleumSplitMode").border = border_style
-    ws_olade.cell(8, 2, "Split_PET_OIL").border = border_style
+    ws_olade.cell(6, 1, "PetroleumSplitMode").border = border_style
+    ws_olade.cell(6, 2, "Split_PET_OIL").border = border_style
     dv_petroleum = DataValidation(type="list", formula1='"OIL_only,Split_PET_OIL"', allow_blank=False)
     ws_olade.add_data_validation(dv_petroleum)
-    dv_petroleum.add('B8')
+    dv_petroleum.add('B6')
+
+    # DemandFromOLADE
+    ws_olade.cell(7, 1, "DemandFromOLADE").border = border_style
+    ws_olade.cell(7, 2, "NO").border = border_style
+    dv_yes_no.add('B7')
 
     # Add descriptions
-    ws_olade.cell(10, 1, "DESCRIPTIONS:")
-    ws_olade.cell(10, 1).font = Font(bold=True, size=11)
-    ws_olade.merge_cells('A10:B10')
+    ws_olade.cell(9, 1, "DESCRIPTIONS:")
+    ws_olade.cell(9, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells('A9:B9')
 
     descriptions = [
-        ("ResidualCapacitiesFromOLADE:", "Set to YES to automatically populate ResidualCapacity parameter from OLADE data. This applies only to PWR technologies (power generation). OLADE data is automatically converted from MW to GW."),
-        ("CapacityFactorGrowth (%):", "Growth rate to apply for years before and after the OLADE reference year (2023). Example: 5.0 means 5% growth per year."),
-        ("GrowthType:", "Compound: Exponential growth (e.g., 2024 = 2023 × (1+rate)^1). Simple: Linear growth (e.g., 2024 = 2023 + 2023×rate)."),
-        ("PetroleumSplitMode:", "OIL_only: Assign all petroleum to OIL (Fuel oil). Split_PET_OIL: Split between PET (Diésel) and OIL (Fuel oil) using scenario-specific shares from Shares.xlsx."),
+        ("ResidualCapacitiesFromOLADE:", "Set to YES to automatically populate ResidualCapacity parameter from OLADE data. This applies only to PWR technologies (power generation). OLADE data is automatically converted from MW to GW. The same flat capacity value is used for all years."),
+        ("PetroleumSplitMode:", "OIL_only: Assign all petroleum to OIL (Fuel oil). Split_PET_OIL: Split between PET (Diésel) and OIL (Fuel oil + Búnker) using scenario-specific shares from Shares.xlsx."),
+        ("DemandFromOLADE:", "Set to YES to populate electricity demand (SpecifiedAnnualDemand) from OLADE generation data. Configure growth rates per country in the 'Demand_Growth' sheet. Data is converted from GWh to PJ."),
     ]
 
-    current_row = 11
+    current_row = 10
     for label, desc in descriptions:
         # Label in bold
         ws_olade.cell(current_row, 1, label)
@@ -406,7 +398,14 @@ def create_editor_template(data, output_path):
         ["  * The script will automatically populate ResidualCapacity for PWR technologies", ""],
         ["  * Data comes from 'Capacidad instalada por fuente - Anual - OLADE.xlsx'", ""],
         ["  * OLADE data takes priority over manual Editor entries for ResidualCapacity", ""],
-        ["  * Growth rate is applied for years before/after the reference year (2023)", ""],
+        ["  * Flat capacity values are used (same value for all years)", ""],
+        ["", ""],
+        ["- If DemandFromOLADE = YES in OLADE_Config sheet:", ""],
+        ["  * The script will populate electricity demand in A-O_Demand.xlsx", ""],
+        ["  * Data comes from 'Generación eléctrica por fuente - Anual - OLADE.xlsx'", ""],
+        ["  * Configure growth rates per country in the 'Demand_Growth' sheet", ""],
+        ["  * Data is converted from GWh to PJ (1 GWh = 0.0036 PJ)", ""],
+        ["  * Linear growth is applied from the OLADE reference year (2023)", ""],
         ["", ""],
         ["IMPORTANT NOTES:", ""],
         ["- You can add as many rows as needed", ""],
@@ -427,6 +426,81 @@ def create_editor_template(data, output_path):
             cell.font = Font(size=12, bold=True)
 
         cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+    # Create Demand_Growth sheet for country-specific growth rates
+    ws_demand = wb.create_sheet("Demand_Growth", 2)
+    ws_demand.column_dimensions['A'].width = 15
+    ws_demand.column_dimensions['B'].width = 30
+    ws_demand.column_dimensions['C'].width = 20
+
+    # Title
+    cell = ws_demand.cell(1, 1, "ELECTRICITY DEMAND GROWTH RATES")
+    cell.font = Font(size=14, bold=True, color="366092")
+    ws_demand.merge_cells('A1:C1')
+
+    # Instructions
+    ws_demand.cell(2, 1, "Configure the annual linear growth rate (%) for each country's electricity demand")
+    ws_demand.merge_cells('A2:C2')
+    ws_demand.cell(2, 1).font = Font(italic=True)
+
+    # Headers
+    demand_header_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+    demand_header_font = Font(bold=True, color="FFFFFF")
+
+    ws_demand.cell(4, 1, "Country Code").fill = demand_header_fill
+    ws_demand.cell(4, 1).font = demand_header_font
+    ws_demand.cell(4, 1).border = border_style
+    ws_demand.cell(4, 1).alignment = center_align = Alignment(horizontal="center", vertical="center")
+
+    ws_demand.cell(4, 2, "Country Name").fill = demand_header_fill
+    ws_demand.cell(4, 2).font = demand_header_font
+    ws_demand.cell(4, 2).border = border_style
+
+    ws_demand.cell(4, 3, "Growth Rate (%)").fill = demand_header_fill
+    ws_demand.cell(4, 3).font = demand_header_font
+    ws_demand.cell(4, 3).border = border_style
+    ws_demand.cell(4, 3).alignment = Alignment(horizontal="center", vertical="center")
+
+    # Country list with growth rates (default 2.0%)
+    demand_countries = [
+        ("ARG", "Argentina", 2.0),
+        ("BOL", "Bolivia", 2.0),
+        ("BRA", "Brazil", 2.0),
+        ("CHL", "Chile", 2.0),
+        ("COL", "Colombia", 2.0),
+        ("CRI", "Costa Rica", 2.0),
+        ("DOM", "Dominican Republic", 2.0),
+        ("ECU", "Ecuador", 2.0),
+        ("GTM", "Guatemala", 2.0),
+        ("HND", "Honduras", 2.0),
+        ("HTI", "Haiti", 2.0),
+        ("JAM", "Barbados", 2.0),  # Model uses JAM for Barbados
+        ("MEX", "Mexico", 2.0),
+        ("NIC", "Nicaragua", 2.0),
+        ("PAN", "Panama", 2.0),
+        ("PER", "Peru", 2.0),
+        ("PRY", "Paraguay", 2.0),
+        ("SLV", "El Salvador", 2.0),
+        ("URY", "Uruguay", 2.0),
+    ]
+
+    for row_idx, (code, name, rate) in enumerate(demand_countries, 5):
+        ws_demand.cell(row_idx, 1, code).border = border_style
+        ws_demand.cell(row_idx, 1).alignment = Alignment(horizontal="center")
+        ws_demand.cell(row_idx, 2, name).border = border_style
+        ws_demand.cell(row_idx, 3, rate).border = border_style
+        ws_demand.cell(row_idx, 3).number_format = '0.00'
+        ws_demand.cell(row_idx, 3).alignment = Alignment(horizontal="center")
+
+    # Add note at the bottom
+    note_row = 5 + len(demand_countries) + 1
+    ws_demand.cell(note_row, 1, "Note: Growth rate is applied linearly from the OLADE reference year (2023).")
+    ws_demand.merge_cells(f'A{note_row}:C{note_row}')
+    ws_demand.cell(note_row, 1).font = Font(italic=True, size=9)
+
+    ws_demand.cell(note_row + 1, 1, "Formula: Demand(year) = Demand(2023) × (1 + rate × (year - 2023))")
+    ws_demand.merge_cells(f'A{note_row + 1}:C{note_row + 1}')
+    ws_demand.cell(note_row + 1, 1).font = Font(italic=True, size=9)
 
     # Save the workbook
     wb.save(output_path)
@@ -457,11 +531,11 @@ def main():
         print("TEMPLATE GENERATION COMPLETE")
         print("=" * 80)
         print()
-        print("Next steps:")
-        print("1. Open t1_confection/Secondary_Techs_Editor.xlsx")
-        print("2. Fill in the 'Editor' sheet with your changes")
-        print("3. Save and close the file")
-        print("4. Run: python t1_confection/update_secondary_techs.py")
+        # print("Next steps:")
+        # print("1. Open t1_confection/Secondary_Techs_Editor.xlsx")
+        # print("2. Fill in the 'Editor' sheet with your changes")
+        # print("3. Save and close the file")
+        # print("4. Run: python t1_confection/update_secondary_techs.py")
         print()
 
         return 0
