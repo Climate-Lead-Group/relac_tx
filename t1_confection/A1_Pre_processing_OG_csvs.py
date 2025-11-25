@@ -659,16 +659,17 @@ def extract_tech_country_from_code(code: str) -> tuple:
     Extract technology sub-code and country from a technology code.
 
     Args:
-        code: Technology code (e.g., PWRBIOARGXX, PWRCCGCOLXX)
+        code: Technology code (e.g., PWRBIOARGXX, PWRCCGCOLXX01)
 
     Returns:
         Tuple of (tech_subcode, country) or (None, None) if not parseable
     """
     code_upper = str(code).upper()
 
-    # PWR technologies: PWRXXXCCCRRSS (PWR + subcode(3) + country(3) + region(2) + suffix)
-    if code_upper.startswith("PWR") and len(code) >= 12:
-        sub_code = code_upper[3:6]  # e.g., BIO, CCG, OCG
+    # PWR technologies: PWRXXXCCCRRSS or PWRXXXCCCRR (with or without suffix)
+    # PWR(3) + subcode(3) + country(3) + region(2) = 11 chars minimum
+    if code_upper.startswith("PWR") and len(code) >= 11:
+        sub_code = code_upper[3:6]  # e.g., BIO, CCG, OCG, BCK
         country = code_upper[6:9]   # e.g., ARG, COL
         return (sub_code, country)
 
