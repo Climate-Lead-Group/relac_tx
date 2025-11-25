@@ -62,7 +62,7 @@ El archivo principal de configuración es `t1_confection/MOMF_T1_AB.yaml`, donde
 
 ## Editor de Tecnologías Secundarias
 
-El proyecto incluye un sistema para facilitar la edición de tecnologías secundarias (Secondary Techs) en los archivos de parametrización.
+El proyecto incluye un sistema para facilitar la edición de tecnologías secundarias (Secondary Techs) en los archivos de parametrización, con soporte para integración automática de datos OLADE.
 
 ### Uso del Editor
 
@@ -70,31 +70,66 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
    ```bash
    python t1_confection/D1_generate_editor_template.py
    ```
-   Esto crea el archivo `Secondary_Techs_Editor.xlsx` con listas desplegables para facilitar la edición.
+   Esto crea el archivo `Secondary_Techs_Editor.xlsx` con dos hojas:
+   - **Instructions**: Para edición manual con listas desplegables
+   - **OLADE_Config**: Configuración de integración automática con datos OLADE
 
-2. **Editar valores**:
-   - Abrir `Secondary_Techs_Editor.xlsx`
+2. **Edición Manual** (Hoja "Instructions"):
    - Seleccionar: Escenario (BAU, NDC, NDC+ELC, NDC_NoRPO, o ALL)
-   - Seleccionar: País, Tecnología y Parámetro
-   - Ingresar los valores para los años deseados
+   - Seleccionar: País, Tecnología (Tech.Name) y Parámetro
+   - Ingresar los valores para los años deseados (2021-2050)
+   - La columna "Tech" se completa automáticamente con VLOOKUP
 
-3. **Aplicar cambios**:
+3. **Integración OLADE** (Hoja "OLADE_Config"):
+
+   Permite poblar automáticamente el parámetro `ResidualCapacity` para tecnologías PWR usando datos de capacidad instalada de OLADE.
+
+   | Parámetro | Descripción |
+   |-----------|-------------|
+   | `ResidualCapacitiesFromOLADE` | YES/NO - Habilitar integración OLADE |
+   | `CapacityFactorGrowth (%)` | Tasa de crecimiento anual (ej: 5.0) |
+   | `GrowthType` | Compound (exponencial) o Simple (lineal) |
+   | `PetroleumSplitMode` | OIL_only o Split_PET_OIL |
+
+   **PetroleumSplitMode**:
+   - `OIL_only`: Asigna toda la capacidad de petróleo a OIL (Fuel oil)
+   - `Split_PET_OIL`: Divide entre PET (Diésel) y OIL (Fuel oil) usando proporciones del archivo `Shares.xlsx`
+
+4. **Aplicar cambios**:
    ```bash
    python t1_confection/D2_update_secondary_techs.py
    ```
-   Este script:
-   - Crea respaldos automáticos de los archivos originales
-   - Aplica los cambios a los escenarios correspondientes
-   - Actualiza automáticamente el campo `Projection.Mode` a "User defined"
-   - Genera un log detallado de todas las operaciones
 
-### Características del Editor
+### Características del Sistema
 
 - **Listas desplegables**: Facilitan la selección de escenarios, países, tecnologías y parámetros
-- **Validación automática**: Verifica que los datos sean consistentes antes de aplicar cambios
-- **Respaldos automáticos**: Crea copias de seguridad con timestamp antes de modificar archivos
-- **Aplicación a múltiples escenarios**: Usa "ALL" para aplicar cambios a todos los escenarios a la vez
-- **Logs detallados**: Registro completo de cambios aplicados y errores encontrados
+- **Mapeo Tech.Name → Tech**: Conversión automática de nombres descriptivos a códigos técnicos
+- **Integración OLADE**: Población automática de ResidualCapacity desde datos de capacidad instalada
+- **Conversión MW → GW**: Los datos OLADE (en MW) se convierten automáticamente a GW
+- **Proyección temporal**: Aplica tasas de crecimiento para años antes y después del año base OLADE (2023)
+- **Respaldos automáticos**: Un backup por escenario antes de aplicar cambios
+- **Projection.Mode**: Se actualiza automáticamente a "User defined" al modificar valores
+- **Logs detallados**: Registro completo con identificación de país en cada operación
+
+### Archivos Relacionados
+
+| Archivo | Descripción |
+|---------|-------------|
+| `D1_generate_editor_template.py` | Genera la plantilla Excel |
+| `D2_update_secondary_techs.py` | Aplica los cambios a los escenarios |
+| `Secondary_Techs_Editor.xlsx` | Plantilla de edición (generada) |
+| `Capacidad instalada por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE |
+| `Shares.xlsx` | Proporciones para split de petróleo por escenario |
+
+### Mapeo de Países OLADE → Modelo
+
+Algunos códigos de país difieren entre OLADE y el modelo:
+
+| País | OLADE | Modelo |
+|------|-------|--------|
+| Barbados | BAR | JAM |
+| Chile | CHI | CHL |
+| Costa Rica | CRC | CRI |
 
 ## Licencia
 
