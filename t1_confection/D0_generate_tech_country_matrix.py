@@ -108,6 +108,43 @@ TECH_DESCRIPTIONS = {
     "WON": "Onshore Wind",
 }
 
+# Implausible technology-country combinations based on OLADE 2023 installed capacity data
+# These combinations have zero installed capacity and are marked as NO with red highlighting
+# Source: "Capacidad instalada por fuente - Anual - OLADE.xlsx" (sieLAC-OLADE, Nov 2024)
+IMPLAUSIBLE_COMBINATIONS = {
+    # BIO (Biomass) - No capacity in HTI, JAM
+    ("BIO", "HTI"), ("BIO", "JAM"),
+
+    # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, JAM, NIC, PRY, SLV, URY
+    ("COA", "BOL"), ("COA", "CRI"), ("COA", "ECU"), ("COA", "HND"), ("COA", "HTI"),
+    ("COA", "JAM"), ("COA", "NIC"), ("COA", "PRY"), ("COA", "SLV"), ("COA", "URY"),
+
+    # GAS (Natural Gas) - No capacity in CRI, HND, HTI, JAM, NIC, PRY, URY
+    ("GAS", "CRI"), ("GAS", "HND"), ("GAS", "HTI"), ("GAS", "JAM"),
+    ("GAS", "NIC"), ("GAS", "PRY"), ("GAS", "URY"),
+
+    # GEO (Geothermal) - Only in CHL, CRI, GTM, HND, MEX, NIC, SLV
+    ("GEO", "ARG"), ("GEO", "BOL"), ("GEO", "BRA"), ("GEO", "COL"), ("GEO", "DOM"),
+    ("GEO", "ECU"), ("GEO", "HTI"), ("GEO", "JAM"), ("GEO", "PAN"), ("GEO", "PER"),
+    ("GEO", "PRY"), ("GEO", "URY"),
+
+    # HYD (Hydroelectric) - No capacity in JAM (Barbados has no hydro)
+    ("HYD", "JAM"),
+
+    # NGS (Natural Gas unified) - Same as GAS
+    ("NGS", "CRI"), ("NGS", "HND"), ("NGS", "HTI"), ("NGS", "JAM"),
+    ("NGS", "NIC"), ("NGS", "PRY"), ("NGS", "URY"),
+
+    # URN (Nuclear) - Only in ARG, BRA, MEX
+    ("URN", "BOL"), ("URN", "CHL"), ("URN", "COL"), ("URN", "CRI"), ("URN", "DOM"),
+    ("URN", "ECU"), ("URN", "GTM"), ("URN", "HND"), ("URN", "HTI"), ("URN", "JAM"),
+    ("URN", "NIC"), ("URN", "PAN"), ("URN", "PER"), ("URN", "PRY"), ("URN", "SLV"),
+    ("URN", "URY"),
+
+    # WON (Onshore Wind) - No capacity in JAM
+    ("WON", "JAM"),
+}
+
 # Aggregation rules (same as region_consolidation.yaml)
 AGGREGATION_RULES = {
     "avg": [
@@ -167,6 +204,8 @@ def create_tech_country_matrix():
     header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF")
     tech_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+    implausible_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")  # Light red
+    implausible_font = Font(color="CC0000")  # Dark red text
     center_align = Alignment(horizontal="center", vertical="center")
     thin_border = Border(
         left=Side(style='thin'),
@@ -200,9 +239,18 @@ def create_tech_country_matrix():
 
         # YES/NO cells for each country
         for col_idx, country in enumerate(COUNTRIES, start=2):
-            cell = ws_matrix.cell(row=row_idx, column=col_idx, value="YES")
+            # Check if this is an implausible combination
+            is_implausible = (tech, country) in IMPLAUSIBLE_COMBINATIONS
+            value = "NO" if is_implausible else "YES"
+
+            cell = ws_matrix.cell(row=row_idx, column=col_idx, value=value)
             cell.alignment = center_align
             cell.border = thin_border
+
+            # Apply red highlighting for implausible combinations
+            if is_implausible:
+                cell.fill = implausible_fill
+                cell.font = implausible_font
 
     # Data validation for YES/NO
     dv = DataValidation(type="list", formula1='"YES,NO"', allow_blank=False)
@@ -370,6 +418,7 @@ def create_tech_country_matrix():
     wb.save(output_file)
     print(f"✓ Created: {output_file}")
     print(f"  - Matrix sheet: {len(TECHNOLOGIES)} technologies × {len(COUNTRIES)} countries")
+    print(f"    └─ {len(IMPLAUSIBLE_COMBINATIONS)} implausible combinations marked as NO (red highlighted)")
     print(f"  - NGS_Unification sheet: CCG + OCG → NGS configuration")
     print(f"  - Aggregation_Rules sheet: {len(AGGREGATION_RULES['avg'])} avg, {len(AGGREGATION_RULES['sum'])} sum, {len(AGGREGATION_RULES['disabled'])} disabled")
     print(f"  - Tech_Reference sheet: Technology descriptions")
