@@ -60,6 +60,65 @@ El archivo principal de configuración es `t1_confection/MOMF_T1_AB.yaml`, donde
 - Seeds para reproducibilidad
 - Anualización de capital (`annualize_capital`)
 
+## Matriz Tecnología-País
+
+El sistema incluye una matriz configurable que permite especificar qué combinaciones de tecnología y país deben procesarse, además de unificar las tecnologías CCG y OCG en NGS.
+
+### Uso
+
+1. **Generar la matriz**:
+   ```bash
+   python t1_confection/D0_generate_tech_country_matrix.py
+   ```
+   Esto crea el archivo `Tech_Country_Matrix.xlsx` con las siguientes hojas:
+   - **Matrix**: Matriz YES/NO para cada combinación tecnología-país
+   - **NGS_Unification**: Configuración para unificar CCG + OCG → NGS
+   - **Aggregation_Rules**: Reglas de agregación (avg/sum/disabled)
+   - **Tech_Reference**: Descripción de tecnologías
+   - **Country_Reference**: Descripción de países
+
+2. **Configurar la matriz**:
+   - En la hoja **Matrix**: Cambiar YES/NO para habilitar/deshabilitar combinaciones
+   - En la hoja **NGS_Unification**: Cambiar a YES/NO para habilitar la unificación CCG+OCG→NGS
+
+3. **Ejecutar el preprocesamiento**:
+   ```bash
+   python t1_confection/A1_Pre_processing_OG_csvs.py
+   ```
+   El script aplicará automáticamente:
+   - Filtrado por matriz tecnología-país
+   - Unificación NGS (si está habilitada)
+   - Consolidación de regiones
+   - Limpieza de tecnologías PWR
+
+### Tecnologías en la Matriz
+
+| Código | Descripción |
+|--------|-------------|
+| BCK | Backstop |
+| BIO | Biomass |
+| CCS | Carbon Capture Storage with Coal |
+| COA | Coal |
+| COG | Cogeneration |
+| CSP | Concentrated Solar Power |
+| GAS | Natural Gas |
+| GEO | Geothermal |
+| HYD | Hydroelectric |
+| LDS | Long duration storage |
+| NGS | Natural Gas (CCG + OCG unified) |
+| OIL | Oil |
+| OTH | Other |
+| PET | Petroleum |
+| SDS | Short duration storage |
+| SPV | Solar Photovoltaic |
+| URN | Nuclear |
+| WAS | Waste |
+| WAV | Wave |
+| WOF | Offshore Wind |
+| WON | Onshore Wind |
+
+**Nota:** Los prefijos estructurales (ELC, MIN, PWR, RNW, TRN) no se incluyen en la matriz porque se combinan con los códigos anteriores para formar nombres de tecnología completos (ej: PWRBIOARGXX, MINCOAARGXX).
+
 ## Editor de Tecnologías Secundarias
 
 El proyecto incluye un sistema para facilitar la edición de tecnologías secundarias (Secondary Techs) en los archivos de parametrización, con soporte para integración automática de datos OLADE.
@@ -115,8 +174,10 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 | Archivo | Descripción |
 |---------|-------------|
+| `D0_generate_tech_country_matrix.py` | Genera la matriz tecnología-país |
 | `D1_generate_editor_template.py` | Genera la plantilla Excel |
 | `D2_update_secondary_techs.py` | Aplica los cambios a los escenarios |
+| `Tech_Country_Matrix.xlsx` | Matriz tecnología-país (generada) |
 | `Secondary_Techs_Editor.xlsx` | Plantilla de edición (generada) |
 | `Capacidad instalada por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE |
 | `Shares.xlsx` | Proporciones para split de petróleo por escenario |
@@ -133,8 +194,8 @@ Algunos códigos de país difieren entre OLADE y el modelo:
 
 ## Licencia
 
-Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está licenciado bajo la Licencia Apache 2.0 - consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-Copyright (c) 2025 Climate Lead Group
+Copyright 2025 Climate Lead Group
 
 Este proyecto está desarrollado por Climate Lead Group para análisis de sistemas energéticos en América Latina y el Caribe.
