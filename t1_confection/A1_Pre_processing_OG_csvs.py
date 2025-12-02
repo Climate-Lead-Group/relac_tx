@@ -1311,11 +1311,13 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
 
     for param in PARAMETERS:
         if param not in og_data:
+            techs_by_param[param] = set()  # Empty set for missing parameters
             continue
         df = og_data[param]
         key_col = "FUEL" if param == "ReserveMarginTagFuel" else "TECHNOLOGY"
-        # Skip if DataFrame is empty or missing required columns
+        # Handle empty DataFrames - still track the parameter but with empty tech set
         if df.empty or key_col not in df.columns:
+            techs_by_param[param] = set()
             continue
         techs_by_param[param] = set(df[key_col].unique())
         if param != "ReserveMarginTagFuel" and "YEAR" in df.columns:
@@ -1338,16 +1340,7 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
             tech_name = parse_fuel_name(tech)
 
         for param in PARAMETERS:
-            if param not in og_data:
-                continue
-
-            df = og_data[param]
-            key_col = "FUEL" if param == "ReserveMarginTagFuel" else "TECHNOLOGY"
-            # Skip if DataFrame is empty or missing required columns
-            if df.empty or key_col not in df.columns:
-                continue
-            group = df[df[key_col] == tech]
-
+            # Determine target list based on tech type and parameter
             if is_demand_tech and param in ["CapitalCost", "FixedCost", "ResidualCapacity"]:
                 target = demand_records
             elif is_demand_tech:
@@ -1366,6 +1359,14 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
                 "Unit": None,
                 "Projection.Parameter": 0
             }
+
+            # Check if parameter has data for this tech
+            group = pd.DataFrame()  # Empty by default
+            if param in og_data:
+                df = og_data[param]
+                key_col = "FUEL" if param == "ReserveMarginTagFuel" else "TECHNOLOGY"
+                if not df.empty and key_col in df.columns:
+                    group = df[df[key_col] == tech]
 
             if group.empty:
                 record["Projection.Mode"] = "EMPTY"
