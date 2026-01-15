@@ -13,7 +13,7 @@ import sys
 import platform  
 import shutil
 import time
-from datetime import date
+from datetime import date, datetime
 import multiprocessing as mp
 import math
 from typing import List, Any
@@ -546,31 +546,38 @@ def concatenate_all_scenarios(HERE, params):
         
         
         #########################################################################################
+        # Calculate AccumulatedTotalAnnualMinCapacityInvestment
+        # Must group by (Future, Scenario, TECHNOLOGY) and accumulate within each group
         if "TotalAnnualMinCapacityInvestment" in df_combined.columns:
-            df = df_combined.copy()  # para evitar vistas
-            df['AccumulatedTotalAnnualMinCapacityInvestment'] = df['TotalAnnualMinCapacityInvestment']
-            
-            # 2) Determina el rango de años dinámicamente
-            years = sorted(df['YEAR'].dropna().unique())
-            period_start = years[0]   # p.ej. 2021
-            period_end   = years[-1]  # p.ej. 2050
-            
-            # 3) Inicializa el acumulador
-            acc = 0
-            
-            # 4) Recorre fila a fila SIN agrupar ni filtrar
-            for idx in df.index:
-                year = df.at[idx, 'YEAR']
-                val  = df.at[idx, 'AccumulatedTotalAnnualMinCapacityInvestment']
-                
-                # Cuando llegue al año inicial, reinicias el acumulador
-                if year == period_start:
-                    acc = val
-                    df.at[idx, 'AccumulatedTotalAnnualMinCapacityInvestment'] = val
-                else:
-                    # En años posteriores, sumas el valor actual al acumulado
-                    acc = acc + val
-                    df.at[idx, 'AccumulatedTotalAnnualMinCapacityInvestment'] = acc
+            df = df_combined.copy()
+
+            # Initialize the accumulated column with NaN
+            df['AccumulatedTotalAnnualMinCapacityInvestment'] = np.nan
+
+            # Define grouping columns (exclude YEAR since we accumulate over years)
+            group_cols = ['Future', 'Scenario', 'TECHNOLOGY']
+            group_cols = [c for c in group_cols if c in df.columns]
+
+            if group_cols:
+                # Sort by group columns + YEAR to ensure correct order for cumsum
+                sort_cols = group_cols + ['YEAR']
+                df = df.sort_values(by=sort_cols).reset_index(drop=True)
+
+                # Calculate cumulative sum within each group
+                # Only for rows that have a value in TotalAnnualMinCapacityInvestment
+                mask = df['TotalAnnualMinCapacityInvestment'].notna()
+                df.loc[mask, 'AccumulatedTotalAnnualMinCapacityInvestment'] = (
+                    df.loc[mask]
+                    .groupby(group_cols, sort=False)['TotalAnnualMinCapacityInvestment']
+                    .cumsum()
+                )
+            else:
+                # Fallback: if no group columns, just do a simple cumsum
+                mask = df['TotalAnnualMinCapacityInvestment'].notna()
+                df.loc[mask, 'AccumulatedTotalAnnualMinCapacityInvestment'] = (
+                    df.loc[mask, 'TotalAnnualMinCapacityInvestment'].cumsum()
+                )
+
             df_combined = df
         #########################################################################################
         
@@ -790,6 +797,12 @@ if __name__ == "__main__":
                 )
 
                 print(f'✅ Capital investment annualization completed successfully.')
+
+                # Copy the annualized file with today's date
+                today = datetime.now().strftime("%Y%m%d")
+                dated_combined = combined_file_path.replace('.csv', f'_{today}.csv')
+                shutil.copy2(combined_file_path, dated_combined)
+                print(f'✅ Annualized file copied to: {dated_combined}')
                 print('#'*80)
             else:
                 print(f'⚠️  WARNING: Combined file not found at {combined_file_path}')
