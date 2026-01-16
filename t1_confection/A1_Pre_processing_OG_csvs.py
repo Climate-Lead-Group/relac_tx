@@ -35,6 +35,70 @@ MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
 A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
 REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "region_consolidation.yaml"
 TECH_COUNTRY_MATRIX_FILE = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
+OLADE_GENERATION_FILE = SCRIPT_DIR / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
+
+# Model horizon years - data outside this range will be filtered/adjusted
+LAST_YEAR = 2050
+
+def get_olade_reference_year():
+    """
+    Read the reference year from the OLADE generation file.
+    The year is extracted from the sheet name (e.g., "1.2023" -> 2023).
+    Returns 2023 as default if file not found or parsing fails.
+    """
+    default_year = 2023
+    if not OLADE_GENERATION_FILE.exists():
+        print(f"[Warning] OLADE file not found, using default year: {default_year}")
+        return default_year
+
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(OLADE_GENERATION_FILE, read_only=True)
+        # Look for sheet names like "1.2023", "1.2024", etc.
+        for sheet_name in wb.sheetnames:
+            if sheet_name.startswith("1."):
+                year_str = sheet_name.split(".")[1]
+                if year_str.isdigit():
+                    year = int(year_str)
+                    wb.close()
+                    print(f"[Info] OLADE reference year detected: {year}")
+                    return year
+        wb.close()
+    except Exception as e:
+        print(f"[Warning] Could not read OLADE year: {e}")
+
+    print(f"[Warning] Could not detect OLADE year, using default: {default_year}")
+    return default_year
+
+# Get FIRST_YEAR dynamically from OLADE file
+FIRST_YEAR = get_olade_reference_year()
+
+# Default year range for sheets when no data is available
+MODEL_YEARS = list(range(FIRST_YEAR, LAST_YEAR + 1))
+
+# OLADE country name to model country code mapping (for reading OLADE generation data)
+OLADE_COUNTRY_MAPPING = {
+    'Argentina': 'ARG',
+    'Barbados': 'BRB',
+    'Belice': 'BLZ',
+    'Bolivia': 'BOL',
+    'Brasil': 'BRA',
+    'Chile': 'CHL',
+    'Colombia': 'COL',
+    'Costa Rica': 'CRI',
+    'Ecuador': 'ECU',
+    'El Salvador': 'SLV',
+    'Guatemala': 'GTM',
+    'Haiti': 'HTI',
+    'Honduras': 'HND',
+    'México': 'MEX',
+    'Nicaragua': 'NIC',
+    'Panamá': 'PAN',
+    'Paraguay': 'PRY',
+    'Perú': 'PER',
+    'República Dominicana': 'DOM',
+    'Uruguay': 'URY'
+}
 
 # ISO-3 country code to country name mapping for Latin America and the Caribbean
 iso_country_map = {
@@ -58,7 +122,7 @@ iso_country_map = {
     "HND": "Honduras",
     "NIC": "Nicaragua",
     "SLV": "El Salvador",
-    "JAM": "Barbados",
+    "BRB": "Barbados",
     "HTI": "Haiti",
     'INT': 'International Markets'
 }
@@ -106,6 +170,195 @@ def read_csv_files(input_dir):
             key = os.path.splitext(filename)[0]
             data_dict[key] = df
     return data_dict
+
+
+def replace_country_codes(og_data: Dict[str, pd.DataFrame], old_code: str, new_code: str) -> Dict[str, pd.DataFrame]:
+    """
+    Replace country codes in all DataFrames.
+
+    This function replaces occurrences of old_code with new_code in:
+    - String columns that contain country codes (e.g., TECHNOLOGY, FUEL, REGION)
+    - The replacement is done for codes embedded in longer strings (e.g., PWRHYDJAMXX -> PWRHYDBRBXX)
+    - Also adds the new emission code (e.g., CO2BRB) to the EMISSION set if CO2+old_code exists
+
+    Args:
+        og_data: Dictionary of DataFrames from OG_csvs_inputs
+        old_code: Country code to replace (e.g., 'JAM')
+        new_code: New country code (e.g., 'BRB')
+
+    Returns:
+        Modified dictionary with replaced country codes
+    """
+    print(f"\n[Info] Replacing country code {old_code} -> {new_code} in all data")
+    total_replacements = 0
+
+    # First, add new emission code to EMISSION set if old code exists
+    # Note: We keep the old emission code (e.g., CO2JAM) as a backup for future use
+    if 'EMISSION' in og_data:
+        emission_df = og_data['EMISSION']
+        old_emission = f"CO2{old_code}"
+        new_emission = f"CO2{new_code}"
+
+        # Check if old emission exists and new one doesn't
+        if 'VALUE' in emission_df.columns:
+            has_old = (emission_df['VALUE'] == old_emission).any()
+            has_new = (emission_df['VALUE'] == new_emission).any()
+
+            if has_old and not has_new:
+                # Add new emission code (keeping the old one as backup)
+                new_row = pd.DataFrame({'VALUE': [new_emission]})
+                og_data['EMISSION'] = pd.concat([emission_df, new_row], ignore_index=True)
+                print(f"[Info] Added {new_emission} to EMISSION set (keeping {old_emission} as backup)")
+
+    # Now replace all occurrences EXCEPT in the EMISSION set (to preserve CO2JAM as backup)
+    for param_name, df in og_data.items():
+        # Skip the EMISSION set - we want to keep both CO2JAM and CO2BRB there
+        if param_name == 'EMISSION':
+            continue
+
+        for col in df.columns:
+            if df[col].dtype == 'object':  # String columns
+                # Count replacements before applying
+                mask = df[col].astype(str).str.contains(old_code, na=False)
+                replacements_in_col = mask.sum()
+
+                if replacements_in_col > 0:
+                    df[col] = df[col].astype(str).str.replace(old_code, new_code, regex=False)
+                    total_replacements += replacements_in_col
+
+    print(f"[Info] Replaced {total_replacements} occurrences of {old_code} -> {new_code}")
+    return og_data
+
+
+def write_csv_files(og_data: Dict[str, pd.DataFrame], output_folder: Path) -> None:
+    """
+    Write all DataFrames back to CSV files in the output folder.
+
+    This function writes the processed OG_Input_Data back to OG_csvs_inputs
+    so that B1_Compiler picks up the correct EMISSION set (with CO2BRB).
+
+    Args:
+        og_data: Dictionary of DataFrames to write
+        output_folder: Path to the output folder (typically OG_csvs_inputs)
+    """
+    print(f"\n[Info] Writing updated CSV files to {output_folder}")
+    written_count = 0
+
+    for param_name, df in og_data.items():
+        output_path = output_folder / f"{param_name}.csv"
+        df.to_csv(output_path, index=False)
+        written_count += 1
+
+    print(f"[Info] Written {written_count} CSV files to {output_folder}")
+
+
+def filter_data_by_first_year(og_data: Dict[str, pd.DataFrame], first_year: int) -> Dict[str, pd.DataFrame]:
+    """
+    Filter all DataFrames to only include data from first_year onwards.
+
+    Args:
+        og_data: Dictionary of DataFrames from OG_csvs_inputs
+        first_year: First year to include in the data (e.g., 2021)
+
+    Returns:
+        Modified dictionary with filtered DataFrames
+    """
+    print(f"\n[Info] Filtering data to start from year {first_year}")
+    total_rows_filtered = 0
+
+    for param_name, df in og_data.items():
+        if "YEAR" not in df.columns:
+            continue
+
+        rows_before = len(df)
+        og_data[param_name] = df[df["YEAR"] >= first_year].copy()
+        rows_filtered = rows_before - len(og_data[param_name])
+
+        if rows_filtered > 0:
+            total_rows_filtered += rows_filtered
+
+    # Also filter the YEAR set itself (which has years in VALUE column, not YEAR column)
+    if "YEAR" in og_data and "VALUE" in og_data["YEAR"].columns:
+        rows_before = len(og_data["YEAR"])
+        og_data["YEAR"] = og_data["YEAR"][og_data["YEAR"]["VALUE"] >= first_year].copy()
+        rows_filtered = rows_before - len(og_data["YEAR"])
+        if rows_filtered > 0:
+            total_rows_filtered += rows_filtered
+            print(f"[Info] Filtered YEAR set: removed {rows_filtered} years before {first_year}")
+
+    if total_rows_filtered > 0:
+        print(f"[Info] Filtered out {total_rows_filtered} rows with YEAR < {first_year}")
+
+    return og_data
+
+
+def read_olade_generation_data():
+    """
+    Read OLADE electricity generation data from Excel file.
+    Used to add missing countries (like HTI) that may not be in the OSeMOSYS input CSVs.
+
+    Note: OLADE data is in GWh, converted to PJ for the model (1 GWh = 0.0036 PJ)
+
+    Returns:
+        dict: {
+            'reference_year': int,
+            'data': {
+                country_iso3: generation_pj
+            }
+        }
+        Returns None if file not found.
+    """
+    if not OLADE_GENERATION_FILE.exists():
+        print(f"[Warning] OLADE generation file not found: {OLADE_GENERATION_FILE}")
+        return None
+
+    try:
+        from openpyxl import load_workbook as load_wb_olade
+        wb = load_wb_olade(OLADE_GENERATION_FILE, data_only=True)
+
+        # Find the sheet with generation data (format: "1.YYYY")
+        ref_year = FIRST_YEAR  # Use the dynamically detected year
+        sheet_name = f"1.{ref_year}"
+        if sheet_name not in wb.sheetnames:
+            # Fallback: find any sheet starting with "1."
+            for sn in wb.sheetnames:
+                if sn.startswith("1."):
+                    sheet_name = sn
+                    ref_year = int(sn.split(".")[1])
+                    break
+        ws = wb[sheet_name]
+
+        # Get country columns from row 5 (starting at column 3)
+        country_columns = {}
+        for col_idx in range(3, ws.max_column + 1):
+            country_name = ws.cell(5, col_idx).value
+            if country_name and str(country_name) in OLADE_COUNTRY_MAPPING:
+                iso3_code = OLADE_COUNTRY_MAPPING[str(country_name)]
+                country_columns[col_idx] = iso3_code
+
+        # Read Total generation from row 21
+        data = {}
+        for col_idx, country_iso3 in country_columns.items():
+            total_gwh = ws.cell(21, col_idx).value  # Row 21 = "Total"
+
+            if total_gwh is not None and total_gwh != '':
+                try:
+                    generation_gwh = float(total_gwh)
+                    # Convert from GWh to PJ (1 GWh = 0.0036 PJ)
+                    generation_pj = generation_gwh * 0.0036
+                    data[country_iso3] = generation_pj
+                except ValueError:
+                    pass
+
+        wb.close()
+
+        return {
+            'reference_year': ref_year,
+            'data': data
+        }
+    except Exception as e:
+        print(f"[Warning] Could not read OLADE generation data: {e}")
+        return None
 
 
 #-------------------------------------Region Consolidation Functions---------------------------------#
@@ -250,6 +503,21 @@ def consolidate_dataframe(
                 lambda x: replace_region_in_code(str(x), country, regions, unified)
             )
 
+    # Also transform STORAGE column if it exists and has regional codes
+    # This ensures STORAGE codes like LDSBRACN01 become LDSBRAXX01 before grouping
+    has_storage_with_regions = False
+    if "STORAGE" in df.columns and column != "STORAGE":
+        storage_mask = df["STORAGE"].apply(
+            lambda x: find_country_region_in_code(str(x), country, regions) is not None if pd.notna(x) else False
+        )
+        if storage_mask.any():
+            has_storage_with_regions = True
+            if not has_fuel_with_regions:  # df not yet copied
+                df = df.copy()
+            df.loc[storage_mask, "STORAGE"] = df.loc[storage_mask, "STORAGE"].apply(
+                lambda x: replace_region_in_code(str(x), country, regions, unified)
+            )
+
     # Identify rows that need consolidation (based on main column)
     mask = df[column].apply(lambda x: find_country_region_in_code(str(x), country, regions) is not None)
 
@@ -259,6 +527,13 @@ def consolidate_dataframe(
             lambda x: find_country_region_in_code(str(x), country, regions) is not None if pd.notna(x) else False
         )
         mask = mask | fuel_mask
+
+    # Also check if STORAGE column has regional codes that need consolidation
+    if "STORAGE" in df.columns and column != "STORAGE":
+        storage_mask = df["STORAGE"].apply(
+            lambda x: find_country_region_in_code(str(x), country, regions) is not None if pd.notna(x) else False
+        )
+        mask = mask | storage_mask
 
     if not mask.any():
         return df  # No rows to consolidate
@@ -278,20 +553,30 @@ def consolidate_dataframe(
             lambda x: replace_region_in_code(str(x), country, regions, unified) if pd.notna(x) else x
         )
 
+    # Also normalize STORAGE column for grouping if it exists
+    if "STORAGE" in df_to_consolidate.columns and column != "STORAGE":
+        df_to_consolidate["_storage_key"] = df_to_consolidate["STORAGE"].apply(
+            lambda x: replace_region_in_code(str(x), country, regions, unified) if pd.notna(x) else x
+        )
+
     # Determine grouping columns (all columns except VALUE and the target column)
     # For most CSVs, we group by all non-numeric columns except the one being consolidated
     group_cols = ["_group_key"]
 
     # Add other categorical columns to grouping
     for col in df_to_consolidate.columns:
-        if col in ["_group_key", "_fuel_key", column, "VALUE", "FUEL"]:
+        if col in ["_group_key", "_fuel_key", "_storage_key", column, "VALUE", "FUEL", "STORAGE"]:
             continue
-        if col in ["YEAR", "TIMESLICE", "MODE_OF_OPERATION", "EMISSION", "DAILYTIMEBRACKET", "REGION", "STORAGE"]:
+        if col in ["YEAR", "TIMESLICE", "MODE_OF_OPERATION", "EMISSION", "DAILYTIMEBRACKET", "REGION"]:
             group_cols.append(col)
 
     # Add normalized FUEL key to grouping if it exists
     if "_fuel_key" in df_to_consolidate.columns:
         group_cols.append("_fuel_key")
+
+    # Add normalized STORAGE key to grouping if it exists
+    if "_storage_key" in df_to_consolidate.columns:
+        group_cols.append("_storage_key")
 
     # Perform aggregation
     if "VALUE" in df_to_consolidate.columns:
@@ -311,6 +596,11 @@ def consolidate_dataframe(
         if "_fuel_key" in df_consolidated.columns:
             df_consolidated["FUEL"] = df_consolidated["_fuel_key"]
             df_consolidated.drop(columns=["_fuel_key"], inplace=True)
+
+        # Restore STORAGE from _storage_key if it exists
+        if "_storage_key" in df_consolidated.columns:
+            df_consolidated["STORAGE"] = df_consolidated["_storage_key"]
+            df_consolidated.drop(columns=["_storage_key"], inplace=True)
     else:
         # For DataFrames without VALUE column, just deduplicate
         df_consolidated = df_to_consolidate.drop_duplicates(subset=["_group_key"]).copy()
@@ -319,6 +609,9 @@ def consolidate_dataframe(
         if "_fuel_key" in df_consolidated.columns:
             df_consolidated["FUEL"] = df_consolidated["_fuel_key"]
             df_consolidated.drop(columns=["_fuel_key"], inplace=True)
+        if "_storage_key" in df_consolidated.columns:
+            df_consolidated["STORAGE"] = df_consolidated["_storage_key"]
+            df_consolidated.drop(columns=["_storage_key"], inplace=True)
 
     # Combine unchanged and consolidated rows
     result = pd.concat([df_unchanged, df_consolidated], ignore_index=True)
@@ -863,9 +1156,99 @@ def unify_ngs_technologies(og_data: Dict[str, pd.DataFrame], matrix_config: Dict
 
 #--------------------------------------------------------------------------------------------------#
 
+def update_sheet_year_headers(output_excel_path, sheet_name, model_years, fixed_cols_count=8):
+    """
+    Update only the year headers in a sheet without modifying data rows.
+    Used for sheets that have no new data but need their year columns aligned to MODEL_YEARS.
+
+    Args:
+        output_excel_path: Path to the Excel file
+        sheet_name: Name of the sheet to update
+        model_years: List of years to use as headers (e.g., MODEL_YEARS)
+        fixed_cols_count: Number of fixed (non-year) columns at the start
+    """
+    wb = load_workbook(output_excel_path)
+    if sheet_name not in wb.sheetnames:
+        print(f"[Warning] Sheet '{sheet_name}' not found in file. Skipping header update.")
+        wb.close()
+        return
+
+    ws = wb[sheet_name]
+
+    # Get current headers
+    current_headers = [ws.cell(1, col).value for col in range(1, ws.max_column + 1)]
+
+    # Find where year columns start (first numeric header after fixed columns)
+    year_start_col = None
+    for col_idx, header in enumerate(current_headers, 1):
+        if header is not None:
+            try:
+                year = int(header)
+                if 2000 <= year <= 2100:
+                    year_start_col = col_idx
+                    break
+            except (ValueError, TypeError):
+                continue
+
+    if year_start_col is None:
+        # No year columns found, use fixed_cols_count + 1
+        year_start_col = fixed_cols_count + 1
+
+    # Get old year columns for data migration
+    old_year_cols = {}
+    for col_idx, header in enumerate(current_headers, 1):
+        if header is not None:
+            try:
+                year = int(header)
+                if 2000 <= year <= 2100:
+                    old_year_cols[year] = col_idx
+            except (ValueError, TypeError):
+                continue
+
+    # Create mapping from old column to new column for years we're keeping
+    new_year_cols = {year: year_start_col + idx for idx, year in enumerate(model_years)}
+
+    # Read all data rows first (to avoid issues with column shifting)
+    data_rows = []
+    for row_idx in range(2, ws.max_row + 1):
+        row_data = {}
+        # Fixed columns
+        for col_idx in range(1, year_start_col):
+            row_data[col_idx] = ws.cell(row_idx, col_idx).value
+        # Year data (by year, not column)
+        for year, col_idx in old_year_cols.items():
+            if year in model_years:  # Only keep years in MODEL_YEARS
+                row_data[('year', year)] = ws.cell(row_idx, col_idx).value
+        data_rows.append(row_data)
+
+    # Calculate new total columns needed
+    new_max_col = year_start_col + len(model_years) - 1
+
+    # Clear existing year headers and data beyond fixed columns
+    for col_idx in range(year_start_col, ws.max_column + 1):
+        ws.cell(1, col_idx).value = None
+        for row_idx in range(2, ws.max_row + 1):
+            ws.cell(row_idx, col_idx).value = None
+
+    # Write new year headers
+    for idx, year in enumerate(model_years):
+        ws.cell(1, year_start_col + idx, year)
+
+    # Write back data for years that exist in MODEL_YEARS
+    for row_idx, row_data in enumerate(data_rows, 2):
+        for year in model_years:
+            if ('year', year) in row_data:
+                new_col = new_year_cols[year]
+                ws.cell(row_idx, new_col, row_data[('year', year)])
+
+    wb.save(output_excel_path)
+    print(f"[Success] Sheet '{sheet_name}' year headers updated to {model_years[0]}-{model_years[-1]}.")
+
 def write_sheet(sheet_name, records, all_years, output_excel_path):
     if not records:
-        print(f"[Info] No data to write to sheet '{sheet_name}' in Parametrization file. Skipping.")
+        # Even without data, update the year headers
+        print(f"[Info] No data to write to sheet '{sheet_name}'. Updating year headers only.")
+        update_sheet_year_headers(output_excel_path, sheet_name, all_years, fixed_cols_count=8)
         return
 
     df_out = pd.DataFrame(records)
@@ -980,8 +1363,8 @@ def assign_tech_type(tech):
 #-------------------------------------Updated intermediate functions-------------------------------#
 def update_demand_profiles(df, output_excel_path, input_excel_path):
     """Updates the Profiles sheet in the given Excel file using the specified DataFrame."""
-    # Identify unique years
-    unique_years = sorted(df["YEAR"].unique())
+    # Identify unique years - use MODEL_YEARS as fallback if no data
+    unique_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     year_cols = [str(y) for y in unique_years]
 
     records = []
@@ -1041,12 +1424,18 @@ def update_demand_profiles(df, output_excel_path, input_excel_path):
     print("[Success] Sheet 'Profiles' in Demand file updated.")
 
 def update_demand_demand_projection(df, output_excel_path, input_excel_path):
-    """Updates the Demand_Projection sheet in the given Excel file using the specified DataFrame."""
-    # Identify unique years
-    unique_years = sorted(df["YEAR"].unique())
+    """Updates the Demand_Projection sheet in the given Excel file using the specified DataFrame.
+
+    Also adds missing countries from OLADE generation data (e.g., HTI) that may not be
+    present in the OSeMOSYS input CSVs.
+    """
+    # Identify unique years - use MODEL_YEARS as fallback if no data
+    unique_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     year_cols = [str(y) for y in unique_years]
 
     records = []
+    existing_countries = set()  # Track which countries we have in the CSV data
+
     for fuel, group in df.groupby("FUEL"):
         record = {
             "Demand/Share": "Demand",
@@ -1064,6 +1453,10 @@ def update_demand_demand_projection(df, output_excel_path, input_excel_path):
         demand = fuel[8:10]
         country = iso_country_map.get(iso, f"Unknown country ({iso})")
 
+        # Track country codes for ELC*XX02 entries (transmission demand)
+        if fuel.startswith("ELC") and region == "XX" and demand == "02":
+            existing_countries.add(iso)
+
         if demand == "01":
             name = f"Output demand of power plants in {country}"
         elif demand == "02":
@@ -1080,6 +1473,46 @@ def update_demand_demand_projection(df, output_excel_path, input_excel_path):
             record[str(row["YEAR"])] = row["VALUE"]
 
         records.append(record)
+
+    # Add missing countries from OLADE data
+    olade_data = read_olade_generation_data()
+    if olade_data:
+        olade_countries = set(olade_data['data'].keys())
+        # Only add countries that are in iso_country_map (model countries)
+        model_countries = set(iso_country_map.keys()) - {'INT'}  # Exclude international markets
+        missing_countries = (olade_countries & model_countries) - existing_countries
+
+        if missing_countries:
+            print(f"[Info] Adding missing countries from OLADE data: {', '.join(sorted(missing_countries))}")
+
+            ref_year = olade_data['reference_year']
+            default_growth_rate = 0.02  # 2% annual growth rate for demand projection
+
+            for country_code in sorted(missing_countries):
+                base_demand_pj = olade_data['data'][country_code]
+                fuel_code = f"ELC{country_code}XX02"
+                country_name = iso_country_map.get(country_code, f"Unknown country ({country_code})")
+
+                record = {
+                    "Demand/Share": "Demand",
+                    "Fuel/Tech": fuel_code,
+                    "Name": f"Output demand of transmission lines in {country_name}",
+                    "Ref.Cap.BY": "not needed",
+                    "Ref.OAR.BY": "not needed",
+                    "Ref.km.BY": "not needed",
+                    "Projection.Mode": "User defined",
+                    "Projection.Parameter": 0
+                }
+
+                # Calculate demand for each year using linear growth from reference year
+                for year_str in year_cols:
+                    year = int(year_str)
+                    years_diff = year - ref_year
+                    demand_value = base_demand_pj * (1 + default_growth_rate * years_diff)
+                    record[year_str] = max(0, demand_value)  # Ensure non-negative
+
+                records.append(record)
+                print(f"  Added {fuel_code}: base demand {base_demand_pj:.2f} PJ from OLADE ({ref_year})")
 
     # Create DataFrame
     df_demand_projection  = pd.DataFrame(records)
@@ -1102,7 +1535,8 @@ def update_demand_demand_projection(df, output_excel_path, input_excel_path):
 
 def update_parametrization_capacities(df, output_excel_path):
     """Updates Capacities sheet in A-O_Parametrization.xlsx using CapacityFactor data."""
-    unique_years = sorted(df["YEAR"].unique())
+    # Use MODEL_YEARS as fallback if no data
+    unique_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     year_cols = [str(y) for y in unique_years]
 
     tech_id_map = {}
@@ -1154,7 +1588,8 @@ def update_parametrization_capacities(df, output_excel_path):
 
 def update_parametrization_yearsplit(df, output_excel_path):
     """Updates Yearsplit sheet in A-O_Parametrization.xlsx using YearSplit data."""
-    unique_years = sorted(df["YEAR"].unique())
+    # Use MODEL_YEARS as fallback if no data
+    unique_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     year_cols = [str(y) for y in unique_years]
 
     records = []
@@ -1194,7 +1629,8 @@ def update_parametrization_yearsplit(df, output_excel_path):
 
 def update_parametrization_daysplit(df, output_excel_path):
     """Updates DaySplit sheet in A-O_Parametrization.xlsx using DaySplit data."""
-    unique_years = sorted(df["YEAR"].unique())
+    # Use MODEL_YEARS as fallback if no data
+    unique_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     year_cols = [str(y) for y in unique_years]
     
     records = []
@@ -1393,7 +1829,8 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
 
             target.append(record)
 
-    all_years = sorted(all_years)
+    # Use MODEL_YEARS as fallback if no data provided years
+    all_years = sorted(all_years) if all_years else MODEL_YEARS
     write_sheet("Primary Techs", primary_records, all_years, output_excel_path)
     write_sheet("Secondary Techs", secondary_records, all_years, output_excel_path)
     write_sheet("Demand Techs", demand_records, all_years, output_excel_path)
@@ -1413,7 +1850,8 @@ def update_parametrization_variable_cost(og_data, output_excel_path):
     df = og_data[param]
     tech_ids = {}
     tech_counter = 1
-    all_years = sorted(df["YEAR"].unique())
+    # Use MODEL_YEARS as fallback if no data
+    all_years = sorted(df["YEAR"].unique()) if not df.empty else MODEL_YEARS
     records = []
 
     for (tech, mode), group in df.groupby(["TECHNOLOGY", "MODE_OF_OPERATION"]):
@@ -1946,8 +2384,9 @@ def update_projection_primary(og_data, workbook):
     df_input = df_input[df_input["TECHNOLOGY"].str.startswith(("MIN", "RNW"))]
     df_output = df_output[df_output["TECHNOLOGY"].str.startswith(("MIN", "RNW"))]
 
-    # Determine the union of all years used
-    all_years = sorted(set(df_input["YEAR"]).union(df_output["YEAR"]))
+    # Determine the union of all years used - use MODEL_YEARS as fallback if no data
+    years_set = set(df_input["YEAR"]).union(df_output["YEAR"]) if not (df_input.empty and df_output.empty) else set()
+    all_years = sorted(years_set) if years_set else MODEL_YEARS
 
     def build_records(df, direction):
         records = []
@@ -2022,7 +2461,9 @@ def update_projection_secondary(og_data, workbook):
         ~df_output["TECHNOLOGY"].str.startswith(("MIN", "RNW", "PWRTRN"))
     ]
 
-    all_years = sorted(set(df_input["YEAR"]).union(df_output["YEAR"]))
+    # Use MODEL_YEARS as fallback if no data
+    years_set = set(df_input["YEAR"]).union(df_output["YEAR"]) if not (df_input.empty and df_output.empty) else set()
+    all_years = sorted(years_set) if years_set else MODEL_YEARS
 
     def build_records(df, direction):
         records = []
@@ -2096,7 +2537,9 @@ def update_projection_demand_techs(og_data, workbook):
         df_output["FUEL"].str.endswith("02")
     ]
 
-    all_years = sorted(set(df_input["YEAR"]).union(df_output["YEAR"]))
+    # Use MODEL_YEARS as fallback if no data
+    years_set = set(df_input["YEAR"]).union(df_output["YEAR"]) if not (df_input.empty and df_output.empty) else set()
+    all_years = sorted(years_set) if years_set else MODEL_YEARS
 
     def build_records(df, direction):
         records = []
@@ -2242,11 +2685,13 @@ def update_xtra_storage_capital_cost_storage(og_data, workbook):
             }
         param_data[param_name] = records
 
-    all_years = sorted(set(
+    # Use MODEL_YEARS as fallback if no data
+    years_set = set(
         y for pdata in param_data.values()
         for pinfo in pdata.values()
         for y in pinfo["Years"]
-    ))
+    )
+    all_years = sorted(years_set) if years_set else MODEL_YEARS
 
     storage_ids = {name: idx + 1 for idx, name in enumerate(sorted(all_storages))}
     final_records = []
@@ -2569,7 +3014,11 @@ def update_parametrization(og_data, output_excel_path, input_excel_path):
         df=og_data["DaySplit"],
         output_excel_path=output_excel_path
     )
-    
+
+    # Update year headers for sheets that may not have new data but need aligned years
+    # Other_Techs has 7 fixed columns: Application, Tech, Tech.Name, Fuel, Parameter, Unit, Projection.Mode
+    update_sheet_year_headers(output_excel_path, "Other_Techs", MODEL_YEARS, fixed_cols_count=7)
+
     print("[Success] Excel file 'Parametrization' updated.")
     print("-------------------------------------------------------------------------\n")
     
@@ -2668,6 +3117,12 @@ def main():
     global OG_Input_Data
     OG_Input_Data = read_csv_files(INPUT_FOLDER)
 
+    # Replace JAM -> BRB for Barbados (original model used JAM incorrectly)
+    OG_Input_Data = replace_country_codes(OG_Input_Data, 'JAM', 'BRB')
+
+    # Filter data to start from FIRST_YEAR (removes earlier years to avoid overlap with old model)
+    OG_Input_Data = filter_data_by_first_year(OG_Input_Data, FIRST_YEAR)
+
     # Load tech-country matrix configuration (runs BEFORE other processing)
     matrix_config = load_tech_country_matrix()
 
@@ -2760,7 +3215,14 @@ def main():
             )
         except Exception as e:
             print(f"[Error] Failed to update storage file: {e}")
-        
+
+    # Write updated OG_csvs_inputs files (including EMISSION.csv with CO2BRB)
+    # This ensures B1_Compiler picks up the correct EMISSION set
+    try:
+        write_csv_files(OG_Input_Data, INPUT_FOLDER)
+    except Exception as e:
+        print(f"[Error] Failed to write CSV files: {e}")
+
     return df_input,df_output,merged
 
 

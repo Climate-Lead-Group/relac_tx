@@ -38,19 +38,19 @@ cplex_threads: 12
 cplex_random_seed: 12345      # Random seed for reproducibility
 
 # For Gurobi use
-gurobi_threads: 12
+gurobi_threads: 3
 gurobi_seed: 12345            # Random seed for reproducibility
 
 # For delete intermediate files
 del_files: True
 
 # For run only the main scenarios
-only_main_scenario: False
+only_main_scenario: True
 
 # Paralle scenarios
-parallel: False
+parallel: True
 # Number of scenario per run
-max_x_per_iter: 2
+max_x_per_iter: 4
 
 # Write A2 otoole outputs
 A2_otoole_outputs: True

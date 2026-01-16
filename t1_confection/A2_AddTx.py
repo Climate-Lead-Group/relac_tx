@@ -35,7 +35,7 @@ iso_country_map = {
     "HND": "Honduras",
     "NIC": "Nicaragua",
     "SLV": "El Salvador",
-    "JAM": "Barbados",
+    "BRB": "Barbados",
     "HTI": "Haiti",
     'INT': 'International Markets'
 }
@@ -313,26 +313,31 @@ def process_parametrization(path, pairs, yaml_data):
                           engine='openpyxl')
 
 
-    # Mapa rápido Tech → Tech.ID ya existentes
-    existing_ids = fhp.set_index('Tech')['Tech.ID'].to_dict()
-    max_id       = max(existing_ids.values(), default=0)
+    # Mapa rápido Tech → Tech.ID ya existentes (solo para techs NO de transmisión)
+    # Las tecnologías de transmisión tendrán IDs secuenciales empezando desde 1
+    transmission_prefixes = ('RNWTRN', 'RNWRPO', 'RNWNLI', 'TRNRPO', 'TRNNLI', 'PWRTRN')
+    existing_ids = {}
+    for _, row in fhp.iterrows():
+        tech = row.get('Tech', '')
+        tech_id = row.get('Tech.ID', 0)
+        if tech and not any(tech.startswith(p) for p in transmission_prefixes):
+            existing_ids[tech] = tech_id
 
     new_rows_fhp   = []          # filas nuevas (o que faltan) para FHP
     new_rows_dtech = []          # todas las filas que se añadirán a Demand Techs
 
+    # Tech.ID contador para tecnologías de transmisión (empezando desde 1)
+    tx_tech_id = 0
+
     # ───── 2. Generar / actualizar tecnologías ─────────────────────────────
     for country, region in pairs:
-        for tech_prefix in ('RNWTRN','RNWRPO','RNWNLI',
-                            'TRNRPO','TRNNLI','PWRTRN'):         # ← añadimos PWRTRN
+        for tech_prefix in transmission_prefixes:
             tech_code = f"{tech_prefix}{country}{region}"
             countryname = iso_country_map.get(country, f"Unknown ({country})")
-            # 2.1 Tech.ID: conservar si ya existe
-            if tech_code in existing_ids:
-                tech_id = existing_ids[tech_code]               # guarda el existente
-            else:
-                max_id += 1
-                tech_id = max_id
-                existing_ids[tech_code] = tech_id               # memoriza
+            # 2.1 Tech.ID: asignar ID secuencial para tecnologías de transmisión
+            tx_tech_id += 1
+            tech_id = tx_tech_id
+            existing_ids[tech_code] = tech_id
 
             # 2.2 Nombre descriptivo
             tech_name = (
@@ -434,18 +439,18 @@ def list_scenario_suffixes(base_dir: Path) -> List[str]:
 # CLI glue
 # ---------------------------------------------------------------------------
 def main():
-    
-    script_dir = Path.cwd()
+
+    script_dir = Path(__file__).resolve().parent
     OUTPUT_FOLDER = script_dir / "A1_Outputs"
     scenario_suffixes = list_scenario_suffixes(OUTPUT_FOLDER)
     for scen in scenario_suffixes:
     
     
         defaults = {
-            "yaml": "country_codes.yaml",
-            "base": f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Model_Base_Year.xlsx",
-            "proj": f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Projections.xlsx",
-            "param": f"A1_Outputs/A1_Outputs_{scen}/A-O_Parametrization.xlsx"
+            "yaml": str(script_dir / "country_codes.yaml"),
+            "base": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Model_Base_Year.xlsx"),
+            "proj": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Projections.xlsx"),
+            "param": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_Parametrization.xlsx")
         }
         ap = argparse.ArgumentParser(description='Process CLG model spreadsheets.')
         ap.add_argument('--yaml', help='country_codes.yaml')

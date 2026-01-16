@@ -29,15 +29,19 @@ aggregation_rules:
     - CapacityToActivityUnit
     - CapitalCost
     - CapitalCostStorage
+    - DiscountRateStorage
     - EmissionActivityRatio
     - FixedCost
     - InputActivityRatio
+    - MinStorageCharge
     - OperationalLife
     - OperationalLifeStorage
     - OutputActivityRatio
     - ReserveMarginTagFuel
     - ReserveMarginTagTechnology
     - SpecifiedDemandProfile
+    - StorageMaxChargeRate
+    - StorageMaxDischargeRate
     - TechnologyFromStorage
     - TechnologyToStorage
     - VariableCost

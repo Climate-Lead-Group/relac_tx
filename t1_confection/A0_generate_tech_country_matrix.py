@@ -25,8 +25,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Country codes from the model (same as iso_country_map)
 COUNTRIES = [
-    "ARG", "BOL", "BRA", "CHL", "COL", "CRI", "CUB", "DOM", "ECU",
-    "GTM", "HND", "HTI", "JAM", "MEX", "NIC", "PAN", "PER", "PRY",
+    "ARG", "BOL", "BRA", "BRB", "CHL", "COL", "CRI", "CUB", "DOM", "ECU",
+    "GTM", "HND", "HTI", "MEX", "NIC", "PAN", "PER", "PRY",
     "SLV", "URY", "VEN"
 ]
 
@@ -35,6 +35,7 @@ COUNTRY_NAMES = {
     "ARG": "Argentina",
     "BOL": "Bolivia",
     "BRA": "Brazil",
+    "BRB": "Barbados",
     "CHL": "Chile",
     "COL": "Colombia",
     "CRI": "Costa Rica",
@@ -44,7 +45,6 @@ COUNTRY_NAMES = {
     "GTM": "Guatemala",
     "HND": "Honduras",
     "HTI": "Haiti",
-    "JAM": "Barbados",
     "MEX": "Mexico",
     "NIC": "Nicaragua",
     "PAN": "Panama",
@@ -112,37 +112,37 @@ TECH_DESCRIPTIONS = {
 # These combinations have zero installed capacity and are marked as NO with red highlighting
 # Source: "Capacidad instalada por fuente - Anual - OLADE.xlsx" (sieLAC-OLADE, Nov 2024)
 IMPLAUSIBLE_COMBINATIONS = {
-    # BIO (Biomass) - No capacity in HTI, JAM
-    ("BIO", "HTI"), ("BIO", "JAM"),
+    # BIO (Biomass) - No capacity in HTI, BRB
+    ("BIO", "HTI"), ("BIO", "BRB"),
 
-    # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, JAM, NIC, PRY, SLV, URY
+    # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY
     ("COA", "BOL"), ("COA", "CRI"), ("COA", "ECU"), ("COA", "HND"), ("COA", "HTI"),
-    ("COA", "JAM"), ("COA", "NIC"), ("COA", "PRY"), ("COA", "SLV"), ("COA", "URY"),
+    ("COA", "BRB"), ("COA", "NIC"), ("COA", "PRY"), ("COA", "SLV"), ("COA", "URY"),
 
-    # GAS (Natural Gas) - No capacity in CRI, HND, HTI, JAM, NIC, PRY, URY
-    ("GAS", "CRI"), ("GAS", "HND"), ("GAS", "HTI"), ("GAS", "JAM"),
+    # GAS (Natural Gas) - No capacity in CRI, HND, HTI, BRB, NIC, PRY, URY
+    ("GAS", "CRI"), ("GAS", "HND"), ("GAS", "HTI"), ("GAS", "BRB"),
     ("GAS", "NIC"), ("GAS", "PRY"), ("GAS", "URY"),
 
     # GEO (Geothermal) - Only in CHL, CRI, GTM, HND, MEX, NIC, SLV
-    ("GEO", "ARG"), ("GEO", "BOL"), ("GEO", "BRA"), ("GEO", "COL"), ("GEO", "DOM"),
-    ("GEO", "ECU"), ("GEO", "HTI"), ("GEO", "JAM"), ("GEO", "PAN"), ("GEO", "PER"),
+    ("GEO", "ARG"), ("GEO", "BOL"), ("GEO", "BRA"), ("GEO", "BRB"), ("GEO", "COL"), ("GEO", "DOM"),
+    ("GEO", "ECU"), ("GEO", "HTI"), ("GEO", "PAN"), ("GEO", "PER"),
     ("GEO", "PRY"), ("GEO", "URY"),
 
-    # HYD (Hydroelectric) - No capacity in JAM (Barbados has no hydro)
-    ("HYD", "JAM"),
+    # HYD (Hydroelectric) - No capacity in BRB (Barbados has no hydro)
+    ("HYD", "BRB"),
 
     # NGS (Natural Gas unified) - Same as GAS
-    ("NGS", "CRI"), ("NGS", "HND"), ("NGS", "HTI"), ("NGS", "JAM"),
+    ("NGS", "CRI"), ("NGS", "HND"), ("NGS", "HTI"), ("NGS", "BRB"),
     ("NGS", "NIC"), ("NGS", "PRY"), ("NGS", "URY"),
 
     # URN (Nuclear) - Only in ARG, BRA, MEX
-    ("URN", "BOL"), ("URN", "CHL"), ("URN", "COL"), ("URN", "CRI"), ("URN", "DOM"),
-    ("URN", "ECU"), ("URN", "GTM"), ("URN", "HND"), ("URN", "HTI"), ("URN", "JAM"),
+    ("URN", "BOL"), ("URN", "BRB"), ("URN", "CHL"), ("URN", "COL"), ("URN", "CRI"), ("URN", "DOM"),
+    ("URN", "ECU"), ("URN", "GTM"), ("URN", "HND"), ("URN", "HTI"),
     ("URN", "NIC"), ("URN", "PAN"), ("URN", "PER"), ("URN", "PRY"), ("URN", "SLV"),
     ("URN", "URY"),
 
-    # WON (Onshore Wind) - No capacity in JAM
-    ("WON", "JAM"),
+    # WON (Onshore Wind) - No capacity in BRB
+    ("WON", "BRB"),
 }
 
 # Aggregation rules (same as region_consolidation.yaml)

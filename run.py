@@ -181,12 +181,23 @@ def ensure_deps(env_name: str) -> None:
 def is_dvc_repo() -> bool:
     return (Path(".dvc").is_dir())
 
+def is_git_repo() -> bool:
+    """Check if current directory is inside a Git repository."""
+    return (Path(".git").is_dir())
+
 def ensure_dvc_repo(env_name: str) -> None:
     if is_dvc_repo():
         print("DVC repository detected (.dvc/ found).")
         return
-    print("No hay repo DVC. Ejecutando `dvc init`…")
-    run(f"conda run -n {env_name} dvc init")
+
+    # Check if we're in a Git repo to decide how to init DVC
+    if is_git_repo():
+        print("No hay repo DVC. Ejecutando `dvc init`…")
+        run(f"conda run -n {env_name} dvc init")
+    else:
+        print("No hay repo Git. Ejecutando `dvc init --no-scm`…")
+        run(f"conda run -n {env_name} dvc init --no-scm")
+
     if not is_dvc_repo():
         raise RuntimeError("Fallo al inicializar DVC (no se creó .dvc).")
 

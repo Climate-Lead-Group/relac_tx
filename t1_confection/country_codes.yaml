@@ -3,7 +3,7 @@
 
 # List of country codes
 countries:
-  - "JAM"
+  - "BRB"  # Barbados (ISO-3166 standard code)
   - "BOL"
   - "CHL"
   - "COL"
@@ -19,13 +19,7 @@ countries:
   - "PER"
   - "DOM"
   - "URY"
-  - "BRACN"
-  - "BRANE"
-  - "BRASE"
-  - "BRASO"
-  - "BRACW"
-  - "BRAWE"
-  - "BRANW"
+  - "BRA"
   - "MEX"
   - "ARG"
 

@@ -17,7 +17,7 @@ from datetime import datetime
 # OLADE country name to ISO-3 code mapping
 OLADE_COUNTRY_MAPPING = {
     'Argentina': 'ARG',
-    'Barbados': 'BAR',
+    'Barbados': 'BRB',
     'Belice': 'BLZ',
     'Bolivia': 'BOL',
     'Brasil': 'BRA',
@@ -64,7 +64,8 @@ def collect_data_from_all_scenarios():
     Collect all unique values from all scenario files
 
     Returns:
-        dict with scenarios, countries, tech_mapping (Tech.Name -> Tech), parameters, years
+        dict with scenarios, countries, tech_mapping (Tech.Name -> Tech), parameters, years,
+        tech_by_country (country_code -> list of Tech.Name)
     """
     base_path = Path(__file__).parent / "A1_Outputs"
 
@@ -72,6 +73,7 @@ def collect_data_from_all_scenarios():
 
     all_countries = set()
     tech_mapping = {}  # Tech.Name -> Tech code
+    tech_by_country = {}  # country_code -> set of Tech.Name
     all_parameters = set()
     all_years = set()
 
@@ -125,17 +127,36 @@ def collect_data_from_all_scenarios():
                 # Build mapping: Tech.Name -> Tech
                 tech_mapping[tech_name_str] = tech_code_str
 
-                # Extract country code from PWR technologies only
-                # Format: PWRTRNARGXX -> country code is ARG (characters 6-8)
+                # Extract country code from PWR and TRN technologies
+                # PWR Format: PWRURNARGXX -> country code is ARG (characters 6-8)
+                # TRN Format: TRNBRAXXPRYXX -> origin country is BRA (characters 3-5)
+                country_code = None
+
                 if tech_code_str.upper().startswith('PWR') and len(tech_code_str) >= 9:
+                    # PWR technologies: country at positions 6-8
                     country_code = tech_code_str[6:9].upper()
+                elif tech_code_str.upper().startswith('TRN') and len(tech_code_str) >= 8:
+                    # TRN technologies: origin country at positions 3-5
+                    # Example: TRNBRAXXPRYXX -> BRA is origin
+                    country_code = tech_code_str[3:6].upper()
+
+                if country_code:
                     all_countries.add(country_code)
+
+                    # Group Tech.Name by country
+                    if country_code not in tech_by_country:
+                        tech_by_country[country_code] = set()
+                    tech_by_country[country_code].add(tech_name_str)
 
             if parameter:
                 all_parameters.add(str(parameter).strip())
 
         wb.close()
         print(f"  Found: {len(tech_mapping)} technologies, {len(all_parameters)} parameters")
+
+    # Convert sets to sorted lists
+    for country in tech_by_country:
+        tech_by_country[country] = sorted(tech_by_country[country])
 
     print()
     print(f"Summary:")
@@ -151,6 +172,7 @@ def collect_data_from_all_scenarios():
         'countries': sorted(all_countries),
         'tech_mapping': tech_mapping,  # Tech.Name -> Tech code
         'tech_names': sorted(tech_mapping.keys()),  # List of Tech.Name for dropdown
+        'tech_by_country': tech_by_country,  # country_code -> list of Tech.Name
         'parameters': sorted(all_parameters),
         'years': sorted(all_years)
     }
@@ -164,9 +186,15 @@ def create_editor_template(data, output_path):
         data: dict with scenarios, countries, technologies, parameters, years
         output_path: Path where to save the template
     """
+    from openpyxl.workbook.defined_name import DefinedName
+
     print("Creating Excel template...")
 
     wb = openpyxl.Workbook()
+
+    # Force automatic calculation in Excel
+    wb.calculation.calcMode = 'auto'
+    wb.calculation.fullCalcOnLoad = True
 
     # Main sheet for data entry
     ws_main = wb.active
@@ -178,6 +206,7 @@ def create_editor_template(data, output_path):
     ws_tech_names = wb.create_sheet("_TechNames")
     ws_tech_mapping = wb.create_sheet("_TechMapping")  # Tech.Name -> Tech code
     ws_parameters = wb.create_sheet("_Parameters")
+    ws_tech_by_country = wb.create_sheet("_TechByCountry")  # Tech.Name organized by country
 
     # Hide validation sheets
     ws_scenarios.sheet_state = 'hidden'
@@ -185,6 +214,7 @@ def create_editor_template(data, output_path):
     ws_tech_names.sheet_state = 'hidden'
     ws_tech_mapping.sheet_state = 'hidden'
     ws_parameters.sheet_state = 'hidden'
+    ws_tech_by_country.sheet_state = 'hidden'
 
     # Populate validation sheets
     for idx, scenario in enumerate(['ALL'] + data['scenarios'], 1):
@@ -201,6 +231,27 @@ def create_editor_template(data, output_path):
 
     for idx, param in enumerate(data['parameters'], 1):
         ws_parameters.cell(idx, 1, param)
+
+    # Populate _TechByCountry sheet and create named ranges for each country
+    # Each column will have: Row 1 = Country code, Rows 2+ = Tech.Name list for that country
+    sorted_countries = sorted(data['tech_by_country'].keys())
+    for col_idx, country_code in enumerate(sorted_countries, 1):
+        tech_list = data['tech_by_country'][country_code]
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
+
+        # Row 1: Country code as header
+        ws_tech_by_country.cell(1, col_idx, country_code)
+
+        # Rows 2+: Tech.Name list
+        for row_idx, tech_name in enumerate(tech_list, 2):
+            ws_tech_by_country.cell(row_idx, col_idx, tech_name)
+
+        # Create named range for this country (e.g., "Tech_ARG")
+        # Range is from row 2 to row (1 + number of techs)
+        num_techs = len(tech_list)
+        range_ref = f"'_TechByCountry'!${col_letter}$2:${col_letter}${1 + num_techs}"
+        defined_name = DefinedName(f"Tech_{country_code}", attr_text=range_ref)
+        wb.defined_names.add(defined_name)
 
     # Create header row in main sheet
     # Columns: Scenario, Country, Tech.Name, Tech (auto-filled), Parameter, Years...
@@ -253,13 +304,15 @@ def create_editor_template(data, output_path):
     ws_main.add_data_validation(dv_country)
     dv_country.add(f'B2:B{max_data_rows + 1}')
 
-    # Tech.Name dropdown (column C)
+    # Tech.Name dropdown (column C) - depends on Country selected in column B
+    # Uses INDIRECT to reference named range "Tech_ARG", "Tech_BOL", etc.
+    # The formula uses relative reference B2, but Excel will adjust it for each row
     dv_tech_name = DataValidation(
         type="list",
-        formula1=f"=_TechNames!$A$1:$A${len(data['tech_names'])}",
+        formula1='=INDIRECT("Tech_"&$B2)',
         allow_blank=False
     )
-    dv_tech_name.error = 'Please select a valid technology name'
+    dv_tech_name.error = 'Please select a valid technology for this country'
     dv_tech_name.errorTitle = 'Invalid Tech.Name'
     ws_main.add_data_validation(dv_tech_name)
     dv_tech_name.add(f'C2:C{max_data_rows + 1}')
@@ -344,33 +397,196 @@ def create_editor_template(data, output_path):
     ws_olade.cell(7, 2, "NO").border = border_style
     dv_yes_no.add('B7')
 
-    # Add descriptions
-    ws_olade.cell(9, 1, "DESCRIPTIONS:")
-    ws_olade.cell(9, 1).font = Font(bold=True, size=11)
-    ws_olade.merge_cells('A9:B9')
+    # ActivityLowerLimitFromOLADE
+    ws_olade.cell(8, 1, "ActivityLowerLimitFromOLADE").border = border_style
+    ws_olade.cell(8, 2, "NO").border = border_style
+    dv_yes_no.add('B8')
 
-    descriptions = [
-        ("ResidualCapacitiesFromOLADE:", "Set to YES to automatically populate ResidualCapacity parameter from OLADE data. This applies only to PWR technologies (power generation). OLADE data is automatically converted from MW to GW. The same flat capacity value is used for all years."),
-        ("PetroleumSplitMode:", "OIL_only: Assign all petroleum to OIL (Fuel oil). Split_PET_OIL: Split between PET (Diésel) and OIL (Fuel oil + Búnker) using scenario-specific shares from Shares.xlsx."),
-        ("DemandFromOLADE:", "Set to YES to populate electricity demand (SpecifiedAnnualDemand) from OLADE generation data. Configure growth rates per country in the 'Demand_Growth' sheet. Data is converted from GWh to PJ."),
+    # ActivityUpperLimitFromOLADE
+    ws_olade.cell(9, 1, "ActivityUpperLimitFromOLADE").border = border_style
+    ws_olade.cell(9, 2, "NO").border = border_style
+    dv_yes_no.add('B9')
+
+    # Add detailed descriptions with formulas and data sources
+    ws_olade.cell(11, 1, "DETAILED DESCRIPTIONS AND FORMULAS")
+    ws_olade.cell(11, 1).font = Font(bold=True, size=12, color="366092")
+    ws_olade.merge_cells('A11:B11')
+
+    current_row = 13
+
+    # ResidualCapacitiesFromOLADE
+    ws_olade.cell(current_row, 1, "1. ResidualCapacitiesFromOLADE")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    residual_desc = [
+        "Populates the ResidualCapacity parameter for PWR (power generation) technologies.",
+        "",
+        "DATA SOURCE:",
+        "  File: 'Capacidad instalada por fuente - Anual - OLADE.xlsx'",
+        "  Sheet: '1.2023' (or corresponding year)",
+        "  Row 5: Country names",
+        "  Rows 6-20: Technology capacities in MW",
+        "",
+        "FORMULA:",
+        "  ResidualCapacity (GW) = OLADE_Capacity (MW) / 1000",
+        "",
+        "NOTES:",
+        "  - Same flat capacity value is used for all model years",
+        "  - Only applies to PWR technologies (power plants)",
     ]
-
-    current_row = 10
-    for label, desc in descriptions:
-        # Label in bold
-        ws_olade.cell(current_row, 1, label)
-        ws_olade.cell(current_row, 1).font = Font(bold=True, size=10)
-        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
-        current_row += 1
-
-        # Description
-        ws_olade.cell(current_row, 1, desc)
+    for line in residual_desc:
+        ws_olade.cell(current_row, 1, line)
         ws_olade.cell(current_row, 1).font = Font(size=9)
-        ws_olade.cell(current_row, 1).alignment = Alignment(wrap_text=True, vertical="top")
         ws_olade.merge_cells(f'A{current_row}:B{current_row}')
         current_row += 1
+    current_row += 1
 
-        # Blank line
+    # PetroleumSplitMode
+    ws_olade.cell(current_row, 1, "2. PetroleumSplitMode")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    petroleum_desc = [
+        "Controls how petroleum-based generation is split between PET (Diesel) and OIL (Fuel oil).",
+        "",
+        "OPTIONS:",
+        "  OIL_only: Assign all petroleum to OIL technology",
+        "  Split_PET_OIL: Split using shares from Shares.xlsx",
+        "",
+        "DATA SOURCE (for Split_PET_OIL):",
+        "  File: 'Shares.xlsx'",
+        "  Sheets: SharesBAU, SharesNDC, SharesNDC_NoRPO, SharesNDC+ELC",
+        "  Contains: Diesel, Fuel oil, Bunker shares by country and year",
+        "",
+        "FORMULA (Split_PET_OIL):",
+        "  PET_share = Diesel_share",
+        "  OIL_share = Fuel_oil_share + Bunker_share",
+    ]
+    for line in petroleum_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
+    # DemandFromOLADE
+    ws_olade.cell(current_row, 1, "3. DemandFromOLADE")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    demand_desc = [
+        "Populates SpecifiedAnnualDemand in A-O_Demand.xlsx for electricity demand.",
+        "",
+        "DATA SOURCE:",
+        "  File: 'Generacion electrica por fuente - Anual - OLADE.xlsx'",
+        "  Sheet: '1.2023'",
+        "  Row 21: Total generation by country (GWh)",
+        "  Reference year: 2023 (from cell A4)",
+        "",
+        "FORMULA:",
+        "  Demand(year) = Generation_OLADE(PJ) x (1 + growth_rate x (year - 2023))",
+        "",
+        "UNIT CONVERSION:",
+        "  1 GWh = 0.0036 PJ",
+        "  Generation_PJ = Generation_GWh x 0.0036",
+        "",
+        "GROWTH RATES:",
+        "  Configured per country in 'Demand_Growth' sheet (default: 2% annual)",
+    ]
+    for line in demand_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
+    # ActivityLowerLimitFromOLADE
+    ws_olade.cell(current_row, 1, "4. ActivityLowerLimitFromOLADE")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    lower_desc = [
+        "Populates TotalTechnologyAnnualActivityLowerLimit in A-O_Parametrization.xlsx.",
+        "",
+        "DATA SOURCES:",
+        "  1. 'Generacion electrica por fuente - Anual - OLADE.xlsx' - Total generation",
+        "  2. 'Shares_Total.xlsx' - Technology shares by country/scenario/year",
+        "  3. 'Renewability_Targets' sheet - Target renewable % by year (optional)",
+        "  4. 'Technology_Weights' sheet - Custom tech distribution (optional)",
+        "",
+        "FORMULA:",
+        "  LowerLimit(tech,year) = Generation_Total(PJ) x (1 + growth_rate x (year - 2023)) x Share(tech,year)",
+        "",
+        "SHARE CALCULATION:",
+        "  - If Renewability_Targets defined: Interpolate shares to reach renewable % targets",
+        "  - If not defined: Use shares directly from Shares_Total.xlsx",
+        "",
+        "INTERPOLATION MODES (in Renewability_Targets):",
+        "  - 'linear': Linear interpolation between base year and target years",
+        "  - 'flat_step': Keep flat until target year, then step up (staircase)",
+    ]
+    for line in lower_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
+    # ActivityUpperLimitFromOLADE
+    ws_olade.cell(current_row, 1, "5. ActivityUpperLimitFromOLADE")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    upper_desc = [
+        "Populates TotalTechnologyAnnualActivityUpperLimit in A-O_Parametrization.xlsx.",
+        "",
+        "FORMULA:",
+        "  UpperLimit(tech,year) = LowerLimit(tech,year) + 0.1",
+        "",
+        "NOTES:",
+        "  - Can be enabled independently of LowerLimit",
+        "  - If only UpperLimit is enabled, base value is calculated using same formula as LowerLimit",
+        "  - The +0.1 margin allows slight flexibility in the optimization",
+    ]
+    for line in upper_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
+    # Technology mapping section
+    ws_olade.cell(current_row, 1, "TECHNOLOGY MAPPING (OLADE -> Model)")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11, color="366092")
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    tech_mapping_desc = [
+        "",
+        "RENEWABLE TECHNOLOGIES:",
+        "  Biomasa         -> BIO (Biomass)",
+        "  Eolica          -> WND (Wind)",
+        "  Geotermica      -> GEO (Geothermal)",
+        "  Hidroelectrica  -> HYD (Hydro)",
+        "  Solar (GD + gran escala) -> SPV (Solar PV)",
+        "",
+        "NON-RENEWABLE TECHNOLOGIES:",
+        "  Carbon          -> COA (Coal)",
+        "  Diesel          -> PET (Petroleum/Diesel)",
+        "  Gas natural     -> NGS (Natural Gas)",
+        "  Nuclear         -> URN (Uranium/Nuclear)",
+        "  Fuel oil + Bunker -> OIL (Oil/Fuel oil)",
+    ]
+    for line in tech_mapping_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
         current_row += 1
 
     # Populate instructions sheet
@@ -384,8 +600,8 @@ def create_editor_template(data, output_path):
         ["2. Go to the 'Editor' sheet", ""],
         ["3. Fill in each row with:", ""],
         ["   - Scenario: Select BAU, NDC, NDC+ELC, NDC_NoRPO, or ALL (applies to all scenarios)", ""],
-        ["   - Country: Select the country code (ARG, BOL, CHI, COL, ECU, GUA, etc.)", ""],
-        ["   - Tech.Name: Select the descriptive technology name from the dropdown", ""],
+        ["   - Country: Select the country code (ARG, BOL, CHL, COL, ECU, GTM, etc.)", ""],
+        ["   - Tech.Name: Select from dropdown (options depend on country selected)", ""],
         ["   - Tech: This column is auto-filled based on Tech.Name (READ-ONLY)", ""],
         ["   - Parameter: Select the parameter to modify", ""],
         ["   - Year values: Enter numeric values for each year (leave empty to keep current value)", ""],
@@ -406,6 +622,12 @@ def create_editor_template(data, output_path):
         ["  * Configure growth rates per country in the 'Demand_Growth' sheet", ""],
         ["  * Data is converted from GWh to PJ (1 GWh = 0.0036 PJ)", ""],
         ["  * Linear growth is applied from the OLADE reference year (2023)", ""],
+        ["", ""],
+        ["- If ActivityLowerLimitFromOLADE = YES in OLADE_Config sheet:", ""],
+        ["  * The script will populate TotalTechnologyAnnualActivityLowerLimit in A-O_Parametrization.xlsx", ""],
+        ["  * Formula: Generation_OLADE × (1 + growth_rate × (year - 2023)) × Share_technology", ""],
+        ["  * Shares come from 'Shares_Total.xlsx' (scenario-specific by country and technology)", ""],
+        ["  * Uses the same growth rates as DemandFromOLADE (from 'Demand_Growth' sheet)", ""],
         ["", ""],
         ["IMPORTANT NOTES:", ""],
         ["- You can add as many rows as needed", ""],
@@ -474,7 +696,7 @@ def create_editor_template(data, output_path):
         ("GTM", "Guatemala", 2.0),
         ("HND", "Honduras", 2.0),
         ("HTI", "Haiti", 2.0),
-        ("JAM", "Barbados", 2.0),  # Model uses JAM for Barbados
+        ("BRB", "Barbados", 2.0),
         ("MEX", "Mexico", 2.0),
         ("NIC", "Nicaragua", 2.0),
         ("PAN", "Panama", 2.0),
@@ -501,6 +723,426 @@ def create_editor_template(data, output_path):
     ws_demand.cell(note_row + 1, 1, "Formula: Demand(year) = Demand(2023) × (1 + rate × (year - 2023))")
     ws_demand.merge_cells(f'A{note_row + 1}:C{note_row + 1}')
     ws_demand.cell(note_row + 1, 1).font = Font(italic=True, size=9)
+
+    # =========================================================================
+    # Create Renewability_Targets sheet
+    # =========================================================================
+    ws_renew = wb.create_sheet("Renewability_Targets", 3)
+    ws_renew.column_dimensions['A'].width = 12
+    ws_renew.column_dimensions['B'].width = 15
+    ws_renew.column_dimensions['C'].width = 15
+
+    # OLADE base year is 2023 - filter years to start from 2023
+    olade_base_year = 2023
+    renew_years = [y for y in data['years'] if y >= olade_base_year]
+
+    # Title
+    cell = ws_renew.cell(1, 1, "RENEWABILITY TARGETS")
+    cell.font = Font(size=14, bold=True, color="366092")
+    ws_renew.merge_cells('A1:C1')
+
+    # Instructions
+    ws_renew.cell(2, 1, "Define the target percentage of RENEWABLE generation for each country/scenario.")
+    ws_renew.merge_cells(f'A2:{openpyxl.utils.get_column_letter(3 + len(renew_years))}2')
+    ws_renew.cell(2, 1).font = Font(italic=True)
+
+    ws_renew.cell(3, 1, f"Base year is {olade_base_year} (from OLADE data). Only define targets for years where you want to set a specific renewable %.")
+    ws_renew.merge_cells(f'A3:{openpyxl.utils.get_column_letter(3 + len(renew_years))}3')
+    ws_renew.cell(3, 1).font = Font(italic=True, size=9)
+
+    # Headers
+    renew_header_fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+    renew_header_font = Font(bold=True, color="FFFFFF")
+
+    renew_headers = ['Country', 'Scenario', 'Interpolation'] + [str(year) for year in renew_years]
+    for col_idx, header in enumerate(renew_headers, 1):
+        cell = ws_renew.cell(5, col_idx, header)
+        cell.fill = renew_header_fill
+        cell.font = renew_header_font
+        cell.border = border_style
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        if col_idx > 3:
+            ws_renew.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 8
+
+    # Pre-populate rows for each country+scenario combination
+    scenarios = ['BAU', 'NDC', 'NDC+ELC', 'NDC_NoRPO']
+    countries_list = sorted(data['countries'])
+
+    row_idx = 6
+    for country in countries_list:
+        for scenario in scenarios:
+            ws_renew.cell(row_idx, 1, country).border = border_style
+            ws_renew.cell(row_idx, 1).alignment = Alignment(horizontal="center")
+            ws_renew.cell(row_idx, 2, scenario).border = border_style
+            ws_renew.cell(row_idx, 2).alignment = Alignment(horizontal="center")
+            ws_renew.cell(row_idx, 3, "flat_step").border = border_style
+            ws_renew.cell(row_idx, 3).alignment = Alignment(horizontal="center")
+            # Year columns - leave empty for user input
+            for col_idx in range(4, 4 + len(renew_years)):
+                ws_renew.cell(row_idx, col_idx).border = border_style
+                ws_renew.cell(row_idx, col_idx).number_format = '0.00%'
+            row_idx += 1
+
+    # Add Interpolation dropdown
+    dv_interpolation = DataValidation(type="list", formula1='"linear,flat_step"', allow_blank=False)
+    ws_renew.add_data_validation(dv_interpolation)
+    dv_interpolation.add(f'C6:C{row_idx - 1}')
+
+    # Add detailed notes at the bottom
+    note_row = row_idx + 1
+    ws_renew.cell(note_row, 1, "HOW IT WORKS:")
+    ws_renew.merge_cells(f'A{note_row}:C{note_row}')
+    ws_renew.cell(note_row, 1).font = Font(bold=True, size=10)
+    note_row += 1
+
+    notes = [
+        f"1. Base year ({olade_base_year}): Uses actual renewable % from OLADE/Shares_Total.xlsx data",
+        "2. Target years: Define your desired renewable % in specific years (e.g., 50% in 2030, 70% in 2040)",
+        "3. Empty cells: Values are interpolated based on the interpolation mode selected",
+        "",
+        "INTERPOLATION MODES:",
+        "  - linear: Smooth linear progression from base year to each target year",
+        "  - flat_step: Keep flat at previous value until target year, then jump to new value (staircase)",
+        "",
+        "RENEWABLE SOURCES (summed for renewable %):",
+        "  HYD (Hydro), SPV (Solar), WND (Wind), GEO (Geothermal), BIO (Biomass)",
+        "",
+        "EXAMPLE: If base year has 40% renewable and you set 60% for 2030:",
+        "  - linear: 40%(2023) -> 44%(2025) -> 48%(2027) -> 52%(2029) -> 60%(2030)",
+        "  - flat_step: 40%(2023-2029) -> 60%(2030+)",
+    ]
+    for note in notes:
+        ws_renew.cell(note_row, 1, note)
+        ws_renew.cell(note_row, 1).font = Font(size=9)
+        ws_renew.merge_cells(f'A{note_row}:{openpyxl.utils.get_column_letter(3 + len(renew_years))}{note_row}')
+        note_row += 1
+
+    # Freeze panes
+    ws_renew.freeze_panes = 'D6'
+
+    # =========================================================================
+    # Create Technology_Weights sheet (renamed from Renewable_Weights)
+    # =========================================================================
+    ws_weights = wb.create_sheet("Technology_Weights", 4)
+    ws_weights.column_dimensions['A'].width = 12
+    ws_weights.column_dimensions['B'].width = 15
+
+    # All technology columns (same as OLADE sources)
+    # Renewables: HYD, SPV, WND, GEO, BIO
+    # Non-renewables: COA, PET, NGS, URN, OIL
+    all_techs = ['HYD', 'SPV', 'WND', 'GEO', 'BIO', 'COA', 'PET', 'NGS', 'URN', 'OIL']
+    renewable_techs = ['HYD', 'SPV', 'WND', 'GEO', 'BIO']
+    non_renewable_techs = ['COA', 'PET', 'NGS', 'URN', 'OIL']
+
+    # Title
+    cell = ws_weights.cell(1, 1, "TECHNOLOGY WEIGHTS (OPTIONAL)")
+    cell.font = Font(size=14, bold=True, color="366092")
+    ws_weights.merge_cells(f'A1:{openpyxl.utils.get_column_letter(2 + len(all_techs))}1')
+
+    # Warning that this is optional
+    ws_weights.cell(2, 1, "*** THIS SHEET IS OPTIONAL - LEAVE EMPTY TO USE DEFAULT BEHAVIOR ***")
+    ws_weights.merge_cells(f'A2:{openpyxl.utils.get_column_letter(2 + len(all_techs))}2')
+    ws_weights.cell(2, 1).font = Font(bold=True, size=11, color="FF0000")
+
+    # Default behavior explanation
+    ws_weights.cell(3, 1, "DEFAULT BEHAVIOR (when this sheet is empty):")
+    ws_weights.merge_cells(f'A3:{openpyxl.utils.get_column_letter(2 + len(all_techs))}3')
+    ws_weights.cell(3, 1).font = Font(bold=True, size=10)
+
+    default_explanation = [
+        "  The renewable % target is distributed PROPORTIONALLY based on each technology's share in OLADE base year data.",
+        "  Example: If OLADE shows HYD=60%, SPV=25%, WND=10%, GEO=3%, BIO=2% and you set 70% renewable target:",
+        "    -> HYD gets 70% x (60/100) = 42%, SPV gets 70% x (25/100) = 17.5%, etc.",
+        "  Non-renewable technologies are also distributed proportionally within the remaining (1 - renewable%) share.",
+    ]
+    row_start = 4
+    for i, line in enumerate(default_explanation):
+        ws_weights.cell(row_start + i, 1, line)
+        ws_weights.merge_cells(f'A{row_start + i}:{openpyxl.utils.get_column_letter(2 + len(all_techs))}{row_start + i}')
+        ws_weights.cell(row_start + i, 1).font = Font(size=9)
+
+    # Headers row
+    header_row = 9
+    weights_header_fill_renew = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Green for renewables
+    weights_header_fill_nonrenew = PatternFill(start_color="C65911", end_color="C65911", fill_type="solid")  # Orange for non-renewables
+    weights_header_font = Font(bold=True, color="FFFFFF")
+
+    # Fixed columns
+    ws_weights.cell(header_row, 1, "Country").fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws_weights.cell(header_row, 1).font = weights_header_font
+    ws_weights.cell(header_row, 1).border = border_style
+    ws_weights.cell(header_row, 1).alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_weights.cell(header_row, 2, "Scenario").fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws_weights.cell(header_row, 2).font = weights_header_font
+    ws_weights.cell(header_row, 2).border = border_style
+    ws_weights.cell(header_row, 2).alignment = Alignment(horizontal="center", vertical="center")
+
+    # Technology columns
+    for col_idx, tech in enumerate(all_techs, 3):
+        cell = ws_weights.cell(header_row, col_idx, tech)
+        if tech in renewable_techs:
+            cell.fill = weights_header_fill_renew
+        else:
+            cell.fill = weights_header_fill_nonrenew
+        cell.font = weights_header_font
+        cell.border = border_style
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws_weights.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 8
+
+    # Add subheader for renewable/non-renewable grouping
+    ws_weights.cell(header_row - 1, 3, "RENEWABLE")
+    ws_weights.merge_cells(f'C{header_row - 1}:G{header_row - 1}')
+    ws_weights.cell(header_row - 1, 3).fill = weights_header_fill_renew
+    ws_weights.cell(header_row - 1, 3).font = weights_header_font
+    ws_weights.cell(header_row - 1, 3).alignment = Alignment(horizontal="center")
+
+    ws_weights.cell(header_row - 1, 8, "NON-RENEWABLE")
+    ws_weights.merge_cells(f'H{header_row - 1}:L{header_row - 1}')
+    ws_weights.cell(header_row - 1, 8).fill = weights_header_fill_nonrenew
+    ws_weights.cell(header_row - 1, 8).font = weights_header_font
+    ws_weights.cell(header_row - 1, 8).alignment = Alignment(horizontal="center")
+
+    # Pre-populate rows for each country+scenario combination
+    row_idx = header_row + 1
+    for country in countries_list:
+        for scenario in scenarios:
+            ws_weights.cell(row_idx, 1, country).border = border_style
+            ws_weights.cell(row_idx, 1).alignment = Alignment(horizontal="center")
+            ws_weights.cell(row_idx, 2, scenario).border = border_style
+            ws_weights.cell(row_idx, 2).alignment = Alignment(horizontal="center")
+            # Weight columns - leave empty for default (proportional to OLADE)
+            for col_idx in range(3, 3 + len(all_techs)):
+                ws_weights.cell(row_idx, col_idx).border = border_style
+                ws_weights.cell(row_idx, col_idx).number_format = '0.00'
+            row_idx += 1
+
+    # Add detailed notes at the bottom
+    note_row = row_idx + 2
+    ws_weights.cell(note_row, 1, "WHEN TO USE THIS SHEET:")
+    ws_weights.cell(note_row, 1).font = Font(bold=True, size=10)
+    note_row += 1
+
+    notes = [
+        "Only fill this sheet if you want to OVERRIDE the default proportional distribution.",
+        "For example, if you want Solar to grow faster than its historical proportion suggests.",
+        "",
+        "RULES FOR WEIGHTS:",
+        "  - Renewable weights (HYD+SPV+WND+GEO+BIO) must sum to 1.0",
+        "  - Non-renewable weights (COA+PET+NGS+URN+OIL) must sum to 1.0",
+        "  - The renewable % from Renewability_Targets determines how much goes to each group",
+        "",
+        "TECHNOLOGY CODES (same as OLADE sources):",
+        "  RENEWABLE: HYD=Hidroelectrica, SPV=Solar, WND=Eolica, GEO=Geotermica, BIO=Biomasa",
+        "  NON-RENEWABLE: COA=Carbon, PET=Diesel, NGS=Gas natural, URN=Nuclear, OIL=Fuel oil+Bunker",
+        "",
+        "EXAMPLE:",
+        "  If Renewability_Targets says 60% renewable for 2030, and you set weights:",
+        "    HYD=0.40, SPV=0.35, WND=0.20, GEO=0.03, BIO=0.02 (sum=1.0)",
+        "    COA=0.10, PET=0.15, NGS=0.60, URN=0.10, OIL=0.05 (sum=1.0)",
+        "  Then for 2030: HYD=60%x0.40=24%, SPV=60%x0.35=21%, NGS=40%x0.60=24%, etc.",
+    ]
+    for note in notes:
+        ws_weights.cell(note_row, 1, note)
+        ws_weights.cell(note_row, 1).font = Font(size=9)
+        ws_weights.merge_cells(f'A{note_row}:{openpyxl.utils.get_column_letter(2 + len(all_techs))}{note_row}')
+        note_row += 1
+
+    # Freeze panes
+    ws_weights.freeze_panes = f'C{header_row + 1}'
+
+    # =========================================================================
+    # Create Documentation sheet for Activity Limits validation
+    # =========================================================================
+    ws_doc = wb.create_sheet("Documentation", 5)
+    ws_doc.column_dimensions['A'].width = 100
+    for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H']:
+        ws_doc.column_dimensions[col].width = 12
+
+    # Title
+    ws_doc['A1'] = 'ACTIVITY LIMITS CALCULATION & VALIDATION'
+    ws_doc['A1'].font = Font(size=16, bold=True, color='FFFFFF')
+    ws_doc['A1'].fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
+    ws_doc['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws_doc.merge_cells('A1:H1')
+    ws_doc.row_dimensions[1].height = 25
+
+    # Section 1: Formula
+    doc_row = 3
+    ws_doc[f'A{doc_row}'] = '1. BASE FORMULA'
+    ws_doc[f'A{doc_row}'].font = Font(size=12, bold=True, color='FFFFFF')
+    ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = 'ActivityLimit = Generation_OLADE × (1 + growth_rate × (year - ref_year)) × Share_technology'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Where:'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • Generation_OLADE: Total electricity generation for country in base year (PJ)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • growth_rate: Annual growth rate (e.g., 0.02 = 2%)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • ref_year: OLADE reference year (2023)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • Share_technology: Technology share (from Shares_Total or Renewability_Targets)'
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'UpperLimit = LowerLimit + 0.1'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+
+    # Section 2: Validation 1
+    doc_row += 3
+    ws_doc[f'A{doc_row}'] = '2. INDIVIDUAL VALIDATION (during calculation)'
+    ws_doc[f'A{doc_row}'].font = Font(size=12, bold=True, color='FFFFFF')
+    ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = 'Constraint: LowerLimit ≤ MaxPossibleActivity'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'MaxPossibleActivity = Capacity × CapacityToActivityUnit × AvailabilityFactor × CapacityFactor'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Where Capacity = min(TotalAnnualMaxCapacity, ResidualCapacity)'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Validation Logic:'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  IF MaxPossibleActivity ≤ 0:'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → No capacity available'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → LowerLimit = 0'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → UpperLimit = 0.1'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → Value is CAPPED'
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = '  ELSE:'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → MaxAllowed = MaxPossibleActivity - 0.05  (safety margin)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '    → IF LowerLimit > MaxAllowed:'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '         → LowerLimit = max(0, MaxAllowed)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '         → UpperLimit = LowerLimit + 0.1'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '         → Value is CAPPED'
+
+    # Section 3: Validation 2
+    doc_row += 3
+    ws_doc[f'A{doc_row}'] = '3. UNIVERSAL VALIDATION (after all calculations)'
+    ws_doc[f'A{doc_row}'].font = Font(size=12, bold=True, color='FFFFFF')
+    ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = 'Applied ONLY to these 10 PWR generation technologies:'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  URN (Nuclear), NGS (Natural Gas), COA (Coal), HYD (Hydro), GEO (Geothermal)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  WON (Wind), SPV (Solar), BIO (Biomass), PET (Petroleum/Diesel), OIL (Fuel Oil)'
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Excludes: Storage (SDS, LDS), Backup (BCK), Transmission (TRN)'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Purpose: Re-verify that NO technology has LowerLimit > MaxPossibleActivity'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = 'This catches manual errors from the Editor sheet and ensures model feasibility.'
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    # Section 4: Example
+    doc_row += 3
+    ws_doc[f'A{doc_row}'] = '4. NUMERICAL EXAMPLE'
+    ws_doc[f'A{doc_row}'].font = Font(size=12, bold=True, color='FFFFFF')
+    ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = 'Country: Argentina | Technology: PWRHYDARGXX (Hydro) | Year: 2030'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Input Data:'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True)
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • Generation_OLADE (2023) = 100 PJ'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • Growth rate = 2% (0.02)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • Share_HYD = 40%'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • ResidualCapacity = 2.5 GW'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • TotalAnnualMaxCapacity = 3.0 GW'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • CapacityToActivityUnit = 31.536'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • AvailabilityFactor = 0.95'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  • CapacityFactor = 0.28'
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Step 1: Calculate base LowerLimit'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True, underline='single')
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  years_diff = 2030 - 2023 = 7'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  Generation_2030 = 100 × (1 + 0.02 × 7) = 114 PJ'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  LowerLimit = 114 × 0.40 = 45.6 PJ'
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Step 2: Validate against capacity'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True, underline='single')
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  Capacity = min(2.5, 3.0) = 2.5 GW  (ResidualCapacity is more restrictive)'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  MaxPossibleActivity = 2.5 × 31.536 × 0.95 × 0.28 = 20.95 PJ'
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  MaxAllowed = 20.95 - 0.05 = 20.90 PJ'
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Step 3: Apply validation'
+    ws_doc[f'A{doc_row}'].font = Font(bold=True, underline='single')
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  LowerLimit (45.6) > MaxAllowed (20.90)  →  CAPPED!'
+    ws_doc[f'A{doc_row}'].font = Font(color='FF0000', bold=True)
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  Final LowerLimit = 20.90 PJ'
+    ws_doc[f'A{doc_row}'].font = Font(color='00B050', bold=True)
+    doc_row += 1
+    ws_doc[f'A{doc_row}'] = '  Final UpperLimit = 20.90 + 0.1 = 21.00 PJ'
+    ws_doc[f'A{doc_row}'].font = Font(color='00B050', bold=True)
+
+    doc_row += 2
+    ws_doc[f'A{doc_row}'] = 'Note: This indicates additional capacity investment is needed to meet the demand target.'
+    ws_doc[f'A{doc_row}'].font = Font(italic=True)
+    ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
+    ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
 
     # Save the workbook
     wb.save(output_path)

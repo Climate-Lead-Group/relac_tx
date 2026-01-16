@@ -584,8 +584,7 @@ def concatenate_all_scenarios(HERE, params):
         
         path_comb = os.path.join(HERE,params['prefix_final_files'] + combined_name)
         df_combined.to_csv(path_comb, index=False)
-        dated = path_comb.replace('.csv', f'_{today}.csv')
-        df_combined.to_csv(dated, index=False)
+        # Note: dated copy with annualized data will be created after annualization (if enabled)
     else:
         path_comb = None
 
@@ -798,8 +797,8 @@ if __name__ == "__main__":
 
                 print(f'✅ Capital investment annualization completed successfully.')
 
-                # Copy the annualized file with today's date
-                today = datetime.now().strftime("%Y%m%d")
+                # Create dated copy with annualized data
+                today = date.today().isoformat()  # 'YYYY-MM-DD'
                 dated_combined = combined_file_path.replace('.csv', f'_{today}.csv')
                 shutil.copy2(combined_file_path, dated_combined)
                 print(f'✅ Annualized file copied to: {dated_combined}')
@@ -815,6 +814,14 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
             print('#'*80)
+    else:
+        # If annualization is disabled, still create dated copy of combined file
+        combined_file_path = os.path.join(HERE, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
+        if os.path.exists(combined_file_path):
+            today = date.today().isoformat()  # 'YYYY-MM-DD'
+            dated_combined = combined_file_path.replace('.csv', f'_{today}.csv')
+            shutil.copy2(combined_file_path, dated_combined)
+            print(f'✅ Combined file copied to: {dated_combined}')
     ###############################################################################################
 
 
