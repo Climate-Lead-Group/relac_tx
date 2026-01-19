@@ -58,7 +58,8 @@ def read_olade_config(editor_path):
 
     Returns:
         dict with config: {enabled, petroleum_split_mode, demand_enabled, activity_lower_limit_enabled,
-                          activity_upper_limit_enabled, demand_growth_rates, renewability_targets, technology_weights}
+                          activity_upper_limit_enabled, demand_growth_rates, scenarios_demand_adjustments,
+                          renewability_targets, technology_weights}
     """
     wb = openpyxl.load_workbook(editor_path, data_only=True)
 
@@ -71,6 +72,7 @@ def read_olade_config(editor_path):
             'activity_lower_limit_enabled': False,
             'activity_upper_limit_enabled': False,
             'demand_growth_rates': {},
+            'scenarios_demand_adjustments': {},
             'renewability_targets': {},
             'technology_weights': {}
         }
@@ -145,6 +147,47 @@ def read_olade_config(editor_path):
                     'targets': targets
                 }
 
+    # Read scenario-specific demand growth adjustments from Scenarios_Demand_Growth sheet
+    # Structure: {(country, scenario): {year: adjustment_percentage}}
+    scenarios_demand_adjustments = {}
+    if 'Scenarios_Demand_Growth' in wb.sheetnames:
+        ws_scen_demand = wb['Scenarios_Demand_Growth']
+        # Get year columns from header (row 5)
+        year_cols = {}
+        for col_idx in range(3, ws_scen_demand.max_column + 1):
+            header = ws_scen_demand.cell(5, col_idx).value
+            if header and str(header).isdigit():
+                year_cols[int(header)] = col_idx
+
+        # Data starts at row 6
+        for row_idx in range(6, ws_scen_demand.max_row + 1):
+            country = ws_scen_demand.cell(row_idx, 1).value
+            scenario = ws_scen_demand.cell(row_idx, 2).value
+
+            if not country or not scenario:
+                continue
+
+            country_str = str(country).strip().upper()
+            scenario_str = str(scenario).strip()
+
+            adjustments = {}
+            for year, col_idx in year_cols.items():
+                value = ws_scen_demand.cell(row_idx, col_idx).value
+                if value is not None:
+                    try:
+                        # Value is stored as percentage (e.g., 0.05 for 5%)
+                        # Convert to decimal if needed
+                        adj_pct = float(value)
+                        # If value > 1, assume it's like 5 instead of 0.05
+                        if abs(adj_pct) > 1:
+                            adj_pct = adj_pct / 100.0
+                        adjustments[year] = adj_pct
+                    except (ValueError, TypeError):
+                        pass
+
+            if adjustments:  # Only add if there are any adjustments defined
+                scenarios_demand_adjustments[(country_str, scenario_str)] = adjustments
+
     # Read technology weights from Technology_Weights sheet (formerly Renewable_Weights)
     # Structure: {(country, scenario): {'renewable': {'HYD': w, ...}, 'non_renewable': {'COA': w, ...}}}
     technology_weights = {}
@@ -213,6 +256,7 @@ def read_olade_config(editor_path):
         'activity_lower_limit_enabled': activity_lower_limit_enabled,
         'activity_upper_limit_enabled': activity_upper_limit_enabled,
         'demand_growth_rates': demand_growth_rates,
+        'scenarios_demand_adjustments': scenarios_demand_adjustments,
         'renewability_targets': renewability_targets,
         'technology_weights': technology_weights
     }
@@ -1351,6 +1395,17 @@ class SecondaryTechsUpdater:
                             # Linear growth: Demand(year) = Demand(ref_year) × (1 + rate × (year - ref_year))
                             years_diff = year - ref_year
                             demand_year = base_demand_pj * (1 + growth_rate * years_diff)
+
+                            # Apply scenario-specific demand adjustment if defined
+                            # Formula: Demand(scenario, year) = Base_Demand(year) × (1 + adjustment_percentage)
+                            adjustments_dict = self.olade_config.get('scenarios_demand_adjustments', {})
+                            adjustment_key = (country_code, scenario)
+                            if adjustment_key in adjustments_dict:
+                                year_adjustments = adjustments_dict[adjustment_key]
+                                if year in year_adjustments:
+                                    adjustment_pct = year_adjustments[year]
+                                    demand_year = demand_year * (1 + adjustment_pct)
+
                             demand_year = round(demand_year, 2)
 
                             ws.cell(row_idx, year_col_map[year], demand_year)
@@ -1401,6 +1456,16 @@ class SecondaryTechsUpdater:
                             if year in year_col_map:
                                 years_diff = year - ref_year
                                 demand_year = base_demand_pj * (1 + growth_rate * years_diff)
+
+                                # Apply scenario-specific demand adjustment if defined
+                                adjustments_dict = self.olade_config.get('scenarios_demand_adjustments', {})
+                                adjustment_key = (country_code, scenario)
+                                if adjustment_key in adjustments_dict:
+                                    year_adjustments = adjustments_dict[adjustment_key]
+                                    if year in year_adjustments:
+                                        adjustment_pct = year_adjustments[year]
+                                        demand_year = demand_year * (1 + adjustment_pct)
+
                                 demand_year = round(demand_year, 2)
 
                                 ws.cell(new_row, year_col_map[year], demand_year)

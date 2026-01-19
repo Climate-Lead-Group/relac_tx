@@ -13,6 +13,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 import sys
 from pathlib import Path
 from datetime import datetime
+import yaml
 
 # OLADE country name to ISO-3 code mapping
 OLADE_COUNTRY_MAPPING = {
@@ -57,6 +58,26 @@ OLADE_TECH_MAPPING = {
     # Note: BIO is special - sum of 'Biogás' + 'Biomasa sólida'
     # Note: 'Petróleo y derivados' pending confirmation
 }
+
+
+def read_base_scenario():
+    """
+    Read base_scenario from MOMF_T1_AB.yaml
+
+    Returns:
+        str: The base scenario name (default: 'BAU')
+    """
+    yaml_path = Path(__file__).parent / "MOMF_T1_AB.yaml"
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            base_scenario = config.get('base_scenario', 'BAU')
+            print(f"Base scenario from YAML: {base_scenario}")
+            return base_scenario
+    except Exception as e:
+        print(f"Warning: Could not read base_scenario from YAML: {e}")
+        print("Using default base_scenario: BAU")
+        return 'BAU'
 
 
 def collect_data_from_all_scenarios():
@@ -952,9 +973,108 @@ def create_editor_template(data, output_path):
     ws_weights.freeze_panes = f'C{header_row + 1}'
 
     # =========================================================================
-    # Create Documentation sheet for Activity Limits validation
+    # Create Scenarios_Demand_Growth sheet (after Demand_Growth, before Renewability_Targets)
     # =========================================================================
-    ws_doc = wb.create_sheet("Documentation", 5)
+    # Read base_scenario from YAML to exclude it from this sheet
+    base_scenario = read_base_scenario()
+    scenarios_for_demand = [s for s in scenarios if s != base_scenario]
+
+    ws_scenarios_demand = wb.create_sheet("Scenarios_Demand_Growth", 3)
+    ws_scenarios_demand.column_dimensions['A'].width = 15
+    ws_scenarios_demand.column_dimensions['B'].width = 15
+
+    # OLADE base year is 2023 - filter years to start from 2023
+    olade_base_year = 2023
+    demand_adj_years = [y for y in data['years'] if y >= olade_base_year]
+
+    # Title
+    cell = ws_scenarios_demand.cell(1, 1, "SCENARIO-SPECIFIC DEMAND GROWTH ADJUSTMENTS")
+    cell.font = Font(size=14, bold=True, color="366092")
+    ws_scenarios_demand.merge_cells(f'A1:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}1')
+
+    # Instructions
+    ws_scenarios_demand.cell(2, 1, f"Define percentage adjustments to electricity demand for each scenario (excluding base scenario '{base_scenario}').")
+    ws_scenarios_demand.merge_cells(f'A2:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}2')
+    ws_scenarios_demand.cell(2, 1).font = Font(italic=True)
+
+    ws_scenarios_demand.cell(3, 1, "Each percentage is applied INDEPENDENTLY to the base demand of that year (not cumulative).")
+    ws_scenarios_demand.merge_cells(f'A3:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}3')
+    ws_scenarios_demand.cell(3, 1).font = Font(italic=True, bold=True, size=9)
+
+    # Headers
+    scenarios_demand_header_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
+    scenarios_demand_header_font = Font(bold=True, color="FFFFFF")
+
+    scenarios_demand_headers = ['Country', 'Scenario'] + [str(year) for year in demand_adj_years]
+    for col_idx, header in enumerate(scenarios_demand_headers, 1):
+        cell = ws_scenarios_demand.cell(5, col_idx, header)
+        cell.fill = scenarios_demand_header_fill
+        cell.font = scenarios_demand_header_font
+        cell.border = border_style
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        if col_idx > 2:
+            ws_scenarios_demand.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 8
+
+    # Pre-populate rows for each country+scenario combination (excluding base scenario)
+    row_idx = 6
+    for country in countries_list:
+        for scenario in scenarios_for_demand:
+            ws_scenarios_demand.cell(row_idx, 1, country).border = border_style
+            ws_scenarios_demand.cell(row_idx, 1).alignment = Alignment(horizontal="center")
+            ws_scenarios_demand.cell(row_idx, 2, scenario).border = border_style
+            ws_scenarios_demand.cell(row_idx, 2).alignment = Alignment(horizontal="center")
+            # Year columns - default 0%
+            for col_idx in range(3, 3 + len(demand_adj_years)):
+                ws_scenarios_demand.cell(row_idx, col_idx, 0).border = border_style
+                ws_scenarios_demand.cell(row_idx, col_idx).number_format = '0.00%'
+                ws_scenarios_demand.cell(row_idx, col_idx).alignment = Alignment(horizontal="center")
+            row_idx += 1
+
+    # Add detailed notes at the bottom
+    note_row = row_idx + 1
+    ws_scenarios_demand.cell(note_row, 1, "HOW IT WORKS:")
+    ws_scenarios_demand.merge_cells(f'A{note_row}:C{note_row}')
+    ws_scenarios_demand.cell(note_row, 1).font = Font(bold=True, size=10)
+    note_row += 1
+
+    notes = [
+        f"Base Scenario: '{base_scenario}' uses the demand growth rates from the 'Demand_Growth' sheet",
+        "Other Scenarios: Apply additional percentage adjustments defined in this sheet",
+        "",
+        "CALCULATION METHOD (Independent, Non-Cumulative):",
+        f"  Demand(scenario, year) = Base_Demand({base_scenario}, year) × (1 + adjustment_percentage)",
+        "",
+        "EXAMPLE:",
+        f"  If {base_scenario} demand in 2030 is 100 PJ and you set +5% for NDC in 2030:",
+        "    → NDC demand in 2030 = 100 × (1 + 0.05) = 105 PJ",
+        "  If you set -3% for 2035:",
+        f"    → NDC demand in 2035 = Base_Demand({base_scenario}, 2035) × (1 - 0.03)",
+        "  Each year's percentage is independent and applies to that year's base demand only",
+        "",
+        "USE CASES:",
+        "  - Electric vehicle adoption scenarios (increases demand)",
+        "  - Energy efficiency improvements (decreases demand)",
+        "  - Different economic growth assumptions",
+        "",
+        "NOTES:",
+        "  - Positive percentages increase demand, negative percentages decrease demand",
+        "  - Default is 0% (same as base scenario)",
+        f"  - Base scenario '{base_scenario}' is excluded from this sheet",
+    ]
+    for note in notes:
+        ws_scenarios_demand.cell(note_row, 1, note)
+        ws_scenarios_demand.cell(note_row, 1).font = Font(size=9)
+        ws_scenarios_demand.merge_cells(f'A{note_row}:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}{note_row}')
+        note_row += 1
+
+    # Freeze panes
+    ws_scenarios_demand.freeze_panes = 'C6'
+
+    # =========================================================================
+    # Create Documentation sheet for Activity Limits validation (moved after Instructions)
+    # =========================================================================
+    # This will be created after all other sheets, then moved to index 2 (after Instructions)
+    ws_doc = wb.create_sheet("Documentation")
     ws_doc.column_dimensions['A'].width = 100
     for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H']:
         ws_doc.column_dimensions[col].width = 12
@@ -1143,6 +1263,14 @@ def create_editor_template(data, output_path):
     ws_doc[f'A{doc_row}'].font = Font(italic=True)
     ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
     ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
+
+    # Reorder sheets: Documentation should come after Instructions (index 2)
+    # Current order after creation: Instructions(0), OLADE_Config(1), Demand_Growth(2),
+    # Scenarios_Demand_Growth(3), Renewability_Targets(4), Technology_Weights(5),
+    # Editor, _hidden sheets, Documentation(last)
+    # Move Documentation to index 2 (after Instructions, before OLADE_Config)
+    doc_sheet_index = wb.sheetnames.index('Documentation')
+    wb.move_sheet('Documentation', offset=-(doc_sheet_index - 2))
 
     # Save the workbook
     wb.save(output_path)
