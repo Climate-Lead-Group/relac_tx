@@ -428,6 +428,13 @@ def create_editor_template(data, output_path):
     ws_olade.cell(9, 2, "NO").border = border_style
     dv_yes_no.add('B9')
 
+    # ActivityLowerLimitMethod
+    ws_olade.cell(10, 1, "ActivityLowerLimitMethod").border = border_style
+    ws_olade.cell(10, 2, "CapacityBased").border = border_style
+    dv_method = DataValidation(type="list", formula1='"CapacityBased,ShareBased"', allow_blank=False)
+    ws_olade.add_data_validation(dv_method)
+    dv_method.add('B10')
+
     # Add detailed descriptions with formulas and data sources
     ws_olade.cell(11, 1, "DETAILED DESCRIPTIONS AND FORMULAS")
     ws_olade.cell(11, 1).font = Font(bold=True, size=12, color="366092")
@@ -582,6 +589,52 @@ def create_editor_template(data, output_path):
         current_row += 1
     current_row += 1
 
+    # ActivityLowerLimitMethod
+    ws_olade.cell(current_row, 1, "6. ActivityLowerLimitMethod")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    method_desc = [
+        "Defines the calculation method for TotalTechnologyAnnualActivityLowerLimit.",
+        "Only applies when ActivityLowerLimitFromOLADE = YES.",
+        "",
+        "OPTIONS:",
+        "  - 'CapacityBased' (DEFAULT): Calculate LowerLimit based on maximum activity from capacity",
+        "    Formula: LowerLimit = min(Generation_target × Share, MaxActivity_from_capacity)",
+        "    Where: MaxActivity = (ResidualCapacity + TotalAnnualMaxCapacityInvestment) × CapacityToActivityUnit × AvailabilityFactor × ΣCapacityFactor",
+        "",
+        "  - 'ShareBased': Calculate LowerLimit to maintain technology shares, adjusting CapacityFactor",
+        "    Step 1: Calculate target LowerLimit from shares:",
+        "            LowerLimit_target = Generation_total × (1 + growth × years) × Share_technology",
+        "    Step 2: Calculate current max activity from minimum capacity:",
+        "            MaxActivity_current = TotalAnnualMinCapacityInvestment × CapacityToActivityUnit × AvailabilityFactor × ΣCapacityFactor",
+        "    Step 3: If LowerLimit_target > MaxActivity_current, adjust CapacityFactor:",
+        "            Adjustment_Factor = LowerLimit_target / MaxActivity_current",
+        "            New_CF = Current_CF × Adjustment_Factor",
+        "    Step 4: Normalize all adjusted CapacityFactors to ensure total share = 100%",
+        "    Step 5: Cap individual CapacityFactors to maximum 1.0",
+        "    Step 6: Set final LowerLimit based on adjusted CapacityFactors",
+        "",
+        "REQUIREMENTS FOR ShareBased:",
+        "  - ActivityLowerLimitFromOLADE must be YES",
+        "  - TotalAnnualMinCapacityInvestment must be > 0 for target technologies",
+        "  - Renewability_Targets sheet must define technology shares",
+        "  - Technology_Weights sheet (optional) for custom distribution within renewable/non-renewable groups",
+        "",
+        "NOTES:",
+        "  - ShareBased method modifies CapacityFactor values in the Capacities sheet",
+        "  - All timeslices (S1D1, S1D2, etc.) are adjusted proportionally",
+        "  - Normalization ensures shares sum to 100% even when individual CFs are capped at 1.0",
+        "  - Only technologies with TotalAnnualMinCapacityInvestment > 0 are adjusted",
+    ]
+    for line in method_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
     # Technology mapping section
     ws_olade.cell(current_row, 1, "TECHNOLOGY MAPPING (OLADE -> Model)")
     ws_olade.cell(current_row, 1).font = Font(bold=True, size=11, color="366092")
@@ -646,7 +699,10 @@ def create_editor_template(data, output_path):
         ["", ""],
         ["- If ActivityLowerLimitFromOLADE = YES in OLADE_Config sheet:", ""],
         ["  * The script will populate TotalTechnologyAnnualActivityLowerLimit in A-O_Parametrization.xlsx", ""],
-        ["  * Formula: Generation_OLADE × (1 + growth_rate × (year - 2023)) × Share_technology", ""],
+        ["  * Two calculation methods available (ActivityLowerLimitMethod):", ""],
+        ["    - CapacityBased: Uses max activity from capacity (default)", ""],
+        ["    - ShareBased: Maintains technology shares by adjusting CapacityFactor", ""],
+        ["  * Formula (CapacityBased): Generation_OLADE × (1 + growth_rate × (year - 2023)) × Share_technology", ""],
         ["  * Shares come from 'Shares_Total.xlsx' (scenario-specific by country and technology)", ""],
         ["  * Uses the same growth rates as DemandFromOLADE (from 'Demand_Growth' sheet)", ""],
         ["", ""],

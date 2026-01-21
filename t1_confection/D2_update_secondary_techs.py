@@ -58,8 +58,8 @@ def read_olade_config(editor_path):
 
     Returns:
         dict with config: {enabled, petroleum_split_mode, demand_enabled, activity_lower_limit_enabled,
-                          activity_upper_limit_enabled, demand_growth_rates, scenarios_demand_adjustments,
-                          renewability_targets, technology_weights}
+                          activity_upper_limit_enabled, activity_lower_limit_method, demand_growth_rates,
+                          scenarios_demand_adjustments, renewability_targets, technology_weights}
     """
     wb = openpyxl.load_workbook(editor_path, data_only=True)
 
@@ -71,6 +71,7 @@ def read_olade_config(editor_path):
             'demand_enabled': False,
             'activity_lower_limit_enabled': False,
             'activity_upper_limit_enabled': False,
+            'activity_lower_limit_method': 'CapacityBased',
             'demand_growth_rates': {},
             'scenarios_demand_adjustments': {},
             'renewability_targets': {},
@@ -81,12 +82,13 @@ def read_olade_config(editor_path):
 
     # Read configuration values
     # Row 5 = ResidualCapacitiesFromOLADE, Row 6 = PetroleumSplitMode, Row 7 = DemandFromOLADE
-    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE
+    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE, Row 10 = ActivityLowerLimitMethod
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
     petroleum_split_mode = str(ws['B6'].value) if ws['B6'].value else 'Split_PET_OIL'
     demand_enabled = str(ws['B7'].value).upper() == 'YES' if ws['B7'].value else False
     activity_lower_limit_enabled = str(ws['B8'].value).upper() == 'YES' if ws['B8'].value else False
     activity_upper_limit_enabled = str(ws['B9'].value).upper() == 'YES' if ws['B9'].value else False
+    activity_lower_limit_method = str(ws['B10'].value) if ws['B10'].value else 'CapacityBased'
 
     # Read demand growth rates from Demand_Growth sheet
     demand_growth_rates = {}
@@ -255,6 +257,7 @@ def read_olade_config(editor_path):
         'demand_enabled': demand_enabled,
         'activity_lower_limit_enabled': activity_lower_limit_enabled,
         'activity_upper_limit_enabled': activity_upper_limit_enabled,
+        'activity_lower_limit_method': activity_lower_limit_method,
         'demand_growth_rates': demand_growth_rates,
         'scenarios_demand_adjustments': scenarios_demand_adjustments,
         'renewability_targets': renewability_targets,
@@ -1704,6 +1707,317 @@ class SecondaryTechsUpdater:
 
         return result
 
+    def adjust_capacity_factors_for_share_based_limits(self, wb, scenario, country_code, tech_shares,
+                                                         all_years, ref_year, base_generation_pj, growth_rate):
+        """
+        Adjust CapacityFactor values in the Capacities sheet to meet share-based LowerLimits.
+
+        This method:
+        1. Calculates target LowerLimit based on shares
+        2. Checks if current CapacityFactor allows meeting that target with TotalAnnualMinCapacityInvestment
+        3. Adjusts CapacityFactor proportionally if needed
+        4. Normalizes all adjustments to ensure total share = 100%
+        5. Caps individual CapacityFactors to maximum 1.0
+
+        Args:
+            wb: openpyxl workbook
+            scenario: scenario name
+            country_code: ISO3 country code
+            tech_shares: dict {tech_type: {year: share}}
+            all_years: list of years
+            ref_year: OLADE reference year
+            base_generation_pj: base generation in PJ
+            growth_rate: annual growth rate
+
+        Returns:
+            dict: {tech_str: {year: adjusted_lower_limit}}
+        """
+        if 'Secondary Techs' not in wb.sheetnames or 'Capacities' not in wb.sheetnames:
+            self.log("  ✗ Required sheets not found for ShareBased method", "WARNING")
+            return {}
+
+        ws_secondary = wb['Secondary Techs']
+        ws_capacities = wb['Capacities']
+
+        # Build indices for Secondary Techs sheet
+        year_col_map = {}
+        headers = [cell.value for cell in ws_secondary[1]]
+        for col_idx, header in enumerate(headers, 1):
+            if header and str(header).isdigit():
+                try:
+                    year = int(header)
+                    if 2000 <= year <= 2100:
+                        year_col_map[year] = col_idx
+                except:
+                    pass
+
+        # Find TotalAnnualMinCapacityInvestment rows (Parameter.ID = 7)
+        min_capacity_rows = {}  # {tech_str: row_idx}
+        availability_rows = {}  # {tech_str: row_idx}
+
+        for row_idx in range(2, ws_secondary.max_row + 1):
+            tech_code = ws_secondary.cell(row_idx, 2).value
+            param_id = ws_secondary.cell(row_idx, 4).value
+            parameter = ws_secondary.cell(row_idx, 5).value
+
+            if tech_code:
+                tech_str = str(tech_code).strip().upper()
+                if param_id == 7 or (parameter and str(parameter).strip() == 'TotalAnnualMinCapacityInvestment'):
+                    min_capacity_rows[tech_str] = row_idx
+                elif parameter and str(parameter).strip() == 'AvailabilityFactor':
+                    availability_rows[tech_str] = row_idx
+
+        # Read CapacityToActivityUnit from Fixed Horizon Parameters
+        capacity_to_activity = {}
+        if 'Fixed Horizon Parameters' in wb.sheetnames:
+            ws_fixed = wb['Fixed Horizon Parameters']
+            for row_idx in range(2, ws_fixed.max_row + 1):
+                tech_code = ws_fixed.cell(row_idx, 2).value
+                parameter = ws_fixed.cell(row_idx, 6).value
+                value = ws_fixed.cell(row_idx, 8).value
+                if tech_code and parameter and value:
+                    tech_str = str(tech_code).strip().upper()
+                    if str(parameter).strip() == 'CapacityToActivityUnit':
+                        try:
+                            capacity_to_activity[tech_str] = float(value)
+                        except (ValueError, TypeError):
+                            pass
+
+        # Build index for Capacities sheet
+        # Structure: Timeslices | Tech.ID | Tech | Tech.Name | Parameter.ID | Parameter | Unit | Projection.Mode | Projection.Parameter | Year columns...
+        cap_year_col_map = {}
+        cap_headers = [cell.value for cell in ws_capacities[1]]
+        for col_idx, header in enumerate(cap_headers, 1):
+            if header and str(header).isdigit():
+                try:
+                    year = int(header)
+                    if 2000 <= year <= 2100:
+                        cap_year_col_map[year] = col_idx
+                except:
+                    pass
+
+        # Find CapacityFactor rows for each technology (Parameter.ID = 6)
+        # Group by technology and timeslice
+        capacity_factor_rows = {}  # {tech_str: {timeslice: row_idx}}
+        for row_idx in range(2, ws_capacities.max_row + 1):
+            timeslice = ws_capacities.cell(row_idx, 1).value
+            tech_code = ws_capacities.cell(row_idx, 2).value
+            param_id = ws_capacities.cell(row_idx, 5).value
+            parameter = ws_capacities.cell(row_idx, 6).value
+
+            if tech_code and timeslice:
+                tech_str = str(tech_code).strip().upper()
+                timeslice_str = str(timeslice).strip()
+                if param_id == 6 or (parameter and str(parameter).strip() == 'CapacityFactor'):
+                    if tech_str not in capacity_factor_rows:
+                        capacity_factor_rows[tech_str] = {}
+                    capacity_factor_rows[tech_str][timeslice_str] = row_idx
+
+        # Read YearSplit values (proportion of year for each timeslice)
+        # These should be in Yearsplit sheet
+        yearsplit_values = {}  # {timeslice: proportion}
+        if 'Yearsplit' in wb.sheetnames:
+            ws_yearsplit = wb['Yearsplit']
+            for row_idx in range(2, ws_yearsplit.max_row + 1):
+                timeslice = ws_yearsplit.cell(row_idx, 1).value
+                value = ws_yearsplit.cell(row_idx, 5).value  # Assuming YearSplit is in column 5
+                if timeslice and value is not None:
+                    try:
+                        yearsplit_values[str(timeslice).strip()] = float(value)
+                    except (ValueError, TypeError):
+                        pass
+
+        # If no YearSplit data, use equal distribution across timeslices
+        if not yearsplit_values and capacity_factor_rows:
+            # Get all unique timeslices
+            all_timeslices = set()
+            for tech_timeslices in capacity_factor_rows.values():
+                all_timeslices.update(tech_timeslices.keys())
+            if all_timeslices:
+                equal_split = 1.0 / len(all_timeslices)
+                yearsplit_values = {ts: equal_split for ts in all_timeslices}
+
+        self.log(f"  ShareBased: Processing {country_code} with {len(min_capacity_rows)} technologies")
+
+        # Process each technology for each year
+        adjusted_limits = {}  # {tech_str: {year: lower_limit}}
+        adjustment_factors = {}  # {(tech_str, year): adjustment_factor}
+
+        for tech_type, year_shares in tech_shares.items():
+            tech_str = f"PWR{tech_type}{country_code}XX"
+
+            # Skip if no TotalAnnualMinCapacityInvestment defined
+            if tech_str not in min_capacity_rows:
+                continue
+
+            # Skip if no CapacityFactor data
+            if tech_str not in capacity_factor_rows:
+                continue
+
+            min_cap_row = min_capacity_rows[tech_str]
+            avail_row = availability_rows.get(tech_str)
+            c2a = capacity_to_activity.get(tech_str, 31.536)
+
+            if tech_str not in adjusted_limits:
+                adjusted_limits[tech_str] = {}
+
+            for year in all_years:
+                if year not in year_col_map or year not in cap_year_col_map:
+                    continue
+
+                share = year_shares.get(year, 0.0)
+                if share <= 0:
+                    continue
+
+                # Get TotalAnnualMinCapacityInvestment for this year
+                min_cap_value = ws_secondary.cell(min_cap_row, year_col_map[year]).value
+                if min_cap_value is None or float(min_cap_value) <= 0:
+                    continue
+
+                try:
+                    min_cap = float(min_cap_value)
+                except (ValueError, TypeError):
+                    continue
+
+                # Get AvailabilityFactor
+                avail = 1.0  # Default
+                if avail_row:
+                    avail_value = ws_secondary.cell(avail_row, year_col_map[year]).value
+                    if avail_value is not None:
+                        try:
+                            avail = float(avail_value)
+                        except (ValueError, TypeError):
+                            pass
+
+                # Calculate target LowerLimit based on shares
+                years_diff = year - ref_year
+                generation_year = base_generation_pj * (1 + growth_rate * years_diff)
+                target_lower_limit = generation_year * share
+
+                # Calculate current maximum activity from minimum capacity
+                # Sum all CapacityFactor * YearSplit for this technology
+                sum_cf_yearsplit = 0.0
+                cf_values = {}  # Store current CF values for later adjustment
+
+                for timeslice, cf_row_idx in capacity_factor_rows[tech_str].items():
+                    cf_value = ws_capacities.cell(cf_row_idx, cap_year_col_map[year]).value
+                    if cf_value is not None:
+                        try:
+                            cf = float(cf_value)
+                            yearsplit = yearsplit_values.get(timeslice, 0.0)
+                            sum_cf_yearsplit += cf * yearsplit
+                            cf_values[timeslice] = cf
+                        except (ValueError, TypeError):
+                            pass
+
+                # MaxActivity = MinCapacity × C2A × Avail × Σ(CF × YearSplit) × 8760
+                current_max_activity = min_cap * c2a * avail * sum_cf_yearsplit * 8760
+
+                # Calculate adjustment factor if needed
+                if current_max_activity > 0 and target_lower_limit > current_max_activity:
+                    adjustment_factor = target_lower_limit / current_max_activity
+                    adjustment_factors[(tech_str, year)] = adjustment_factor
+
+                    # Store the target (will be normalized later)
+                    adjusted_limits[tech_str][year] = target_lower_limit
+                else:
+                    # No adjustment needed
+                    adjusted_limits[tech_str][year] = min(target_lower_limit, current_max_activity)
+
+        # NORMALIZATION STEP
+        # For each year, normalize all adjustments to ensure total share = 100%
+        for year in all_years:
+            if year not in year_col_map or year not in cap_year_col_map:
+                continue
+
+            # Collect all technologies that need adjustment for this year
+            techs_to_adjust = []
+            total_requested_share = 0.0
+
+            for tech_type, year_shares in tech_shares.items():
+                tech_str = f"PWR{tech_type}{country_code}XX"
+                if (tech_str, year) in adjustment_factors:
+                    share = year_shares.get(year, 0.0)
+                    techs_to_adjust.append((tech_str, tech_type, share))
+                    total_requested_share += share
+
+            # Apply adjustments to CapacityFactor
+            if techs_to_adjust:
+                self.log(f"    Year {year}: Adjusting {len(techs_to_adjust)} technologies (total share: {total_requested_share:.2%})")
+
+                for tech_str, tech_type, share in techs_to_adjust:
+                    adjustment_factor = adjustment_factors.get((tech_str, year), 1.0)
+
+                    # Normalize the adjustment factor
+                    normalized_factor = adjustment_factor / total_requested_share if total_requested_share > 0 else 1.0
+
+                    # Apply to all timeslices for this technology
+                    if tech_str in capacity_factor_rows:
+                        for timeslice, cf_row_idx in capacity_factor_rows[tech_str].items():
+                            current_cf = ws_capacities.cell(cf_row_idx, cap_year_col_map[year]).value
+                            if current_cf is not None:
+                                try:
+                                    cf = float(current_cf)
+                                    new_cf = cf * normalized_factor
+                                    # Cap at 1.0
+                                    new_cf = min(new_cf, 1.0)
+                                    ws_capacities.cell(cf_row_idx, cap_year_col_map[year], round(new_cf, 4))
+                                except (ValueError, TypeError):
+                                    pass
+
+                        self.log(f"      {tech_type}: Adjusted CF by factor {normalized_factor:.4f}")
+
+                # Recalculate adjusted limits after CF changes
+                for tech_str, tech_type, share in techs_to_adjust:
+                    min_cap_row = min_capacity_rows.get(tech_str)
+                    avail_row = availability_rows.get(tech_str)
+                    c2a = capacity_to_activity.get(tech_str, 31.536)
+
+                    if not min_cap_row:
+                        continue
+
+                    min_cap_value = ws_secondary.cell(min_cap_row, year_col_map[year]).value
+                    if min_cap_value is None or float(min_cap_value) <= 0:
+                        continue
+
+                    min_cap = float(min_cap_value)
+
+                    avail = 1.0
+                    if avail_row:
+                        avail_value = ws_secondary.cell(avail_row, year_col_map[year]).value
+                        if avail_value is not None:
+                            try:
+                                avail = float(avail_value)
+                            except (ValueError, TypeError):
+                                pass
+
+                    # Recalculate sum_cf_yearsplit with adjusted values
+                    sum_cf_yearsplit = 0.0
+                    if tech_str in capacity_factor_rows:
+                        for timeslice, cf_row_idx in capacity_factor_rows[tech_str].items():
+                            cf_value = ws_capacities.cell(cf_row_idx, cap_year_col_map[year]).value
+                            if cf_value is not None:
+                                try:
+                                    cf = float(cf_value)
+                                    yearsplit = yearsplit_values.get(timeslice, 0.0)
+                                    sum_cf_yearsplit += cf * yearsplit
+                                except (ValueError, TypeError):
+                                    pass
+
+                    # Recalculate final LowerLimit
+                    adjusted_max_activity = min_cap * c2a * avail * sum_cf_yearsplit * 8760
+
+                    # Calculate target again
+                    years_diff = year - ref_year
+                    generation_year = base_generation_pj * (1 + growth_rate * years_diff)
+                    target_lower_limit = generation_year * share
+
+                    # Set final limit (can't exceed adjusted max activity)
+                    final_limit = min(target_lower_limit, adjusted_max_activity)
+                    adjusted_limits[tech_str][year] = final_limit
+
+        return adjusted_limits
+
     def update_activity_limits(self, all_years):
         """
         Update TotalTechnologyAnnualActivityLowerLimit and/or TotalTechnologyAnnualActivityUpperLimit
@@ -1738,11 +2052,17 @@ class SecondaryTechsUpdater:
         growth_rates = self.olade_config.get('demand_growth_rates', {})
         renewability_targets = self.olade_config.get('renewability_targets', {})
 
+        limit_method = self.olade_config.get('activity_lower_limit_method', 'CapacityBased')
+
         self.log(f"Reference year: {ref_year}")
         self.log(f"Update LowerLimit: {'YES' if update_lower else 'NO'}")
         self.log(f"Update UpperLimit: {'YES' if update_upper else 'NO'}")
+        self.log(f"LowerLimit Method: {limit_method}")
         self.log(f"Renewability targets defined for: {len(renewability_targets)} country/scenario combinations")
-        self.log("LowerLimit will be capped based on MaxCapacity constraints")
+        if limit_method == 'CapacityBased':
+            self.log("LowerLimit will be capped based on MaxCapacity constraints")
+        else:
+            self.log("ShareBased: Will adjust CapacityFactors to meet share targets")
         self.log("")
 
         activity_changes = 0
@@ -1860,6 +2180,17 @@ class SecondaryTechsUpdater:
                     if not tech_shares:
                         continue
 
+                    # Check if we should use ShareBased method
+                    limit_method = self.olade_config.get('activity_lower_limit_method', 'CapacityBased')
+                    share_based_limits = {}
+
+                    if update_lower and limit_method == 'ShareBased':
+                        # Use ShareBased method: adjust CapacityFactors and calculate limits
+                        share_based_limits = self.adjust_capacity_factors_for_share_based_limits(
+                            wb, scenario, country_code, tech_shares, all_years,
+                            ref_year, base_generation_pj, growth_rate
+                        )
+
                     # Update each technology
                     for tech_type, year_shares in tech_shares.items():
                         tech_str = f"PWR{tech_type}{country_code}XX"
@@ -1886,92 +2217,102 @@ class SecondaryTechsUpdater:
                             if share <= 0:
                                 continue
 
-                            # Calculate: Generation × (1 + rate × years_diff) × Share
-                            years_diff = year - ref_year
-                            generation_year = base_generation_pj * (1 + growth_rate * years_diff)
-                            limit_value = generation_year * share
+                            # Check if we have pre-calculated limit from ShareBased method
+                            if limit_method == 'ShareBased' and tech_str in share_based_limits:
+                                limit_value = share_based_limits[tech_str].get(year)
+                                if limit_value is None:
+                                    continue
+                                # ShareBased already adjusted CapacityFactors and calculated limits
+                                # Skip the CapacityBased calculation
+                            else:
+                                # CapacityBased method: Calculate: Generation × (1 + rate × years_diff) × Share
+                                years_diff = year - ref_year
+                                generation_year = base_generation_pj * (1 + growth_rate * years_diff)
+                                limit_value = generation_year * share
 
-                            # Calculate maximum possible activity based on available capacity
-                            # We need to consider BOTH MaxCapacity AND ResidualCapacity constraints
-                            # The actual available capacity is limited by:
-                            # 1. TotalAnnualMaxCapacity (absolute maximum allowed)
-                            # 2. ResidualCapacity (what's actually built/available from past)
-                            # Since we can't easily calculate accumulated investments here,
-                            # we use ResidualCapacity as the realistic constraint for activity limits
+                            # Calculate maximum possible activity based on available capacity (for CapacityBased method)
+                            # Only perform capping for CapacityBased method
+                            if limit_method != 'ShareBased':
+                                # We need to consider BOTH MaxCapacity AND ResidualCapacity constraints
+                                # The actual available capacity is limited by:
+                                # 1. TotalAnnualMaxCapacity (absolute maximum allowed)
+                                # 2. ResidualCapacity (what's actually built/available from past)
+                                # Since we can't easily calculate accumulated investments here,
+                                # we use ResidualCapacity as the realistic constraint for activity limits
 
-                            max_possible_activity = None
-                            capacity_source = None
+                                max_possible_activity = None
+                                capacity_source = None
 
-                            # Get availability factor (needed for both calculations)
-                            avail = None
-                            if avail_row:
-                                avail_value = ws.cell(avail_row, year_col_map[year]).value
-                                if avail_value is not None:
-                                    try:
-                                        avail = float(avail_value)
-                                    except (ValueError, TypeError):
-                                        pass
-
-                            if avail is not None:
-                                # CapacityFactor varies by technology (using 0.28 as conservative)
-                                capacity_factor = 0.28
-
-                                # Calculate activity from MaxCapacity
-                                max_cap_activity = None
-                                if max_cap_row:
-                                    max_cap_value = ws.cell(max_cap_row, year_col_map[year]).value
-                                    if max_cap_value is not None:
+                                # Get availability factor (needed for both calculations)
+                                avail = None
+                                if avail_row:
+                                    avail_value = ws.cell(avail_row, year_col_map[year]).value
+                                    if avail_value is not None:
                                         try:
-                                            max_cap = float(max_cap_value)
-                                            max_cap_activity = max_cap * c2a * avail * capacity_factor
+                                            avail = float(avail_value)
                                         except (ValueError, TypeError):
                                             pass
 
-                                # Calculate activity from ResidualCapacity
-                                residual_cap_activity = None
-                                if residual_cap_row:
-                                    residual_cap_value = ws.cell(residual_cap_row, year_col_map[year]).value
-                                    if residual_cap_value is not None:
-                                        try:
-                                            residual_cap = float(residual_cap_value)
-                                            residual_cap_activity = residual_cap * c2a * avail * capacity_factor
-                                        except (ValueError, TypeError):
-                                            pass
+                                if avail is not None:
+                                    # CapacityFactor varies by technology (using 0.28 as conservative)
+                                    capacity_factor = 0.28
 
-                                # Use the MORE RESTRICTIVE of the two constraints
-                                # ResidualCapacity represents what's actually available
-                                # MaxCapacity represents what's allowed (but may require investment)
-                                if max_cap_activity is not None and residual_cap_activity is not None:
-                                    # Both exist: use the minimum (most restrictive)
-                                    if residual_cap_activity < max_cap_activity:
-                                        max_possible_activity = residual_cap_activity
-                                        capacity_source = 'ResidualCapacity'
-                                    else:
+                                    # Calculate activity from MaxCapacity
+                                    max_cap_activity = None
+                                    if max_cap_row:
+                                        max_cap_value = ws.cell(max_cap_row, year_col_map[year]).value
+                                        if max_cap_value is not None:
+                                            try:
+                                                max_cap = float(max_cap_value)
+                                                max_cap_activity = max_cap * c2a * avail * capacity_factor
+                                            except (ValueError, TypeError):
+                                                pass
+
+                                    # Calculate activity from ResidualCapacity
+                                    residual_cap_activity = None
+                                    if residual_cap_row:
+                                        residual_cap_value = ws.cell(residual_cap_row, year_col_map[year]).value
+                                        if residual_cap_value is not None:
+                                            try:
+                                                residual_cap = float(residual_cap_value)
+                                                residual_cap_activity = residual_cap * c2a * avail * capacity_factor
+                                            except (ValueError, TypeError):
+                                                pass
+
+                                    # Use the MORE RESTRICTIVE of the two constraints
+                                    # ResidualCapacity represents what's actually available
+                                    # MaxCapacity represents what's allowed (but may require investment)
+                                    if max_cap_activity is not None and residual_cap_activity is not None:
+                                        # Both exist: use the minimum (most restrictive)
+                                        if residual_cap_activity < max_cap_activity:
+                                            max_possible_activity = residual_cap_activity
+                                            capacity_source = 'ResidualCapacity'
+                                        else:
+                                            max_possible_activity = max_cap_activity
+                                            capacity_source = 'MaxCapacity'
+                                    elif max_cap_activity is not None:
                                         max_possible_activity = max_cap_activity
                                         capacity_source = 'MaxCapacity'
-                                elif max_cap_activity is not None:
-                                    max_possible_activity = max_cap_activity
-                                    capacity_source = 'MaxCapacity'
-                                elif residual_cap_activity is not None:
-                                    max_possible_activity = residual_cap_activity
-                                    capacity_source = 'ResidualCapacity'
+                                    elif residual_cap_activity is not None:
+                                        max_possible_activity = residual_cap_activity
+                                        capacity_source = 'ResidualCapacity'
 
-                            # Cap the limit_value if it exceeds max_possible_activity
-                            # Also set to 0 if MaxCapacity is 0 (no capacity allowed)
-                            if max_possible_activity is not None:
-                                if max_possible_activity <= 0:
-                                    # MaxCapacity is 0, so LowerLimit must also be 0
-                                    if limit_value > 0:
-                                        limit_value = 0
-                                        tech_capped += 1
-                                        capped_values += 1
-                                else:
-                                    # Leave a small margin (0.05 PJ) below the maximum
-                                    max_allowed = max_possible_activity - 0.05
-                                    if limit_value > max_allowed:
-                                        limit_value = max(0, max_allowed)
-                                        tech_capped += 1
-                                        capped_values += 1
+                                # Cap the limit_value if it exceeds max_possible_activity
+                                # Also set to 0 if MaxCapacity is 0 (no capacity allowed)
+                                if max_possible_activity is not None:
+                                    if max_possible_activity <= 0:
+                                        # MaxCapacity is 0, so LowerLimit must also be 0
+                                        if limit_value > 0:
+                                            limit_value = 0
+                                            tech_capped += 1
+                                            capped_values += 1
+                                    else:
+                                        # Leave a small margin (0.05 PJ) below the maximum
+                                        max_allowed = max_possible_activity - 0.05
+                                        if limit_value > max_allowed:
+                                            limit_value = max(0, max_allowed)
+                                            tech_capped += 1
+                                            capped_values += 1
 
                             limit_value = round(limit_value, 4)
 
