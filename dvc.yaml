@@ -25,7 +25,7 @@ stages:
       - t1_confection/MOMF_T1_AB.yaml
       - t1_confection/osemosys_fast_preprocessed.txt
       - concatenate_files/concatenate_relac.py
-      - t1_confection/capital_annualization_script.py
+      - t1_confection/Z_AUX_capital_annualization_script.py
 
       # folder with data
       - t1_confection/A2_Output_Params/

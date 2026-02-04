@@ -780,7 +780,7 @@ if __name__ == "__main__":
             print('#'*80)
 
             # Import the annualization function
-            from capital_annualization_script import annualize_capital_investment
+            from Z_AUX_capital_annualization_script import annualize_capital_investment
 
             # Define the path to the combined file
             combined_file_path = os.path.join(HERE, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
