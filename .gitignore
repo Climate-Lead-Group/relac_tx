@@ -1,8 +1,6 @@
 # folders
 t1_confection/A2_Output_Params
 t1_confection/Executables
-config_main_files
-Concatenate_otoole_outputs
 
 # Excel files
 t1_confection/_GDP_Ref.xlsx
@@ -34,6 +32,17 @@ t1_confection/gurobi.log
 t1_confection/secondary_techs_update_log_*.txt
 t1_confection/A1_Outputs/secondary_techs_update_log_*.txt
 
+# All files containing "log", "debug", or "backup" in their name
+*log*
+*Log*
+*LOG*
+*debug*
+*Debug*
+*DEBUG*
+*backup*
+*Backup*
+*BACKUP*
+
 # guides
 RELAC_TX_Guia_instalacion_ejecucion.pdf
 
@@ -42,3 +51,5 @@ t1_confection/Secondary_Techs_Editor.xlsx
 t1_confection/~$Secondary_Techs_Editor.xlsx
 t1_confection/A1_Outputs/*/A-O_Parametrization_backup_*.xlsx
 t1_confection/A1_Outputs/*/A-O_Demand_backup_*.xlsx
+t1_confection/A1_Outputs/*/A-O_AR_Model_Base_backup_*.xlsx
+t1_confection/A1_Outputs/*/A-O_AR_Projections_backup_*.xlsx
