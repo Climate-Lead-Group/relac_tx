@@ -33,7 +33,7 @@ INPUT_FOLDER = SCRIPT_DIR / "OG_csvs_inputs"
 OUTPUT_FOLDER = SCRIPT_DIR / "A1_Outputs"
 MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
 A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
-REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "region_consolidation.yaml"
+REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "Config_region_consolidation.yaml"
 TECH_COUNTRY_MATRIX_FILE = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
 OLADE_GENERATION_FILE = SCRIPT_DIR / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
 
@@ -170,6 +170,207 @@ def read_csv_files(input_dir):
             key = os.path.splitext(filename)[0]
             data_dict[key] = df
     return data_dict
+
+
+def normalize_temporal_profiles(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """
+    Normalize temporal profiles to ensure they sum to 1.0 for proper OSeMOSYS input.
+
+    This function normalizes:
+    1. SpecifiedDemandProfile - by (REGION, FUEL, YEAR)
+    2. YearSplit - by YEAR
+    3. DaySplit - by grouping columns (YEAR, DAYTYPE, REGION if present)
+
+    Args:
+        og_data: Dictionary of DataFrames from OG_csvs_inputs
+
+    Returns:
+        Modified dictionary with normalized profiles
+    """
+    print("\n" + "🔧" * 40)
+    print("🔧" + " " * 78 + "🔧")
+    print("🔧" + " " * 20 + "⚡ NORMALIZING TEMPORAL PROFILES ⚡" + " " * 20 + "🔧")
+    print("🔧" + " " * 78 + "🔧")
+    print("🔧" * 40)
+    print("\n[INFO] Ensuring all temporal profiles sum to 1.0 for OSeMOSYS compliance")
+    print("=" * 80)
+
+    normalization_results = {}
+
+    # 1. Normalize SpecifiedDemandProfile
+    if "SpecifiedDemandProfile" in og_data:
+        print("\n🔍 [1/3] Checking SpecifiedDemandProfile...")
+        df = og_data["SpecifiedDemandProfile"].copy()
+
+        if not df.empty and "VALUE" in df.columns:
+            # Check current state
+            sums = df.groupby(["REGION", "FUEL", "YEAR"])["VALUE"].sum()
+            problems_before = len(sums[abs(sums - 1.0) > 0.0001])
+
+            if problems_before > 0:
+                print(f"   ⚠️  Found {problems_before} combinations with incorrect sums")
+                print(f"   🔧 Normalizing by (REGION, FUEL, YEAR)...")
+
+                # Normalize
+                df["sum_check"] = df.groupby(["REGION", "FUEL", "YEAR"])["VALUE"].transform("sum")
+                df["VALUE"] = df["VALUE"] / df["sum_check"]
+                df = df.drop(columns=["sum_check"])
+
+                # Verify
+                sums_after = df.groupby(["REGION", "FUEL", "YEAR"])["VALUE"].sum()
+                all_correct = all(abs(sums_after - 1.0) < 0.0001)
+
+                if all_correct:
+                    og_data["SpecifiedDemandProfile"] = df
+                    print(f"   ✅ SpecifiedDemandProfile normalized successfully!")
+                    print(f"   📊 All {len(sums_after)} combinations now sum to 1.0")
+                    normalization_results["SpecifiedDemandProfile"] = "NORMALIZED"
+                else:
+                    print(f"   ❌ Normalization failed for SpecifiedDemandProfile")
+                    normalization_results["SpecifiedDemandProfile"] = "FAILED"
+            else:
+                print(f"   ✅ SpecifiedDemandProfile already normalized (all sums = 1.0)")
+                normalization_results["SpecifiedDemandProfile"] = "OK"
+        else:
+            print(f"   ⚠️  SpecifiedDemandProfile is empty or missing VALUE column")
+            normalization_results["SpecifiedDemandProfile"] = "SKIPPED"
+    else:
+        print("\n⚠️  [1/3] SpecifiedDemandProfile not found in data")
+        normalization_results["SpecifiedDemandProfile"] = "NOT_FOUND"
+
+    # 2. Normalize YearSplit
+    if "YearSplit" in og_data:
+        print("\n🔍 [2/3] Checking YearSplit...")
+        df = og_data["YearSplit"].copy()
+
+        if not df.empty and "VALUE" in df.columns:
+            # Check if YEAR column exists
+            if "YEAR" in df.columns:
+                sums_before = df.groupby("YEAR")["VALUE"].sum()
+                problems_before = len(sums_before[abs(sums_before - 1.0) > 0.0001])
+
+                if problems_before > 0:
+                    print(f"   ⚠️  Found {problems_before} years with incorrect sums")
+                    print(f"   🔧 Normalizing by YEAR...")
+
+                    # Normalize
+                    df["sum_check"] = df.groupby("YEAR")["VALUE"].transform("sum")
+                    df["VALUE"] = df["VALUE"] / df["sum_check"]
+                    df = df.drop(columns=["sum_check"])
+
+                    # Verify
+                    sums_after = df.groupby("YEAR")["VALUE"].sum()
+                    all_correct = all(abs(sums_after - 1.0) < 0.0001)
+
+                    if all_correct:
+                        og_data["YearSplit"] = df
+                        print(f"   ✅ YearSplit normalized successfully!")
+                        print(f"   📊 All {len(sums_after)} years now sum to 1.0")
+                        normalization_results["YearSplit"] = "NORMALIZED"
+                    else:
+                        print(f"   ❌ Normalization failed for YearSplit")
+                        normalization_results["YearSplit"] = "FAILED"
+                else:
+                    print(f"   ✅ YearSplit already normalized (all sums = 1.0)")
+                    normalization_results["YearSplit"] = "OK"
+            else:
+                # No YEAR column - normalize entire dataset
+                total = df["VALUE"].sum()
+                if abs(total - 1.0) > 0.0001:
+                    print(f"   ⚠️  Total sum = {total:.6f} (expected 1.0)")
+                    print(f"   🔧 Normalizing entire dataset...")
+                    df["VALUE"] = df["VALUE"] / total
+                    og_data["YearSplit"] = df
+                    print(f"   ✅ YearSplit normalized successfully!")
+                    normalization_results["YearSplit"] = "NORMALIZED"
+                else:
+                    print(f"   ✅ YearSplit already normalized (sum = 1.0)")
+                    normalization_results["YearSplit"] = "OK"
+        else:
+            print(f"   ⚠️  YearSplit is empty or missing VALUE column")
+            normalization_results["YearSplit"] = "SKIPPED"
+    else:
+        print("\n⚠️  [2/3] YearSplit not found in data")
+        normalization_results["YearSplit"] = "NOT_FOUND"
+
+    # 3. Normalize DaySplit
+    if "DaySplit" in og_data:
+        print("\n🔍 [3/3] Checking DaySplit...")
+        df = og_data["DaySplit"].copy()
+
+        if not df.empty and "VALUE" in df.columns:
+            # Identify grouping columns
+            group_cols = [col for col in ["YEAR", "DAYTYPE", "REGION"] if col in df.columns]
+
+            if group_cols:
+                sums_before = df.groupby(group_cols)["VALUE"].sum()
+                problems_before = len(sums_before[abs(sums_before - 1.0) > 0.0001])
+
+                if problems_before > 0:
+                    print(f"   ⚠️  Found {problems_before} combinations with incorrect sums")
+                    print(f"   🔧 Normalizing by {group_cols}...")
+
+                    # Normalize
+                    df["sum_check"] = df.groupby(group_cols)["VALUE"].transform("sum")
+                    df["VALUE"] = df["VALUE"] / df["sum_check"]
+                    df = df.drop(columns=["sum_check"])
+
+                    # Verify
+                    sums_after = df.groupby(group_cols)["VALUE"].sum()
+                    all_correct = all(abs(sums_after - 1.0) < 0.0001)
+
+                    if all_correct:
+                        og_data["DaySplit"] = df
+                        print(f"   ✅ DaySplit normalized successfully!")
+                        print(f"   📊 All {len(sums_after)} combinations now sum to 1.0")
+                        normalization_results["DaySplit"] = "NORMALIZED"
+                    else:
+                        print(f"   ❌ Normalization failed for DaySplit")
+                        normalization_results["DaySplit"] = "FAILED"
+                else:
+                    print(f"   ✅ DaySplit already normalized (all sums = 1.0)")
+                    normalization_results["DaySplit"] = "OK"
+            else:
+                # No grouping columns - normalize entire dataset
+                total = df["VALUE"].sum()
+                if abs(total - 1.0) > 0.0001:
+                    print(f"   ⚠️  Total sum = {total:.6f} (expected 1.0)")
+                    print(f"   🔧 Normalizing entire dataset...")
+                    df["VALUE"] = df["VALUE"] / total
+                    og_data["DaySplit"] = df
+                    print(f"   ✅ DaySplit normalized successfully!")
+                    normalization_results["DaySplit"] = "NORMALIZED"
+                else:
+                    print(f"   ✅ DaySplit already normalized (sum = 1.0)")
+                    normalization_results["DaySplit"] = "OK"
+        else:
+            print(f"   ⚠️  DaySplit is empty or missing VALUE column")
+            normalization_results["DaySplit"] = "SKIPPED"
+    else:
+        print("\n⚠️  [3/3] DaySplit not found in data")
+        normalization_results["DaySplit"] = "NOT_FOUND"
+
+    # Summary
+    print("\n" + "=" * 80)
+    print("📋 NORMALIZATION SUMMARY:")
+    print("=" * 80)
+    for param, status in normalization_results.items():
+        status_icon = {
+            "NORMALIZED": "✅ ✨",
+            "OK": "✅",
+            "FAILED": "❌",
+            "SKIPPED": "⚠️ ",
+            "NOT_FOUND": "❓"
+        }.get(status, "?")
+        print(f"   {status_icon} {param}: {status}")
+
+    print("\n" + "🔧" * 40)
+    print("🔧" + " " * 78 + "🔧")
+    print("🔧" + " " * 15 + "⚡ TEMPORAL PROFILES NORMALIZATION COMPLETE ⚡" + " " * 14 + "🔧")
+    print("🔧" + " " * 78 + "🔧")
+    print("🔧" * 40 + "\n")
+
+    return og_data
 
 
 def replace_country_codes(og_data: Dict[str, pd.DataFrame], old_code: str, new_code: str) -> Dict[str, pd.DataFrame]:
@@ -3117,6 +3318,10 @@ def main():
     global OG_Input_Data
     OG_Input_Data = read_csv_files(INPUT_FOLDER)
 
+    # ⚡ NORMALIZE TEMPORAL PROFILES (SpecifiedDemandProfile, YearSplit, DaySplit)
+    # This ensures all profiles sum to 1.0 for proper OSeMOSYS input compliance
+    OG_Input_Data = normalize_temporal_profiles(OG_Input_Data)
+
     # Replace JAM -> BRB for Barbados (original model used JAM incorrectly)
     OG_Input_Data = replace_country_codes(OG_Input_Data, 'JAM', 'BRB')
 
@@ -3201,7 +3406,7 @@ def main():
         try:
             update_yaml_structure(
                 og_data=OG_Input_Data,
-                yaml_path=SCRIPT_DIR / "MOMF_T1_A.yaml"
+                yaml_path=SCRIPT_DIR / "Config_MOMF_T1_A.yaml"
             )
         except Exception as e:
             print(f"[Error] Failed to update YAML structure: {e}")

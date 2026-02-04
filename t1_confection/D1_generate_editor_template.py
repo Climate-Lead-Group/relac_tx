@@ -62,12 +62,12 @@ OLADE_TECH_MAPPING = {
 
 def read_base_scenario():
     """
-    Read base_scenario from MOMF_T1_AB.yaml
+    Read base_scenario from Config_MOMF_T1_AB.yaml
 
     Returns:
         str: The base scenario name (default: 'BAU')
     """
-    yaml_path = Path(__file__).parent / "MOMF_T1_AB.yaml"
+    yaml_path = Path(__file__).parent / "Config_MOMF_T1_AB.yaml"
     try:
         with open(yaml_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
@@ -431,7 +431,7 @@ def create_editor_template(data, output_path):
     # ActivityLowerLimitMethod
     ws_olade.cell(10, 1, "ActivityLowerLimitMethod").border = border_style
     ws_olade.cell(10, 2, "CapacityBased").border = border_style
-    dv_method = DataValidation(type="list", formula1='"CapacityBased,ShareBased"', allow_blank=False)
+    dv_method = DataValidation(type="list", formula1='"CapacityBased,ShareBased,DemandBased"', allow_blank=False)
     ws_olade.add_data_validation(dv_method)
     dv_method.add('B10')
 
@@ -627,6 +627,33 @@ def create_editor_template(data, output_path):
         "  - All timeslices (S1D1, S1D2, etc.) are adjusted proportionally",
         "  - Normalization ensures shares sum to 100% even when individual CFs are capped at 1.0",
         "  - Only technologies with TotalAnnualMinCapacityInvestment > 0 are adjusted",
+        "",
+        "  - 'DemandBased': Calculate LowerLimit directly from projected demand and normalized shares",
+        "    Formula: LowerLimit[tech,year] = Demand[country,year] × Share_normalized[tech,year]",
+        "    Step 1: Read projected demand from A-O_Demand.xlsx (SpecifiedAnnualDemand)",
+        "    Step 2: Read % renewable from Renewability_Targets (with interpolation)",
+        "    Step 3: Distribute % renewable among renewable fuels using OLADE generation weights",
+        "    Step 4: Distribute % non-renewable among non-renewable fuels using OLADE generation weights",
+        "    Step 5: Normalize all shares year-by-year to ensure Σ(shares) = 1.0",
+        "    Step 6: For non-base scenarios, override years 2023-2025 with base scenario shares",
+        "    Step 7: Calculate LowerLimit = Demand × Share for each technology/year",
+        "",
+        "REQUIREMENTS FOR DemandBased:",
+        "  - ActivityLowerLimitFromOLADE must be YES",
+        "  - A-O_Demand.xlsx must exist in the scenario output folder",
+        "  - Renewability_Targets sheet must define % renewable targets",
+        "  - OLADE generation data must be available for weight calculation",
+        "  - base_scenario defined in Config_MOMF_T1_AB.yaml",
+        "",
+        "FUEL GROUPS FOR DemandBased:",
+        "  Renewable: HYD, SPV, WON, GEO, BIO, CSP, WOF, WAV",
+        "  Non-renewable: COA, NGS, OIL, PET, URN",
+        "  Other (weight=0 if no OLADE data): BCK, CCS, COG, LDS, OTH, SDS, WAS",
+        "",
+        "BASE SCENARIO OVERRIDE:",
+        "  - For all scenarios different from base_scenario (defined in Config_MOMF_T1_AB.yaml)",
+        "  - Years 2023, 2024, 2025 use base scenario shares (policy effects start from 2026)",
+        "  - This ensures realistic transition timing",
     ]
     for line in method_desc:
         ws_olade.cell(current_row, 1, line)
@@ -1320,13 +1347,13 @@ def create_editor_template(data, output_path):
     ws_doc[f'A{doc_row}'].fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
     ws_doc.merge_cells(f'A{doc_row}:H{doc_row}')
 
-    # Reorder sheets: Documentation should come after Instructions (index 2)
+    # Reorder sheets: Documentation should come after Instructions (index 1)
     # Current order after creation: Instructions(0), OLADE_Config(1), Demand_Growth(2),
     # Scenarios_Demand_Growth(3), Renewability_Targets(4), Technology_Weights(5),
     # Editor, _hidden sheets, Documentation(last)
-    # Move Documentation to index 2 (after Instructions, before OLADE_Config)
+    # Target order: Instructions(0), Documentation(1), OLADE_Config(2), ...
     doc_sheet_index = wb.sheetnames.index('Documentation')
-    wb.move_sheet('Documentation', offset=-(doc_sheet_index - 2))
+    wb.move_sheet('Documentation', offset=-(doc_sheet_index - 1))
 
     # Save the workbook
     wb.save(output_path)

@@ -13,7 +13,7 @@ import pandas as pd
 from typing import List
 from pathlib import Path
 
-RENEWABLE_FUELS = {"BIO", "HYD", "CSP", "GEO", "SPV", "WAS", "WAV", "WON", "WOF"}
+RENEWABLE_FUELS = {"BIO", "HYD", "CSP", "GEO", "SPV", "WAS", "WON", "WOF"}
 iso_country_map = {
     "CRI": "Costa Rica", 
     "ARG": "Argentina", 
@@ -447,13 +447,13 @@ def main():
     
     
         defaults = {
-            "yaml": str(script_dir / "country_codes.yaml"),
+            "yaml": str(script_dir / "Config_country_codes.yaml"),
             "base": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Model_Base_Year.xlsx"),
             "proj": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Projections.xlsx"),
             "param": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_Parametrization.xlsx")
         }
         ap = argparse.ArgumentParser(description='Process CLG model spreadsheets.')
-        ap.add_argument('--yaml', help='country_codes.yaml')
+        ap.add_argument('--yaml', help='Config_country_codes.yaml')
         ap.add_argument('--base', help='A-O_AR_Model_Base_Year.xlsx')
         ap.add_argument('--proj', help='A-O_AR_Projections.xlsx')
         ap.add_argument('--param', help='A-O_Parametrization.xlsx')

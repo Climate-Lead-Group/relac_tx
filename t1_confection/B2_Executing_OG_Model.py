@@ -214,22 +214,22 @@ def check_enviro_variables(solver_command):
         print(f"No '{solver_command}' found on the system.")
     #
 
-def get_config_main_path(full_path, base_folder='config_main_files'):
+def get_config_main_path(full_path, base_folder):
     # Split the path into parts
     parts = full_path.split(os.sep)
-    
+
     # Find the index of the target directory 'relac_tx'
     target_index = parts.index('relac_tx') if 'relac_tx' in parts else None
-    
+
     # If the directory is found, reconstruct the path up to that point
     if target_index is not None:
         base_path = os.sep.join(parts[:target_index + 1])
     else:
         base_path = full_path  # If not found, return the original path
-    
+
     # Append the specified directory to the base path
     appended_path = os.path.join(base_path, base_folder)
-    
+
     return appended_path
 
 def main_executer(params, scenario_name, HERE):
@@ -652,11 +652,11 @@ if __name__ == "__main__":
         print(f"[INFO] Working dir -> {HERE}")
         
     # Load params from YAML
-    with open('MOMF_T1_AB.yaml', 'r') as f:
+    with open('Config_MOMF_T1_AB.yaml', 'r') as f:
         params = yaml.safe_load(f)
         
     # Load params from YAML
-    with open('MOMF_T1_A.yaml', 'r') as f:
+    with open('Config_MOMF_T1_A.yaml', 'r') as f:
         params_A2 = yaml.safe_load(f)
     
     # Define source and destination base paths

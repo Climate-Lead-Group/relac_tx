@@ -3,7 +3,7 @@ Migrate Old Inputs to New Model Structure
 
 This script migrates data from Old_Inputs/ to the current model files,
 applying technology name transformations (CCG+OCG -> NGS, suffix removal, etc.)
-based on tech_equivalences.yaml and Tech_Country_Matrix.xlsx.
+based on Config_tech_equivalences.yaml and Tech_Country_Matrix.xlsx.
 
 Usage:
     python t1_confection/A0_migrate_old_inputs.py [--dry-run]
@@ -19,6 +19,30 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 from collections import defaultdict
+
+# Importar el script de normalización de perfiles CSV
+try:
+    from Z_AUX_fix_all_profiles_normalization import (
+        normalize_specified_demand_profile,
+        normalize_year_split,
+        normalize_day_split
+    )
+    NORMALIZATION_AVAILABLE = True
+    print("[INIT] ✓ Profile normalization module (CSV) loaded successfully")
+except ImportError as e:
+    NORMALIZATION_AVAILABLE = False
+    print(f"[INIT] ✗ Failed to import profile normalization module: {e}")
+    print("[INIT]   Normalization will be skipped")
+
+# Importar el script de normalización de perfiles Excel
+try:
+    from Z_AUX_fix_excel_profiles import normalize_excel_profiles
+    EXCEL_NORMALIZATION_AVAILABLE = True
+    print("[INIT] ✓ Excel profile normalization module loaded successfully")
+except ImportError as e:
+    EXCEL_NORMALIZATION_AVAILABLE = False
+    print(f"[INIT] ✗ Failed to import Excel profile normalization module: {e}")
+    print("[INIT]   Excel normalization will be skipped")
 
 
 class TechCountryMatrix:
@@ -102,7 +126,7 @@ class TechEquivalences:
     def _load_yaml(self):
         """Load the YAML configuration"""
         if not self.yaml_path.exists():
-            raise FileNotFoundError(f"tech_equivalences.yaml not found: {self.yaml_path}")
+            raise FileNotFoundError(f"Config_tech_equivalences.yaml not found: {self.yaml_path}")
 
         with open(self.yaml_path, 'r', encoding='utf-8') as f:
             self.config = yaml.safe_load(f)
@@ -190,6 +214,9 @@ class TechEquivalences:
 class OldInputsMigrator:
     """Main class for migrating old inputs to new model structure"""
 
+    # Technologies containing these strings will be excluded from migration
+    EXCLUDED_TECH_STRINGS = ['BCK', 'CCS', 'COG', 'OTH', 'WAV']
+
     def __init__(self, base_path, dry_run=False):
         self.base_path = Path(base_path)
         self.old_inputs_path = self.base_path / "Old_Inputs"
@@ -200,13 +227,14 @@ class OldInputsMigrator:
             'values_migrated': 0,
             'values_skipped_no_mapping': 0,
             'values_skipped_not_available': 0,
+            'values_skipped_excluded': 0,
             'values_aggregated': 0,
             'errors': 0
         }
 
         # Load configuration
         self.matrix = TechCountryMatrix(self.base_path / "Tech_Country_Matrix.xlsx")
-        self.equivalences = TechEquivalences(self.base_path / "tech_equivalences.yaml")
+        self.equivalences = TechEquivalences(self.base_path / "Config_tech_equivalences.yaml")
 
         # Scenarios
         self.scenarios = ["BAU", "NDC", "NDC+ELC", "NDC_NoRPO"]
@@ -217,6 +245,24 @@ class OldInputsMigrator:
         log_line = f"[{timestamp}] {level}: {message}"
         self.log_lines.append(log_line)
         print(log_line)
+
+    def should_exclude_tech(self, tech_code):
+        """
+        Check if a technology should be excluded from migration.
+
+        Args:
+            tech_code: The technology code string
+
+        Returns:
+            bool: True if the technology should be excluded
+        """
+        if not tech_code:
+            return False
+        tech_upper = tech_code.upper()
+        for excluded in self.EXCLUDED_TECH_STRINGS:
+            if excluded in tech_upper:
+                return True
+        return False
 
     def create_backup(self, file_path):
         """Create backup of file before modifying"""
@@ -449,6 +495,7 @@ class OldInputsMigrator:
         skipped_no_mapping = 0
         skipped_not_available = 0
         skipped_no_target = 0
+        skipped_excluded = 0
         aggregated = 0
 
         for key, info in old_data.items():
@@ -479,6 +526,11 @@ class OldInputsMigrator:
                     else:
                         old_tech = key
                     param = None
+
+            # Check if technology should be excluded from migration
+            if self.should_exclude_tech(old_tech):
+                skipped_excluded += 1
+                continue
 
             new_tech, mapping_type = self.equivalences.get_new_tech_code(old_tech)
 
@@ -631,12 +683,14 @@ class OldInputsMigrator:
         self.log(f"      Migrated: {migrated}, Aggregated: {aggregated}, "
                  f"Skipped (no mapping): {skipped_no_mapping}, "
                  f"Skipped (not available): {skipped_not_available}, "
+                 f"Skipped (excluded): {skipped_excluded}, "
                  f"Skipped (no target row): {skipped_no_target}")
 
         self.stats['values_migrated'] += migrated
         self.stats['values_aggregated'] += aggregated
         self.stats['values_skipped_no_mapping'] += skipped_no_mapping
         self.stats['values_skipped_not_available'] += skipped_not_available
+        self.stats['values_skipped_excluded'] += skipped_excluded
 
     def migrate_fixed_horizon_parameters(self, old_ws, new_ws, sheet_name, scenario):
         """
@@ -661,6 +715,10 @@ class OldInputsMigrator:
 
             tech_str = str(tech).strip()
             param_str = str(param).strip()
+
+            # Check if technology should be excluded from migration
+            if self.should_exclude_tech(tech_str):
+                continue
 
             # Get new tech code
             new_tech, mapping_type = self.equivalences.get_new_tech_code(tech_str)
@@ -793,6 +851,65 @@ class OldInputsMigrator:
 
         self.log(f"      Projection.Mode updated: {updated}")
 
+    def update_capacity_investment_projection_mode(self, ws, sheet_name):
+        """
+        Update Projection.Mode for specific parameters in Secondary Techs sheet.
+
+        For TotalAnnualMaxCapacityInvestment and TotalAnnualMaxCapacity:
+        - Change "User defined" to "EMPTY" in Projection.Mode column
+        - Exception for TotalAnnualMaxCapacityInvestment: do NOT change if Tech
+          has interconnection structure (TRN{COUNTRY}XX{COUNTRY}XX)
+        """
+        self.log(f"    Updating Projection.Mode for capacity parameters in {sheet_name}...")
+
+        # Tech col 2, Parameter col 5, Projection.Mode col 7
+        tech_col = 2
+        param_col = 5
+        proj_mode_col = 7
+
+        # Parameters to update
+        target_params = {
+            'TotalAnnualMaxCapacityInvestment': True,  # True = has interconnection exception
+            'TotalAnnualMaxCapacity': False             # False = no exception
+        }
+
+        # Regex pattern for interconnection technologies: TRN{3letters}XX{3letters}XX
+        interconnection_pattern = re.compile(r'^TRN[A-Z]{3}XX[A-Z]{3}XX$')
+
+        updated = 0
+        for row in range(2, ws.max_row + 1):
+            tech = ws.cell(row, tech_col).value
+            param = ws.cell(row, param_col).value
+            proj_mode = ws.cell(row, proj_mode_col).value
+
+            if not tech or not param or not proj_mode:
+                continue
+
+            tech_str = str(tech).strip()
+            param_str = str(param).strip()
+            proj_mode_str = str(proj_mode).strip()
+
+            # Check if this parameter needs updating
+            if param_str not in target_params:
+                continue
+
+            # Only update if current value is "User defined"
+            if proj_mode_str != "User defined":
+                continue
+
+            # Check interconnection exception for TotalAnnualMaxCapacityInvestment
+            has_exception = target_params[param_str]
+            if has_exception and interconnection_pattern.match(tech_str):
+                # Skip this row - it's an interconnection and has exception
+                continue
+
+            # Update Projection.Mode to EMPTY
+            if not self.dry_run:
+                ws.cell(row, proj_mode_col, "EMPTY")
+            updated += 1
+
+        self.log(f"      Projection.Mode updated: {updated}")
+
     def migrate_parametrization(self, scenario):
         """Migrate A-O_Parametrization.xlsx for a scenario"""
         old_path = self.old_inputs_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
@@ -859,6 +976,7 @@ class OldInputsMigrator:
             # Update Projection.Mode for PWRNGS technologies in Secondary Techs
             if 'Secondary Techs' in new_wb.sheetnames:
                 self.update_pwrngs_projection_mode(new_wb['Secondary Techs'], 'Secondary Techs')
+                self.update_capacity_investment_projection_mode(new_wb['Secondary Techs'], 'Secondary Techs')
 
             if not self.dry_run:
                 new_wb.save(new_path)
@@ -1050,6 +1168,10 @@ class OldInputsMigrator:
                         continue
                     tech_str = str(tech).strip()
 
+                    # Check if technology should be excluded from migration
+                    if self.should_exclude_tech(tech_str):
+                        continue
+
                     for fuel_col, value_col, fuel_name in value_configs:
                         fuel = old_ws.cell(row, fuel_col).value
                         value = old_ws.cell(row, value_col).value
@@ -1142,6 +1264,162 @@ class OldInputsMigrator:
             self.log(f"Error processing Storage: {e}", "ERROR")
             self.stats['errors'] += 1
 
+    def normalize_profiles(self):
+        """Normalize temporal profiles after demand migration"""
+        # 🔔 ENTRY POINT - Always log that we reached this method
+        self.log("")
+        self.log("🔔" * 40)
+        self.log("🔔 NORMALIZE_PROFILES() METHOD CALLED 🔔")
+        self.log("🔔" * 40)
+
+        # Check 1: Module availability
+        self.log(f"[CHECK 1] NORMALIZATION_AVAILABLE = {NORMALIZATION_AVAILABLE}")
+        if not NORMALIZATION_AVAILABLE:
+            self.log("❌ WARNING: Profile normalization module not available", "WARNING")
+            self.log("❌ NORMALIZATION SKIPPED - Module import failed")
+            return
+
+        # Check 2: Dry-run mode
+        self.log(f"[CHECK 2] dry_run mode = {self.dry_run}")
+        if self.dry_run:
+            self.log("⚠️  Skipping profile normalization in dry-run mode")
+            self.log("⚠️  NORMALIZATION SKIPPED - Dry-run mode active")
+            return
+
+        # All checks passed - proceeding with normalization
+        self.log("")
+        self.log("✅ All checks passed - proceeding with normalization")
+        self.log("")
+        self.log("=" * 70)
+        self.log("⚡ NORMALIZING TEMPORAL PROFILES ⚡")
+        self.log("=" * 70)
+
+        inputs_dir = self.base_path / "OG_csvs_inputs"
+        self.log(f"📁 Target directory: {inputs_dir}")
+        self.log(f"📁 Directory exists: {inputs_dir.exists()}")
+
+        try:
+            self.log("")
+            self.log("🔄 Starting normalization process...")
+            self.log("")
+
+            results = {
+                "SpecifiedDemandProfile": normalize_specified_demand_profile(inputs_dir),
+                "YearSplit": normalize_year_split(inputs_dir),
+                "DaySplit": normalize_day_split(inputs_dir)
+            }
+
+            # Log results
+            self.log("")
+            self.log("=" * 70)
+            self.log("📊 PROFILE NORMALIZATION RESULTS:")
+            self.log("=" * 70)
+            for profile_name, success in results.items():
+                status = "✅ SUCCESS" if success else "❌ FAILED"
+                self.log(f"  {status} - {profile_name}")
+
+            if all(results.values()):
+                self.log("")
+                self.log("🎉 ALL PROFILES NORMALIZED SUCCESSFULLY! 🎉")
+            else:
+                self.log("")
+                self.log("⚠️  SOME PROFILES FAILED NORMALIZATION", "WARNING")
+
+        except Exception as e:
+            self.log("")
+            self.log("=" * 70)
+            self.log(f"❌ ERROR DURING PROFILE NORMALIZATION: {e}", "ERROR")
+            self.log("=" * 70)
+            import traceback
+            self.log(traceback.format_exc())
+            self.stats['errors'] += 1
+
+    def normalize_excel_profiles(self):
+        """Normalize demand profiles in Excel files (A-O_Demand.xlsx)"""
+        # 🔔 ENTRY POINT
+        self.log("")
+        self.log("📊" * 40)
+        self.log("📊 NORMALIZE_EXCEL_PROFILES() METHOD CALLED 📊")
+        self.log("📊" * 40)
+
+        # Check 1: Module availability
+        self.log(f"[CHECK 1] EXCEL_NORMALIZATION_AVAILABLE = {EXCEL_NORMALIZATION_AVAILABLE}")
+        if not EXCEL_NORMALIZATION_AVAILABLE:
+            self.log("❌ WARNING: Excel profile normalization module not available", "WARNING")
+            self.log("❌ EXCEL NORMALIZATION SKIPPED - Module import failed")
+            return
+
+        # Check 2: Dry-run mode
+        self.log(f"[CHECK 2] dry_run mode = {self.dry_run}")
+        if self.dry_run:
+            self.log("⚠️  Skipping Excel profile normalization in dry-run mode")
+            self.log("⚠️  EXCEL NORMALIZATION SKIPPED - Dry-run mode active")
+            return
+
+        # All checks passed
+        self.log("")
+        self.log("✅ All checks passed - proceeding with Excel normalization")
+        self.log("")
+        self.log("=" * 70)
+        self.log("📊 NORMALIZING EXCEL DEMAND PROFILES")
+        self.log("=" * 70)
+
+        results = {}
+
+        for scenario in self.scenarios:
+            scenario_dir = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}"
+            excel_file = scenario_dir / "A-O_Demand.xlsx"
+
+            self.log("")
+            self.log(f"Processing scenario: {scenario}")
+            self.log(f"  File: {excel_file}")
+
+            if excel_file.exists():
+                try:
+                    # Call the normalization function
+                    success = normalize_excel_profiles(excel_file)
+                    results[scenario] = success
+
+                    if success:
+                        self.log(f"  ✅ {scenario}: Normalized successfully")
+                    else:
+                        self.log(f"  ⚠️  {scenario}: Normalization completed with warnings", "WARNING")
+
+                except Exception as e:
+                    self.log(f"  ❌ {scenario}: Error during normalization - {e}", "ERROR")
+                    results[scenario] = False
+                    self.stats['errors'] += 1
+            else:
+                self.log(f"  ⚠️  {scenario}: File not found, skipping")
+                results[scenario] = None
+
+        # Summary
+        self.log("")
+        self.log("=" * 70)
+        self.log("📋 EXCEL NORMALIZATION SUMMARY:")
+        self.log("=" * 70)
+
+        for scenario, result in results.items():
+            if result is True:
+                self.log(f"  ✅ {scenario}: Success")
+            elif result is False:
+                self.log(f"  ❌ {scenario}: Failed")
+            else:
+                self.log(f"  ⚠️  {scenario}: Skipped (file not found)")
+
+        successful = sum(1 for r in results.values() if r is True)
+        total_attempted = sum(1 for r in results.values() if r is not None)
+
+        if total_attempted > 0 and successful == total_attempted:
+            self.log("")
+            self.log("🎉 ALL EXCEL FILES NORMALIZED SUCCESSFULLY! 🎉")
+        elif successful > 0:
+            self.log("")
+            self.log(f"⚠️  {successful}/{total_attempted} files normalized successfully")
+        else:
+            self.log("")
+            self.log("❌ No Excel files were normalized")
+
     def run(self):
         """Main execution"""
         self.log("=" * 80)
@@ -1158,6 +1436,12 @@ class OldInputsMigrator:
             self.log("Country code transformations:")
             for old_code, new_code in self.equivalences.COUNTRY_CODE_TRANSFORMS.items():
                 self.log(f"  {old_code} -> {new_code}")
+            self.log("")
+
+        # Log excluded technology strings
+        if self.EXCLUDED_TECH_STRINGS:
+            self.log("Technologies containing these strings will be EXCLUDED:")
+            self.log(f"  {', '.join(self.EXCLUDED_TECH_STRINGS)}")
             self.log("")
 
         # Check Old_Inputs exists
@@ -1189,6 +1473,22 @@ class OldInputsMigrator:
             self.migrate_ar_projections(scenario)
             self.migrate_ar_model_base_year(scenario)
 
+        # 🎯 NORMALIZE TEMPORAL PROFILES AFTER ALL DEMAND MIGRATIONS
+        self.log("")
+        self.log("=" * 80)
+        self.log("🎯 ALL SCENARIO MIGRATIONS COMPLETE")
+        self.log("=" * 80)
+
+        # Step 1: Normalize CSV profiles (OG_csvs_inputs)
+        self.log("")
+        self.log("📄 Step 1: Normalizing CSV profiles (OG_csvs_inputs)")
+        self.normalize_profiles()
+
+        # Step 2: Normalize Excel profiles (A-O_Demand.xlsx files)
+        self.log("")
+        self.log("📊 Step 2: Normalizing Excel profiles (A-O_Demand.xlsx)")
+        self.normalize_excel_profiles()
+
         # Summary
         self.log("")
         self.log("=" * 80)
@@ -1199,6 +1499,7 @@ class OldInputsMigrator:
         self.log(f"Values aggregated (CCG+OCG->NGS): {self.stats['values_aggregated']}")
         self.log(f"Values skipped (no mapping): {self.stats['values_skipped_no_mapping']}")
         self.log(f"Values skipped (not available in matrix): {self.stats['values_skipped_not_available']}")
+        self.log(f"Values skipped (excluded techs: {', '.join(self.EXCLUDED_TECH_STRINGS)}): {self.stats['values_skipped_excluded']}")
         self.log(f"Errors: {self.stats['errors']}")
 
         if self.dry_run:

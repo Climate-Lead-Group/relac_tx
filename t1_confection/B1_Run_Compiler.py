@@ -10,7 +10,7 @@ Run scenarios by:
 1) Discovering folders starting with 'A1_Outputs_' in the same directory as this script.
 2) Building a list with the suffix after 'A1_Outputs_'.
 3) Iterating the list:
-   - Update xtra_scen.Main_Scenario in 'MOMF_T1_A.yaml' to the current scenario.
+   - Update xtra_scen.Main_Scenario in 'Config_MOMF_T1_A.yaml' to the current scenario.
    - Execute 'B1_Compiler.py'.
 Notes:
 - All referenced files are assumed to be in the same folder as this script.
@@ -156,7 +156,7 @@ def main():
     script_dir = Path(__file__).resolve().parent
 
     # Define key paths
-    yaml_file = script_dir / "MOMF_T1_A.yaml"
+    yaml_file = script_dir / "Config_MOMF_T1_A.yaml"
     compiler_script = script_dir / "B1_Compiler.py"
     A1_Outputs_script = script_dir / "A1_Outputs"
 

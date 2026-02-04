@@ -20,7 +20,7 @@ import os
 start1 = time.time()
 #
 # Read yaml file with parameterization
-with open('MOMF_T1_A.yaml', 'r') as file:
+with open('Config_MOMF_T1_A.yaml', 'r') as file:
     # Load content file
     params = yaml.safe_load(file)
 
@@ -441,7 +441,7 @@ for s in range( len( param_sheets ) ):
             
             if other_setup_params_timeslices != timeslices_list_check and other_setup_params['Timeslice'] == 'Some' and \
                 timeslices_list_check != []:
-                print('These variables are differents, so you need check A-O_Demand.xlsx sheet Timeslices and MOMF_T1_A.yaml variable xtra_scen/Timeslices')
+                print('These variables are differents, so you need check A-O_Demand.xlsx sheet Timeslices and Config_MOMF_T1_A.yaml variable xtra_scen/Timeslices')
                 sys.exit()
             elif other_setup_params['Timeslice'] == 'Some' and timeslices_list_check != []:
                 timeslices_list = timeslices_list_check
@@ -450,7 +450,7 @@ for s in range( len( param_sheets ) ):
                     or
                     (other_setup_params['Timeslice'] == 'All' and timeslices_list_check)
                 ):
-                print('Check the defintion of Timeslices, into A-O_Demand.xlsx sheet Timeslices and MOMF_T1_A.yaml variable xtra_scen/Timeslice')
+                print('Check the defintion of Timeslices, into A-O_Demand.xlsx sheet Timeslices and Config_MOMF_T1_A.yaml variable xtra_scen/Timeslice')
                 sys.exit()
             elif other_setup_params['Timeslice'] == 'All':
                 timeslices_list = [other_setup_params['Timeslice']]
@@ -927,13 +927,13 @@ for s in range( len( param_sheets ) ):
                     
                     if other_setup_params_timeslices != timeslices_list_check and other_setup_params['Timeslice'] == 'Some' and \
                         timeslices_list_check != []:
-                        print('These variables are differents, so you need check A-O_Parametrization.xlsx sheet Timeslices and MOMF_T1_A.yaml variable xtra_scen/Timeslices')
+                        print('These variables are differents, so you need check A-O_Parametrization.xlsx sheet Timeslices and Config_MOMF_T1_A.yaml variable xtra_scen/Timeslices')
                         sys.exit()
                     elif other_setup_params['Timeslice'] == 'Some' and timeslices_list_check != []:
                         timeslices_list = timeslices_list_check
                     elif (other_setup_params['Timeslice'] == 'Some' and timeslices_list_check == []) or \
                         (other_setup_params['Timeslice'] == 'All' and timeslices_list_check != []):
-                        print('Check the defintion of Timeslices, into A-O_Parametrization.xlsx sheet Timeslices and MOMF_T1_A.yaml variable xtra_scen/Timeslice')
+                        print('Check the defintion of Timeslices, into A-O_Parametrization.xlsx sheet Timeslices and Config_MOMF_T1_A.yaml variable xtra_scen/Timeslice')
                         sys.exit()
                     elif other_setup_params['Timeslice'] == 'All':
                         timeslices_list = [other_setup_params['Timeslice']]
