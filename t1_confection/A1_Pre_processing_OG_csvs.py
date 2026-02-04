@@ -35,7 +35,7 @@ MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
 A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
 REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "Config_region_consolidation.yaml"
 TECH_COUNTRY_MATRIX_FILE = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
-OLADE_GENERATION_FILE = SCRIPT_DIR / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
+OLADE_GENERATION_FILE = SCRIPT_DIR / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
 
 # Model horizon years - data outside this range will be filtered/adjusted
 LAST_YEAR = 2050

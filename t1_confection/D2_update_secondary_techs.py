@@ -3573,9 +3573,9 @@ def main():
         script_dir = Path(__file__).parent
         editor_path = script_dir / "Secondary_Techs_Editor.xlsx"
         base_path = script_dir / "A1_Outputs"
-        olade_file_path = script_dir / "Capacidad instalada por fuente - Anual - OLADE.xlsx"
+        olade_file_path = script_dir / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
         shares_file_path = script_dir / "Shares.xlsx"
-        generation_file_path = script_dir / "Generación eléctrica por fuente - Anual - OLADE.xlsx"
+        generation_file_path = script_dir / "OLADE - Generación eléctrica por fuente - Anual.xlsx"
         shares_total_file_path = script_dir / "Shares_Total.xlsx"
 
         # Create updater and run

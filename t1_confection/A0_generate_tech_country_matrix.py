@@ -110,7 +110,7 @@ TECH_DESCRIPTIONS = {
 
 # Implausible technology-country combinations based on OLADE 2023 installed capacity data
 # These combinations have zero installed capacity and are marked as NO with red highlighting
-# Source: "Capacidad instalada por fuente - Anual - OLADE.xlsx" (sieLAC-OLADE, Nov 2024)
+# Source: "OLADE - Capacidad instalada por fuente - Anual.xlsx" (sieLAC-OLADE, Nov 2024)
 IMPLAUSIBLE_COMBINATIONS = {
     # BIO (Biomass) - No capacity in HTI, BRB
     ("BIO", "HTI"), ("BIO", "BRB"),
