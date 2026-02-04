@@ -23,7 +23,7 @@ prefix_final_files: 'RELAC_TX_'
 preprocess_data_name: 'Pre_processed_'
 output_files: '_output'
 
-
+base_scenario: 'BAU'
 
 # Configuration parameters
 ########################################################################################
