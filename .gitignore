@@ -11,6 +11,9 @@ t1_confection/Discounted_Rate.xlsx
 t1_confection/RELAC_TX_Combined_Inputs_Outputs.csv
 t1_confection/RELAC_TX_Inputs.csv
 t1_confection/RELAC_TX_Outputs.csv
+t1_confection/RELAC_TX_Combined_Inputs_Outputs_*.csv
+t1_confection/RELAC_TX_Inputs_*.csv
+t1_confection/RELAC_TX_Outputs_*.csv
 
 # Python scripts
 t1_confection/setup_utils.py
@@ -23,6 +26,9 @@ t1_confection/Blend_Shares_0.pickle
 # figs
 RELAC_cambiarporfecha.twbx
 workflow.pptx
+
+# Tableau files
+*.twbx
 
 # logs
 t1_confection/cplex.log
