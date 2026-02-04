@@ -78,8 +78,8 @@ def read_olade_config(editor_path):
 
     Returns:
         dict with config: {enabled, petroleum_split_mode, demand_enabled, activity_lower_limit_enabled,
-                          activity_upper_limit_enabled, activity_lower_limit_method, demand_growth_rates,
-                          scenarios_demand_adjustments, renewability_targets, technology_weights}
+                          activity_upper_limit_enabled, demand_growth_rates, scenarios_demand_adjustments,
+                          renewability_targets, technology_weights}
     """
     wb = openpyxl.load_workbook(editor_path, data_only=True)
 
@@ -91,7 +91,6 @@ def read_olade_config(editor_path):
             'demand_enabled': False,
             'activity_lower_limit_enabled': False,
             'activity_upper_limit_enabled': False,
-            'activity_lower_limit_method': 'CapacityBased',
             'demand_growth_rates': {},
             'scenarios_demand_adjustments': {},
             'renewability_targets': {},
@@ -102,13 +101,12 @@ def read_olade_config(editor_path):
 
     # Read configuration values
     # Row 5 = ResidualCapacitiesFromOLADE, Row 6 = PetroleumSplitMode, Row 7 = DemandFromOLADE
-    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE, Row 10 = ActivityLowerLimitMethod
+    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
     petroleum_split_mode = str(ws['B6'].value) if ws['B6'].value else 'Split_PET_OIL'
     demand_enabled = str(ws['B7'].value).upper() == 'YES' if ws['B7'].value else False
     activity_lower_limit_enabled = str(ws['B8'].value).upper() == 'YES' if ws['B8'].value else False
     activity_upper_limit_enabled = str(ws['B9'].value).upper() == 'YES' if ws['B9'].value else False
-    activity_lower_limit_method = str(ws['B10'].value) if ws['B10'].value else 'CapacityBased'
 
     # Read demand growth rates from Demand_Growth sheet
     demand_growth_rates = {}
@@ -277,7 +275,6 @@ def read_olade_config(editor_path):
         'demand_enabled': demand_enabled,
         'activity_lower_limit_enabled': activity_lower_limit_enabled,
         'activity_upper_limit_enabled': activity_upper_limit_enabled,
-        'activity_lower_limit_method': activity_lower_limit_method,
         'demand_growth_rates': demand_growth_rates,
         'scenarios_demand_adjustments': scenarios_demand_adjustments,
         'renewability_targets': renewability_targets,
@@ -2883,26 +2880,18 @@ class SecondaryTechsUpdater:
         growth_rates = self.olade_config.get('demand_growth_rates', {})
         renewability_targets = self.olade_config.get('renewability_targets', {})
 
-        limit_method = self.olade_config.get('activity_lower_limit_method', 'CapacityBased')
-
         # Read base_scenario from YAML for DemandBased override logic
         base_scenario = read_base_scenario()
 
         self.log(f"Reference year: {ref_year}")
         self.log(f"Update LowerLimit: {'YES' if update_lower else 'NO'}")
         self.log(f"Update UpperLimit: {'YES' if update_upper else 'NO'}")
-        self.log(f"LowerLimit Method: {limit_method}")
         self.log(f"Base scenario: {base_scenario}")
         self.log(f"Renewability targets defined for: {len(renewability_targets)} country/scenario combinations")
-        if limit_method == 'CapacityBased':
-            self.log("LowerLimit will be capped based on MaxCapacity constraints")
-        elif limit_method == 'ShareBased':
-            self.log("ShareBased: Will adjust CapacityFactors to meet share targets")
-        elif limit_method == 'DemandBased':
-            self.log("DemandBased: LowerLimit = Demand × Normalized_Share")
-            self.log("  - Reads demand from A-O_Demand.xlsx")
-            self.log("  - Distributes shares using OLADE weights")
-            self.log(f"  - Non-base scenarios: years 2023-2025 use {base_scenario} shares")
+        self.log("Calculation Method: LowerLimit = Demand × Normalized_Share")
+        self.log("  - Reads demand from A-O_Demand.xlsx")
+        self.log("  - Distributes shares using OLADE weights")
+        self.log(f"  - Non-base scenarios: years 2023-2025 use {base_scenario} shares")
         self.log("")
 
         activity_changes = 0
@@ -3054,20 +3043,10 @@ class SecondaryTechsUpdater:
                     # DEBUG: Store shares for CSV export
                     all_shares_data[(scenario, country_code)] = tech_shares
 
-                    # Check which method to use
-                    limit_method = self.olade_config.get('activity_lower_limit_method', 'CapacityBased')
-                    share_based_limits = {}
+                    # Use DemandBased method: LowerLimit = Demand × Normalized_Share
                     demand_based_limits = {}
 
-                    if update_lower and limit_method == 'ShareBased':
-                        # Use ShareBased method: adjust CapacityFactors and calculate limits
-                        share_based_limits = self.adjust_capacity_factors_for_share_based_limits(
-                            wb, scenario, country_code, tech_shares, all_years,
-                            ref_year, base_generation_pj, growth_rate
-                        )
-
-                    elif update_lower and limit_method == 'DemandBased':
-                        # Use DemandBased method: LowerLimit = Demand × Normalized_Share
+                    if update_lower:
                         # Calculate base scenario shares for override if needed (non-base scenarios)
                         base_shares = None
                         if scenario != base_scenario and country_code not in bau_shares_cache:
@@ -3124,29 +3103,18 @@ class SecondaryTechsUpdater:
 
                             share = year_shares.get(year, 0.0)
 
-                            # Calculate limit_value based on method
+                            # Calculate limit_value using DemandBased method
                             # IMPORTANT: Always calculate and write, even if share=0, to clear old values
-                            if limit_method == 'ShareBased' and tech_str in share_based_limits:
-                                limit_value = share_based_limits[tech_str].get(year)
-                                if limit_value is None:
-                                    # If no value in pre-calculated limits, use 0.0
-                                    limit_value = 0.0
-                                # ShareBased already adjusted CapacityFactors and calculated limits
-                                # Skip the CapacityBased calculation
-                            elif limit_method == 'DemandBased' and tech_str in demand_based_limits:
+                            if tech_str in demand_based_limits:
                                 limit_value = demand_based_limits[tech_str].get(year)
                                 if limit_value is None:
                                     # If no value in pre-calculated limits, use 0.0
                                     limit_value = 0.0
-                                # DemandBased already calculated limits from Demand × Share
-                                # Skip the CapacityBased calculation
                             else:
-                                # CapacityBased method: Calculate: Generation × (1 + rate × years_diff) × Share
-                                years_diff = year - ref_year
-                                generation_year = base_generation_pj * (1 + growth_rate * years_diff)
-                                limit_value = generation_year * share
+                                # Fallback: use 0.0 if tech not in demand_based_limits
+                                limit_value = 0.0
 
-                            # Capacity validation now handled by Universal Validation (for ALL methods)
+                            # Capacity validation now handled by Universal Validation
                             # No pre-capping needed - Universal Validation will increase MaxCapacity if needed
                             limit_value = round(limit_value, 4)
 

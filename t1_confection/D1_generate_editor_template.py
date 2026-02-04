@@ -428,13 +428,6 @@ def create_editor_template(data, output_path):
     ws_olade.cell(9, 2, "NO").border = border_style
     dv_yes_no.add('B9')
 
-    # ActivityLowerLimitMethod
-    ws_olade.cell(10, 1, "ActivityLowerLimitMethod").border = border_style
-    ws_olade.cell(10, 2, "CapacityBased").border = border_style
-    dv_method = DataValidation(type="list", formula1='"CapacityBased,ShareBased,DemandBased"', allow_blank=False)
-    ws_olade.add_data_validation(dv_method)
-    dv_method.add('B10')
-
     # Add detailed descriptions with formulas and data sources
     ws_olade.cell(11, 1, "DETAILED DESCRIPTIONS AND FORMULAS")
     ws_olade.cell(11, 1).font = Font(bold=True, size=12, color="366092")
@@ -589,63 +582,34 @@ def create_editor_template(data, output_path):
         current_row += 1
     current_row += 1
 
-    # ActivityLowerLimitMethod
-    ws_olade.cell(current_row, 1, "6. ActivityLowerLimitMethod")
+    # ActivityLowerLimitMethod (DemandBased)
+    ws_olade.cell(current_row, 1, "6. ActivityLowerLimit Calculation Method")
     ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
     ws_olade.merge_cells(f'A{current_row}:B{current_row}')
     current_row += 1
 
     method_desc = [
-        "Defines the calculation method for TotalTechnologyAnnualActivityLowerLimit.",
+        "Calculates TotalTechnologyAnnualActivityLowerLimit directly from projected demand and normalized shares.",
         "Only applies when ActivityLowerLimitFromOLADE = YES.",
         "",
-        "OPTIONS:",
-        "  - 'CapacityBased' (DEFAULT): Calculate LowerLimit based on maximum activity from capacity",
-        "    Formula: LowerLimit = min(Generation_target × Share, MaxActivity_from_capacity)",
-        "    Where: MaxActivity = (ResidualCapacity + TotalAnnualMaxCapacityInvestment) × CapacityToActivityUnit × AvailabilityFactor × ΣCapacityFactor",
+        "CALCULATION METHOD:",
+        "  Formula: LowerLimit[tech,year] = Demand[country,year] × Share_normalized[tech,year]",
+        "  Step 1: Read projected demand from A-O_Demand.xlsx (SpecifiedAnnualDemand)",
+        "  Step 2: Read % renewable from Renewability_Targets (with interpolation)",
+        "  Step 3: Distribute % renewable among renewable fuels using OLADE generation weights",
+        "  Step 4: Distribute % non-renewable among non-renewable fuels using OLADE generation weights",
+        "  Step 5: Normalize all shares year-by-year to ensure Σ(shares) = 1.0",
+        "  Step 6: For non-base scenarios, override years 2023-2025 with base scenario shares",
+        "  Step 7: Calculate LowerLimit = Demand × Share for each technology/year",
         "",
-        "  - 'ShareBased': Calculate LowerLimit to maintain technology shares, adjusting CapacityFactor",
-        "    Step 1: Calculate target LowerLimit from shares:",
-        "            LowerLimit_target = Generation_total × (1 + growth × years) × Share_technology",
-        "    Step 2: Calculate current max activity from minimum capacity:",
-        "            MaxActivity_current = TotalAnnualMinCapacityInvestment × CapacityToActivityUnit × AvailabilityFactor × ΣCapacityFactor",
-        "    Step 3: If LowerLimit_target > MaxActivity_current, adjust CapacityFactor:",
-        "            Adjustment_Factor = LowerLimit_target / MaxActivity_current",
-        "            New_CF = Current_CF × Adjustment_Factor",
-        "    Step 4: Normalize all adjusted CapacityFactors to ensure total share = 100%",
-        "    Step 5: Cap individual CapacityFactors to maximum 1.0",
-        "    Step 6: Set final LowerLimit based on adjusted CapacityFactors",
-        "",
-        "REQUIREMENTS FOR ShareBased:",
-        "  - ActivityLowerLimitFromOLADE must be YES",
-        "  - TotalAnnualMinCapacityInvestment must be > 0 for target technologies",
-        "  - Renewability_Targets sheet must define technology shares",
-        "  - Technology_Weights sheet (optional) for custom distribution within renewable/non-renewable groups",
-        "",
-        "NOTES:",
-        "  - ShareBased method modifies CapacityFactor values in the Capacities sheet",
-        "  - All timeslices (S1D1, S1D2, etc.) are adjusted proportionally",
-        "  - Normalization ensures shares sum to 100% even when individual CFs are capped at 1.0",
-        "  - Only technologies with TotalAnnualMinCapacityInvestment > 0 are adjusted",
-        "",
-        "  - 'DemandBased': Calculate LowerLimit directly from projected demand and normalized shares",
-        "    Formula: LowerLimit[tech,year] = Demand[country,year] × Share_normalized[tech,year]",
-        "    Step 1: Read projected demand from A-O_Demand.xlsx (SpecifiedAnnualDemand)",
-        "    Step 2: Read % renewable from Renewability_Targets (with interpolation)",
-        "    Step 3: Distribute % renewable among renewable fuels using OLADE generation weights",
-        "    Step 4: Distribute % non-renewable among non-renewable fuels using OLADE generation weights",
-        "    Step 5: Normalize all shares year-by-year to ensure Σ(shares) = 1.0",
-        "    Step 6: For non-base scenarios, override years 2023-2025 with base scenario shares",
-        "    Step 7: Calculate LowerLimit = Demand × Share for each technology/year",
-        "",
-        "REQUIREMENTS FOR DemandBased:",
+        "REQUIREMENTS:",
         "  - ActivityLowerLimitFromOLADE must be YES",
         "  - A-O_Demand.xlsx must exist in the scenario output folder",
         "  - Renewability_Targets sheet must define % renewable targets",
         "  - OLADE generation data must be available for weight calculation",
         "  - base_scenario defined in Config_MOMF_T1_AB.yaml",
         "",
-        "FUEL GROUPS FOR DemandBased:",
+        "FUEL GROUPS:",
         "  Renewable: HYD, SPV, WON, GEO, BIO, CSP, WOF, WAV",
         "  Non-renewable: COA, NGS, OIL, PET, URN",
         "  Other (weight=0 if no OLADE data): BCK, CCS, COG, LDS, OTH, SDS, WAS",
@@ -726,12 +690,9 @@ def create_editor_template(data, output_path):
         ["", ""],
         ["- If ActivityLowerLimitFromOLADE = YES in OLADE_Config sheet:", ""],
         ["  * The script will populate TotalTechnologyAnnualActivityLowerLimit in A-O_Parametrization.xlsx", ""],
-        ["  * Two calculation methods available (ActivityLowerLimitMethod):", ""],
-        ["    - CapacityBased: Uses max activity from capacity (default)", ""],
-        ["    - ShareBased: Maintains technology shares by adjusting CapacityFactor", ""],
-        ["  * Formula (CapacityBased): Generation_OLADE × (1 + growth_rate × (year - 2023)) × Share_technology", ""],
-        ["  * Shares come from 'Shares_Total.xlsx' (scenario-specific by country and technology)", ""],
-        ["  * Uses the same growth rates as DemandFromOLADE (from 'Demand_Growth' sheet)", ""],
+        ["  * Formula: LowerLimit[tech,year] = Demand[country,year] × Share_normalized[tech,year]", ""],
+        ["  * Shares are calculated from Renewability_Targets and OLADE generation weights", ""],
+        ["  * Demand values come from A-O_Demand.xlsx (with projected growth)", ""],
         ["", ""],
         ["IMPORTANT NOTES:", ""],
         ["- You can add as many rows as needed", ""],
