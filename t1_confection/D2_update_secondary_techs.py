@@ -284,7 +284,7 @@ def read_olade_config(editor_path):
 
 def read_shares_data(shares_file_path):
     """
-    Read Shares.xlsx file to get Diésel, Fuel oil, and Búnker shares by scenario, country, and year
+    Read Shares_PET_OIL_Split.xlsx file to get Diésel, Fuel oil, and Búnker shares by scenario, country, and year
 
     The file should be normalized so that Diésel + Fuel oil + Búnker = 1.0
 
@@ -699,10 +699,10 @@ def read_demand_data(demand_file_path):
 
 def read_shares_total_data(shares_total_path):
     """
-    Read Shares_Total.xlsx file to get technology shares by scenario, country, technology, and year
+    Read Shares_Power_Generation_Technologies.xlsx file to get technology shares by scenario, country, technology, and year
 
     The file has a structure where countries are followed by their technology rows.
-    Technologies in Shares_Total are mapped to model tech codes:
+    Technologies in Shares_Power_Generation_Technologies are mapped to model tech codes:
     - Biomasa → BIO
     - Búnker + Fuel oil → OIL
     - Carbón → COA
@@ -1766,10 +1766,10 @@ class SecondaryTechsUpdater:
                 for tech in non_renewable_techs:
                     if tech in ['PET', 'OIL']:
                         # Split PETROLEUM between PET and OIL
-                        # Use Shares_Total.xlsx to get the split ratio for base year
+                        # Use Shares_Power_Generation_Technologies.xlsx to get the split ratio for base year
                         petroleum_share = olade_tech_shares.get('PETROLEUM', 0.0)
                         if petroleum_share > 0:
-                            # Get PET and OIL shares from Shares_Total for the split ratio
+                            # Get PET and OIL shares from Shares_Power_Generation_Technologies for the split ratio
                             pet_share_total = base_shares.get('PET', {}).get(base_year, 0.0)
                             oil_share_total = base_shares.get('OIL', {}).get(base_year, 0.0)
                             total_petroleum_shares = pet_share_total + oil_share_total
@@ -3405,7 +3405,7 @@ class SecondaryTechsUpdater:
                 self.log("")
                 self.log("Demand integration: DISABLED")
 
-            # Check Activity Limits integration - needs Shares_Total.xlsx
+            # Check Activity Limits integration - needs Shares_Power_Generation_Technologies.xlsx
             lower_enabled = self.olade_config.get('activity_lower_limit_enabled')
             upper_enabled = self.olade_config.get('activity_upper_limit_enabled')
 
@@ -3542,9 +3542,9 @@ def main():
         editor_path = script_dir / "Secondary_Techs_Editor.xlsx"
         base_path = script_dir / "A1_Outputs"
         olade_file_path = script_dir / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
-        shares_file_path = script_dir / "Shares.xlsx"
+        shares_file_path = script_dir / "Shares_PET_OIL_Split.xlsx"
         generation_file_path = script_dir / "OLADE - Generación eléctrica por fuente - Anual.xlsx"
-        shares_total_file_path = script_dir / "Shares_Total.xlsx"
+        shares_total_file_path = script_dir / "Shares_Power_Generation_Technologies.xlsx"
 
         # Create updater and run
         updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path, generation_file_path, shares_total_file_path)
