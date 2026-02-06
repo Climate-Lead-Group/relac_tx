@@ -2043,7 +2043,7 @@ class SecondaryTechsUpdater:
 
     def read_osemosys_defaults(self):
         """
-        Read OSeMOSYS parameter default values from Config_conversion_format.yaml.
+        Read OSeMOSYS parameter default values from conversion_format.yaml.
 
         Returns:
             dict: Parameter defaults (e.g., {'CapacityFactor': 1, 'AvailabilityFactor': 1, ...})
@@ -2051,9 +2051,9 @@ class SecondaryTechsUpdater:
         import yaml
         from pathlib import Path
 
-        yaml_path = Path(__file__).parent / 'Miscellaneous' / 'Config_conversion_format.yaml'
+        yaml_path = Path(__file__).parent / 'Miscellaneous' / 'conversion_format.yaml'
         if not yaml_path.exists():
-            self.log("WARNING: Config_conversion_format.yaml not found, using hardcoded defaults")
+            self.log("WARNING: conversion_format.yaml not found, using hardcoded defaults")
             return {'CapacityFactor': 1.0}
 
         try:
@@ -2067,7 +2067,7 @@ class SecondaryTechsUpdater:
 
             return defaults
         except Exception as e:
-            self.log(f"WARNING: Error reading Config_conversion_format.yaml: {e}")
+            self.log(f"WARNING: Error reading conversion_format.yaml: {e}")
             return {'CapacityFactor': 1.0}
 
     def apply_ndc_bau_override(self, tech_shares_ndc, tech_shares_bau, override_years=None):
@@ -2141,7 +2141,7 @@ class SecondaryTechsUpdater:
 
         Returns: sum(CapacityFactor[l,y] × YearSplit[l,y]) for all timeslices
         """
-        # Get default from Config_conversion_format.yaml
+        # Get default from conversion_format.yaml
         defaults = self.read_osemosys_defaults()
         default_cf = defaults.get('CapacityFactor', 1.0)
 
@@ -2183,7 +2183,7 @@ class SecondaryTechsUpdater:
                     except (ValueError, TypeError):
                         pass
 
-        # If no CapacityFactor found, use default from Config_conversion_format.yaml
+        # If no CapacityFactor found, use default from conversion_format.yaml
         return cf_sum if cf_sum > 0 else default_cf
 
     def calculate_max_possible_activity(self, wb, ws, tech_str, year, year_col_map,
@@ -2196,7 +2196,7 @@ class SecondaryTechsUpdater:
         Formula: MaxPossibleActivity = MaxCapacity × C2A × AvailabilityFactor × sum(CF × YearSplit)
         Note: C2A already includes the 8760 hours/year conversion, so we do NOT multiply by 8760.
 
-        All parameters use defaults from Config_conversion_format.yaml if not defined:
+        All parameters use defaults from conversion_format.yaml if not defined:
         - TotalAnnualMaxCapacity: default = -1 (no limit in OSeMOSYS)
         - AvailabilityFactor: default = 1.0
         - CapacityFactor: default = 1.0
@@ -2216,7 +2216,7 @@ class SecondaryTechsUpdater:
 
         col_idx = year_col_map[year]
 
-        # Get defaults from Config_conversion_format.yaml
+        # Get defaults from conversion_format.yaml
         defaults = self.read_osemosys_defaults()
 
         # Get C2A with fallback to appropriate default
@@ -2861,6 +2861,9 @@ class SecondaryTechsUpdater:
         Args:
             all_years: list of years to populate
         """
+        # Only DemandBased method is used after removing CapacityBased and ShareBased
+        limit_method = 'DemandBased'
+
         update_lower = self.olade_config.get('activity_lower_limit_enabled', False)
         update_upper = self.olade_config.get('activity_upper_limit_enabled', False)
 
