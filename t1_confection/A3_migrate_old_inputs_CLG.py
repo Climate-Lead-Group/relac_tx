@@ -857,8 +857,7 @@ class OldInputsMigrator:
 
         For TotalAnnualMaxCapacityInvestment and TotalAnnualMaxCapacity:
         - Change "User defined" to "EMPTY" in Projection.Mode column
-        - Exception for TotalAnnualMaxCapacityInvestment: do NOT change if Tech
-          has interconnection structure (TRN{COUNTRY}XX{COUNTRY}XX)
+          (includes interconnection technologies TRN{COUNTRY}XX{COUNTRY}XX)
         """
         self.log(f"    Updating Projection.Mode for capacity parameters in {sheet_name}...")
 
@@ -869,7 +868,7 @@ class OldInputsMigrator:
 
         # Parameters to update
         target_params = {
-            'TotalAnnualMaxCapacityInvestment': True,  # True = has interconnection exception
+            'TotalAnnualMaxCapacityInvestment': False,  # No exception - includes interconnections
             'TotalAnnualMaxCapacity': False             # False = no exception
         }
 

@@ -9,6 +9,7 @@ Usage:
 """
 import openpyxl
 import sys
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 import shutil
@@ -37,6 +38,18 @@ OLADE_COUNTRY_MAPPING = {
     'Perú': 'PER',
     'República Dominicana': 'DOM',
     'Uruguay': 'URY'
+}
+
+
+def strip_accents(text):
+    """Remove accents from text for fuzzy country name matching (e.g., 'Haití' -> 'Haiti')"""
+    nfkd = unicodedata.normalize('NFKD', str(text))
+    return ''.join(c for c in nfkd if not unicodedata.combining(c))
+
+
+# Normalized country mapping (accent-insensitive) for matching country names from external files
+OLADE_COUNTRY_MAPPING_NORMALIZED = {
+    strip_accents(name): code for name, code in OLADE_COUNTRY_MAPPING.items()
 }
 
 # OLADE technology to model tech code (3 chars) mapping
@@ -91,6 +104,7 @@ def read_olade_config(editor_path):
             'demand_enabled': False,
             'activity_lower_limit_enabled': False,
             'activity_upper_limit_enabled': False,
+            'trade_balance_enabled': False,
             'demand_growth_rates': {},
             'scenarios_demand_adjustments': {},
             'renewability_targets': {},
@@ -102,11 +116,13 @@ def read_olade_config(editor_path):
     # Read configuration values
     # Row 5 = ResidualCapacitiesFromOLADE, Row 6 = PetroleumSplitMode, Row 7 = DemandFromOLADE
     # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE
+    # Row 10 = TradeBalanceDemandAdjustment
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
     petroleum_split_mode = str(ws['B6'].value) if ws['B6'].value else 'Split_PET_OIL'
     demand_enabled = str(ws['B7'].value).upper() == 'YES' if ws['B7'].value else False
     activity_lower_limit_enabled = str(ws['B8'].value).upper() == 'YES' if ws['B8'].value else False
     activity_upper_limit_enabled = str(ws['B9'].value).upper() == 'YES' if ws['B9'].value else False
+    trade_balance_enabled = str(ws['B10'].value).upper() == 'YES' if ws['B10'].value else False
 
     # Read demand growth rates from Demand_Growth sheet
     demand_growth_rates = {}
@@ -275,6 +291,7 @@ def read_olade_config(editor_path):
         'demand_enabled': demand_enabled,
         'activity_lower_limit_enabled': activity_lower_limit_enabled,
         'activity_upper_limit_enabled': activity_upper_limit_enabled,
+        'trade_balance_enabled': trade_balance_enabled,
         'demand_growth_rates': demand_growth_rates,
         'scenarios_demand_adjustments': scenarios_demand_adjustments,
         'renewability_targets': renewability_targets,
@@ -617,6 +634,97 @@ def read_olade_generation_data(generation_file_path):
     }
 
 
+def read_trade_balance_data(trade_balance_file_path):
+    """
+    Read per-country electricity import/export data from the 'Imp-Exp por País' sheet.
+
+    Uses accent-normalized country names to match against OLADE_COUNTRY_MAPPING.
+
+    Args:
+        trade_balance_file_path: Path to flujos_energia_estimados_optimizacion.xlsx
+
+    Returns:
+        dict: {
+            country_iso3: {
+                year: {
+                    'importaciones_gwh': float,
+                    'exportaciones_gwh': float
+                }
+            }
+        }
+    """
+    if not trade_balance_file_path.exists():
+        raise FileNotFoundError(f"Trade balance file not found: {trade_balance_file_path}")
+
+    wb = openpyxl.load_workbook(trade_balance_file_path, data_only=True)
+
+    # Find the 'Imp-Exp por País' sheet (accent-insensitive match)
+    target_sheet = None
+    for name in wb.sheetnames:
+        if strip_accents(name) == 'Imp-Exp por Pais':
+            target_sheet = name
+            break
+
+    if not target_sheet:
+        wb.close()
+        raise ValueError(
+            f"Sheet 'Imp-Exp por País' not found in {trade_balance_file_path}. "
+            f"Available sheets: {wb.sheetnames}"
+        )
+
+    ws = wb[target_sheet]
+
+    # Parse header row to find column indices
+    col_map = {}
+    for col_idx in range(1, ws.max_column + 1):
+        header = ws.cell(1, col_idx).value
+        if header:
+            col_map[strip_accents(str(header).strip())] = col_idx
+
+    year_col = col_map.get('Ano')
+    country_col = col_map.get('Pais')
+    exp_col = col_map.get('Exportaciones (GWh)')
+    imp_col = col_map.get('Importaciones (GWh)')
+
+    if not all([year_col, country_col, exp_col, imp_col]):
+        wb.close()
+        raise ValueError(
+            f"Missing required columns in '{target_sheet}'. "
+            f"Found headers: {list(col_map.keys())}. "
+            f"Required: Año, País, Exportaciones (GWh), Importaciones (GWh)"
+        )
+
+    # Read data rows
+    trade_data = {}
+
+    for row_idx in range(2, ws.max_row + 1):
+        year_val = ws.cell(row_idx, year_col).value
+        country_val = ws.cell(row_idx, country_col).value
+        exp_val = ws.cell(row_idx, exp_col).value
+        imp_val = ws.cell(row_idx, imp_col).value
+
+        if year_val is None or country_val is None:
+            continue
+
+        year = int(year_val)
+        country_name_clean = strip_accents(str(country_val).strip())
+        iso3 = OLADE_COUNTRY_MAPPING_NORMALIZED.get(country_name_clean)
+
+        if not iso3:
+            continue  # Country not in our mapping
+
+        if iso3 not in trade_data:
+            trade_data[iso3] = {}
+
+        trade_data[iso3][year] = {
+            'importaciones_gwh': float(imp_val) if imp_val is not None else 0.0,
+            'exportaciones_gwh': float(exp_val) if exp_val is not None else 0.0
+        }
+
+    wb.close()
+    return trade_data
+
+
 def read_demand_data(demand_file_path):
     """
     Read projected electricity demand from A-O_Demand.xlsx
@@ -849,13 +957,14 @@ def read_shares_total_data(shares_total_path):
 
 
 class SecondaryTechsUpdater:
-    def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None, generation_file_path=None, shares_total_file_path=None):
+    def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None, generation_file_path=None, shares_total_file_path=None, trade_balance_file_path=None):
         self.editor_path = editor_path
         self.base_path = base_path
         self.olade_file_path = olade_file_path
         self.shares_file_path = shares_file_path
         self.generation_file_path = generation_file_path
         self.shares_total_file_path = shares_total_file_path
+        self.trade_balance_file_path = trade_balance_file_path
         self.scenarios = ["BAU", "NDC", "NDC+ELC", "NDC_NoRPO"]
         self.log_lines = []
         self.changes_applied = 0
@@ -865,6 +974,7 @@ class SecondaryTechsUpdater:
         self.shares_data = None
         self.generation_data = None
         self.shares_total_data = None
+        self.trade_balance_data = None
         # DEBUG: Cache for DemandBased normalized shares
         self.demand_based_shares_cache = {}  # {(scenario, country): {fuel: {year: share}}}
 
@@ -1651,6 +1761,167 @@ class SecondaryTechsUpdater:
 
         self.log("")
         self.log(f"Demand updates completed: {demand_changes} values written")
+
+    def _get_trade_for_year(self, country_iso3, year):
+        """
+        Get trade balance data for a given country and year.
+
+        For years beyond the available data, uses the last available year's values.
+        For years before the earliest data, uses the earliest year's values.
+
+        Returns:
+            tuple: (importaciones_gwh, exportaciones_gwh)
+        """
+        country_data = self.trade_balance_data.get(country_iso3, {})
+        if not country_data:
+            return 0.0, 0.0
+
+        if year in country_data:
+            return (country_data[year]['importaciones_gwh'],
+                    country_data[year]['exportaciones_gwh'])
+
+        # Use last available year for future years
+        max_available_year = max(country_data.keys())
+        if year > max_available_year:
+            return (country_data[max_available_year]['importaciones_gwh'],
+                    country_data[max_available_year]['exportaciones_gwh'])
+
+        # Use earliest available year for past years
+        min_available_year = min(country_data.keys())
+        return (country_data[min_available_year]['importaciones_gwh'],
+                country_data[min_available_year]['exportaciones_gwh'])
+
+    def update_demand_with_trade_balance(self, all_years):
+        """
+        Adjust electricity demand in A-O_Demand.xlsx by trade balance (imports/exports).
+
+        Formula: Adjusted_Demand = Current_Demand - Exports_PJ + Imports_PJ
+        Where Imports/Exports are converted from GWh to PJ (1 GWh = 0.0036 PJ).
+
+        For years beyond available trade data, uses last available year as constant.
+        This method runs LAST to avoid propagating changes to activity limits.
+
+        Args:
+            all_years: list of years to process
+        """
+        if not self.olade_config.get('trade_balance_enabled') or not self.trade_balance_data:
+            return
+
+        GWH_TO_PJ = 0.0036
+
+        self.log("")
+        self.log("=" * 80)
+        self.log("ADJUSTING DEMAND BY TRADE BALANCE (Imports/Exports)")
+        self.log("=" * 80)
+
+        # Log available years in trade data
+        all_trade_years = set()
+        for country_data in self.trade_balance_data.values():
+            all_trade_years.update(country_data.keys())
+        max_trade_year = max(all_trade_years) if all_trade_years else None
+        self.log(f"Trade data years: {sorted(all_trade_years)}")
+        if max_trade_year:
+            self.log(f"Years beyond {max_trade_year} will use {max_trade_year} values as constant")
+        self.log(f"Conversion: 1 GWh = {GWH_TO_PJ} PJ")
+        self.log(f"Formula: New_Demand = Current_Demand - Exports_PJ + Imports_PJ")
+        self.log("")
+
+        trade_balance_changes = 0
+
+        for scenario in self.scenarios:
+            demand_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
+
+            if not demand_path.exists():
+                self.log(f"  ✗ Demand file not found: {demand_path}", "WARNING")
+                continue
+
+            self.log(f"Processing {scenario}...")
+
+            # Create backup
+            backup_path = self.create_backup(demand_path)
+            self.log(f"  Backup: {backup_path.name}")
+
+            try:
+                wb = openpyxl.load_workbook(demand_path)
+
+                if 'Demand_Projection' not in wb.sheetnames:
+                    wb.close()
+                    self.log(f"  ✗ 'Demand_Projection' sheet not found", "ERROR")
+                    continue
+
+                ws = wb['Demand_Projection']
+
+                # Build year column map from headers
+                year_col_map = {}
+                for col_idx in range(1, ws.max_column + 1):
+                    header = ws.cell(1, col_idx).value
+                    if header and str(header).isdigit():
+                        try:
+                            year = int(header)
+                            if 2000 <= year <= 2100:
+                                year_col_map[year] = col_idx
+                        except (ValueError, TypeError):
+                            pass
+
+                # Find ELC*XX02 rows and apply adjustments
+                for row_idx in range(2, ws.max_row + 1):
+                    fuel_code = ws.cell(row_idx, 2).value
+                    if not fuel_code:
+                        continue
+
+                    fuel_str = str(fuel_code).strip().upper()
+                    if not (fuel_str.startswith('ELC') and fuel_str.endswith('XX02') and len(fuel_str) == 10):
+                        continue
+
+                    country_code = fuel_str[3:6]  # e.g., 'ARG' from 'ELCARGXX02'
+
+                    if country_code not in self.trade_balance_data:
+                        continue  # No trade data for this country
+
+                    first_year_logged = False
+
+                    for year in all_years:
+                        if year not in year_col_map:
+                            continue
+
+                        current_value = ws.cell(row_idx, year_col_map[year]).value
+                        if current_value is None:
+                            continue
+
+                        try:
+                            current_demand_pj = float(current_value)
+                        except (ValueError, TypeError):
+                            continue
+
+                        imports_gwh, exports_gwh = self._get_trade_for_year(country_code, year)
+
+                        # Adjust: New_Demand = Current - Exports + Imports (all in PJ)
+                        imports_pj = imports_gwh * GWH_TO_PJ
+                        exports_pj = exports_gwh * GWH_TO_PJ
+                        new_demand_pj = round(current_demand_pj - exports_pj + imports_pj, 2)
+
+                        ws.cell(row_idx, year_col_map[year], new_demand_pj)
+                        trade_balance_changes += 1
+
+                        if not first_year_logged:
+                            self.log(f"  {country_code}: Imp={imports_gwh:.1f} GWh ({imports_pj:.4f} PJ), "
+                                     f"Exp={exports_gwh:.1f} GWh ({exports_pj:.4f} PJ), "
+                                     f"Demand {current_demand_pj:.2f} -> {new_demand_pj:.2f} PJ (year {year})")
+                            first_year_logged = True
+
+                wb.save(demand_path)
+                wb.close()
+                self.log(f"  ✓ {scenario} trade balance adjustment applied")
+
+            except Exception as e:
+                self.log(f"  ✗ Error adjusting {scenario}: {e}", "ERROR")
+                try:
+                    wb.close()
+                except:
+                    pass
+
+        self.log("")
+        self.log(f"Trade balance adjustments completed: {trade_balance_changes} values updated")
 
     def calculate_technology_shares(self, country_code, scenario, all_years):
         """
@@ -3444,6 +3715,28 @@ class SecondaryTechsUpdater:
                 self.log("")
                 self.log("Activity Limits integration: DISABLED")
 
+            # Check Trade Balance Demand Adjustment
+            if self.olade_config.get('trade_balance_enabled'):
+                self.log("")
+                self.log("Trade Balance Demand Adjustment: ENABLED")
+                if self.trade_balance_file_path and self.trade_balance_file_path.exists():
+                    self.log(f"Trade balance file: {self.trade_balance_file_path}")
+                    try:
+                        self.trade_balance_data = read_trade_balance_data(self.trade_balance_file_path)
+                        countries_with_data = len(self.trade_balance_data)
+                        self.log(f"Trade balance data loaded: {countries_with_data} countries")
+                    except Exception as e:
+                        self.log(f"ERROR loading trade balance data: {e}", "ERROR")
+                        self.log("Continuing without trade balance adjustment...", "WARNING")
+                        self.olade_config['trade_balance_enabled'] = False
+                else:
+                    self.log(f"WARNING: Trade balance file not found: {self.trade_balance_file_path}", "WARNING")
+                    self.log("Continuing without trade balance adjustment...", "WARNING")
+                    self.olade_config['trade_balance_enabled'] = False
+            else:
+                self.log("")
+                self.log("Trade Balance Demand Adjustment: DISABLED")
+
             self.log("")
 
             # Read editor file
@@ -3510,6 +3803,10 @@ class SecondaryTechsUpdater:
                 self.olade_config.get('activity_upper_limit_enabled')) and self.generation_data:
                 self.update_activity_limits(sorted(all_years))
 
+            # Adjust demand by trade balance if enabled (runs LAST - must not affect activity limits)
+            if self.olade_config.get('trade_balance_enabled') and self.trade_balance_data:
+                self.update_demand_with_trade_balance(sorted(all_years))
+
             # Summary
             self.log("")
             self.log("=" * 80)
@@ -3548,9 +3845,10 @@ def main():
         shares_file_path = script_dir / "Shares_PET_OIL_Split.xlsx"
         generation_file_path = script_dir / "OLADE - Generación eléctrica por fuente - Anual.xlsx"
         shares_total_file_path = script_dir / "Shares_Power_Generation_Technologies.xlsx"
+        trade_balance_file_path = script_dir / "Matriz Balance energético" / "flujos_energia_estimados_optimizacion.xlsx"
 
         # Create updater and run
-        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path, generation_file_path, shares_total_file_path)
+        updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path, generation_file_path, shares_total_file_path, trade_balance_file_path)
         return updater.run()
 
     except Exception as e:
