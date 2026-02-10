@@ -5,7 +5,7 @@ stages:
     deps:
       # files
       - t1_confection/B1_Compiler.py
-      - t1_confection/MOMF_T1_A.yaml
+      - t1_confection/Config_MOMF_T1_A.yaml
 
       # folder with data
       - t1_confection/A1_Outputs/
@@ -22,7 +22,7 @@ stages:
     cmd: python -u t1_confection/B2_Executing_OG_Model.py
     deps:
       # files
-      - t1_confection/MOMF_T1_AB.yaml
+      - t1_confection/Config_MOMF_T1_AB.yaml
       - t1_confection/osemosys_fast_preprocessed.txt
       - concatenate_files/concatenate_relac.py
       - t1_confection/Z_AUX_capital_annualization_script.py

@@ -68,7 +68,7 @@ El sistema incluye una matriz configurable que permite especificar qué combinac
 
 1. **Generar la matriz**:
    ```bash
-   python t1_confection/D0_generate_tech_country_matrix.py
+   python t1_confection/A0_generate_tech_country_matrix.py
    ```
    Esto crea el archivo `Tech_Country_Matrix.xlsx` con las siguientes hojas:
    - **Matrix**: Matriz YES/NO para cada combinación tecnología-país
@@ -141,24 +141,43 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 3. **Integración OLADE** (Hoja "OLADE_Config"):
 
-   Permite poblar automáticamente el parámetro `ResidualCapacity` para tecnologías PWR usando datos de capacidad instalada de OLADE.
+   Permite poblar automáticamente parámetros usando datos de OLADE.
 
    | Parámetro | Descripción |
    |-----------|-------------|
-   | `ResidualCapacitiesFromOLADE` | YES/NO - Habilitar integración OLADE para capacidad instalada |
-   | `PetroleumSplitMode` | OIL_only o Split_PET_OIL |
+   | `ResidualCapacitiesFromOLADE` | YES/NO - Habilitar integración OLADE para capacidad instalada (ResidualCapacity) |
+   | `PetroleumSplitMode` | OIL_only o Split_PET_OIL - Modo de división de petróleo |
    | `DemandFromOLADE` | YES/NO - Habilitar integración OLADE para demanda eléctrica |
+   | `ActivityLowerLimitFromOLADE` | YES/NO - Habilitar integración OLADE para TotalTechnologyAnnualActivityLowerLimit |
+   | `ActivityUpperLimitFromOLADE` | YES/NO - Habilitar integración OLADE para TotalTechnologyAnnualActivityUpperLimit |
 
    **PetroleumSplitMode**:
    - `OIL_only`: Asigna toda la capacidad de petróleo a OIL (Fuel oil)
-   - `Split_PET_OIL`: Divide entre PET (Diésel) y OIL (Fuel oil + Búnker) usando proporciones del archivo `Shares.xlsx`
+   - `Split_PET_OIL`: Divide entre PET (Diésel) y OIL (Fuel oil + Búnker) usando proporciones del archivo `Shares_PET_OIL_Split.xlsx`
 
    **DemandFromOLADE**:
    - Cuando está habilitado, actualiza la demanda eléctrica en `A-O_Demand.xlsx` usando datos de generación de OLADE
    - Configura las tasas de crecimiento por país en la hoja `Demand_Growth`
    - Fórmula: `Demanda(año) = Demanda(2023) × (1 + tasa × (año - 2023))`
 
-4. **Aplicar cambios**:
+   **ActivityLowerLimit y ActivityUpperLimit**:
+   - Cuando están habilitados, poblan automáticamente los límites de actividad en `A-O_Parametrization.xlsx`
+   - Usa datos de generación eléctrica de OLADE combinados con shares de tecnologías de `Shares_Power_Generation_Technologies.xlsx`
+   - Configura objetivos de renovabilidad opcionales en la hoja `Renewability_Targets`
+   - Configura pesos personalizados de tecnologías en la hoja `Technology_Weights`
+   - Fórmula: `ActivityLimit(tech,año) = Generación_Total(PJ) × (1 + tasa × (año - 2023)) × Share(tech,año)`
+   - Incluye validación automática contra capacidades disponibles
+   - Ver hoja `Documentation` en el editor para detalles completos de cálculo y validación
+
+4. **Hojas Adicionales del Editor**:
+
+   El archivo `Secondary_Techs_Editor.xlsx` también incluye:
+   - **Renewability_Targets**: Define objetivos de % renovable por año para cada país/escenario (usado por Activity Limits)
+   - **Technology_Weights**: Permite definir distribución personalizada de tecnologías renovables y no renovables
+   - **Scenarios_Demand_Growth**: Configura tasas de crecimiento de demanda específicas por escenario y país
+   - **Documentation**: Documentación técnica completa sobre el cálculo y validación de Activity Limits
+
+5. **Aplicar cambios**:
    ```bash
    python t1_confection/D2_update_secondary_techs.py
    ```
@@ -169,9 +188,12 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 - **Mapeo Tech.Name → Tech**: Conversión automática de nombres descriptivos a códigos técnicos
 - **Integración OLADE Capacidad**: Población automática de ResidualCapacity desde datos de capacidad instalada
 - **Integración OLADE Demanda**: Población automática de demanda eléctrica desde datos de generación
-- **Conversión de unidades**: MW → GW (capacidad), GWh → PJ (demanda)
+- **Integración OLADE Activity Limits**: Población automática de TotalTechnologyAnnualActivityLowerLimit y UpperLimit
+- **Conversión de unidades**: MW → GW (capacidad), GWh → PJ (demanda y activity)
 - **Valores flat (capacidad)**: El mismo valor de capacidad se usa para todos los años
-- **Crecimiento lineal (demanda)**: Tasa de crecimiento configurable por país
+- **Crecimiento lineal (demanda y activity)**: Tasa de crecimiento configurable por país
+- **Validación de Activity Limits**: Verifica automáticamente que los límites no excedan la capacidad disponible
+- **Objetivos de renovabilidad**: Sistema de interpolación para alcanzar metas de % renovable
 - **Respaldos automáticos**: Un backup por escenario antes de aplicar cambios
 - **Projection.Mode**: Se actualiza automáticamente a "User defined" al modificar valores
 - **Logs detallados**: Registro completo con identificación de país en cada operación
@@ -180,14 +202,15 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 | Archivo | Descripción |
 |---------|-------------|
-| `D0_generate_tech_country_matrix.py` | Genera la matriz tecnología-país |
+| `A0_generate_tech_country_matrix.py` | Genera la matriz tecnología-país |
 | `D1_generate_editor_template.py` | Genera la plantilla Excel |
 | `D2_update_secondary_techs.py` | Aplica los cambios a los escenarios |
 | `Tech_Country_Matrix.xlsx` | Matriz tecnología-país (generada) |
 | `Secondary_Techs_Editor.xlsx` | Plantilla de edición (generada) |
-| `Capacidad instalada por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE (capacidad) |
-| `Generación eléctrica por fuente - Anual - OLADE.xlsx` | Datos fuente OLADE (generación) |
-| `Shares.xlsx` | Proporciones para split de petróleo por escenario |
+| `OLADE - Capacidad instalada por fuente - Anual.xlsx` | Datos fuente OLADE (capacidad instalada) |
+| `OLADE - Generación eléctrica por fuente - Anual.xlsx` | Datos fuente OLADE (generación eléctrica) |
+| `Shares_PET_OIL_Split.xlsx` | Proporciones para split de petróleo (Diesel, Fuel oil, Bunker) por escenario |
+| `Shares_Power_Generation_Technologies.xlsx` | Proporciones de tecnologías de generación eléctrica por país/escenario/año |
 
 ### Mapeo de Países OLADE → Modelo
 
