@@ -222,6 +222,56 @@ Algunos códigos de país difieren entre OLADE y el modelo:
 | Chile | CHI | CHL |
 | Costa Rica | CRC | CRI |
 
+## Herramientas de Gestión de Países
+
+### Validador de Datos por País
+
+Verifica que un país tiene todos los datos requeridos en los archivos CSV de entrada de OSeMOSYS.
+
+```bash
+python t1_confection/Z_validate_country_data.py                  # Validar todos los países RELAC
+python t1_confection/Z_validate_country_data.py --country ARG    # Validar un país específico
+python t1_confection/Z_validate_country_data.py --country NCC --report  # Generar reporte detallado
+```
+
+**Validaciones realizadas:**
+- Presencia en sets (TECHNOLOGY, FUEL, EMISSION, STORAGE)
+- Cantidad mínima de tecnologías por prefijo (PWR, MIN, RNW)
+- Datos en todos los parámetros requeridos (costos, capacidad, factores, ratios, etc.)
+- Patrones de fuels esperados por país
+
+### Generador de Plantillas para Nuevo País
+
+Crea un conjunto de archivos CSV con la estructura mínima necesaria para agregar un nuevo país, usando un país existente como referencia.
+
+```bash
+python t1_confection/Z_generate_country_template.py                              # Lee config desde YAML
+python t1_confection/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY  # Override por CLI
+```
+
+**Configuración** (sección `template_generation` en `Config_country_codes.yaml`):
+
+| Parámetro | Descripción |
+|-----------|-------------|
+| `new_country` | Código de 3 letras del nuevo país |
+| `reference_country` | País existente del cual clonar datos |
+| `region` | Código de región (default: XX) |
+| `interconnections` | Lista de vecinos para interconexiones (vacío = sin interconexiones) |
+
+**Características:**
+- Genera CSVs en `templates/{CÓDIGO}/` sin modificar los archivos originales
+- Manejo dinámico de interconexiones: soporta más, menos, igual o cero interconexiones respecto al país de referencia
+- Transformación correcta de códigos de fuel y mode-of-operation para tecnologías TRN
+- Incluye script `merge_into_inputs.py` en la carpeta generada para facilitar la integración
+
+### Archivos Relacionados
+
+| Archivo | Descripción |
+|---------|-------------|
+| `Z_validate_country_data.py` | Valida datos de un país en OG_csvs_inputs |
+| `Z_generate_country_template.py` | Genera plantilla CSV para agregar un país |
+| `Config_country_codes.yaml` | Configuración centralizada (incluye sección `template_generation`) |
+
 ## Licencia
 
 Este proyecto está licenciado bajo la Licencia Apache 2.0 - consulta el archivo [LICENSE](LICENSE) para más detalles.
