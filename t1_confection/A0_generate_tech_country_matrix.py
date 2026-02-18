@@ -19,41 +19,14 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.worksheet.datavalidation import DataValidation
 from pathlib import Path
+from Z_AUX_config_loader import get_countries, get_country_names
 
 # Script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Country codes from the model (same as iso_country_map)
-COUNTRIES = [
-    "ARG", "BOL", "BRA", "BRB", "CHL", "COL", "CRI", "CUB", "DOM", "ECU",
-    "GTM", "HND", "HTI", "MEX", "NIC", "PAN", "PER", "PRY",
-    "SLV", "URY", "VEN"
-]
-
-# Country names for reference
-COUNTRY_NAMES = {
-    "ARG": "Argentina",
-    "BOL": "Bolivia",
-    "BRA": "Brazil",
-    "BRB": "Barbados",
-    "CHL": "Chile",
-    "COL": "Colombia",
-    "CRI": "Costa Rica",
-    "CUB": "Cuba",
-    "DOM": "Dominican Republic",
-    "ECU": "Ecuador",
-    "GTM": "Guatemala",
-    "HND": "Honduras",
-    "HTI": "Haiti",
-    "MEX": "Mexico",
-    "NIC": "Nicaragua",
-    "PAN": "Panama",
-    "PER": "Peru",
-    "PRY": "Paraguay",
-    "SLV": "El Salvador",
-    "URY": "Uruguay",
-    "VEN": "Venezuela"
-}
+# Country codes and names from centralized config
+COUNTRIES = get_countries()
+COUNTRY_NAMES = get_country_names()
 
 # Energy/technology sub-codes from code_to_energy dictionary
 # These are the specific energy types that can be filtered by country
@@ -108,42 +81,20 @@ TECH_DESCRIPTIONS = {
     "WON": "Onshore Wind",
 }
 
-# Implausible technology-country combinations based on OLADE 2023 installed capacity data
-# These combinations have zero installed capacity and are marked as NO with red highlighting
-# Source: "OLADE - Capacidad instalada por fuente - Anual.xlsx" (sieLAC-OLADE, Nov 2024)
-IMPLAUSIBLE_COMBINATIONS = {
-    # BIO (Biomass) - No capacity in HTI, BRB
-    ("BIO", "HTI"), ("BIO", "BRB"),
+# Load implausible combinations from region consolidation config
+# Format in YAML: {tech: [country1, country2, ...]}
+# Converted here to set of (tech, country) tuples for fast lookup
+def _load_implausible_combinations():
+    config_path = SCRIPT_DIR / "Config_region_consolidation.yaml"
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    combos = set()
+    for tech, countries in config.get("implausible_combinations", {}).items():
+        for country in countries:
+            combos.add((tech, country))
+    return combos
 
-    # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY
-    ("COA", "BOL"), ("COA", "CRI"), ("COA", "ECU"), ("COA", "HND"), ("COA", "HTI"),
-    ("COA", "BRB"), ("COA", "NIC"), ("COA", "PRY"), ("COA", "SLV"), ("COA", "URY"),
-
-    # GAS (Natural Gas) - No capacity in CRI, HND, HTI, BRB, NIC, PRY, URY
-    ("GAS", "CRI"), ("GAS", "HND"), ("GAS", "HTI"), ("GAS", "BRB"),
-    ("GAS", "NIC"), ("GAS", "PRY"), ("GAS", "URY"),
-
-    # GEO (Geothermal) - Only in CHL, CRI, GTM, HND, MEX, NIC, SLV
-    ("GEO", "ARG"), ("GEO", "BOL"), ("GEO", "BRA"), ("GEO", "BRB"), ("GEO", "COL"), ("GEO", "DOM"),
-    ("GEO", "ECU"), ("GEO", "HTI"), ("GEO", "PAN"), ("GEO", "PER"),
-    ("GEO", "PRY"), ("GEO", "URY"),
-
-    # HYD (Hydroelectric) - No capacity in BRB (Barbados has no hydro)
-    ("HYD", "BRB"),
-
-    # NGS (Natural Gas unified) - Same as GAS
-    ("NGS", "CRI"), ("NGS", "HND"), ("NGS", "HTI"), ("NGS", "BRB"),
-    ("NGS", "NIC"), ("NGS", "PRY"), ("NGS", "URY"),
-
-    # URN (Nuclear) - Only in ARG, BRA, MEX
-    ("URN", "BOL"), ("URN", "BRB"), ("URN", "CHL"), ("URN", "COL"), ("URN", "CRI"), ("URN", "DOM"),
-    ("URN", "ECU"), ("URN", "GTM"), ("URN", "HND"), ("URN", "HTI"),
-    ("URN", "NIC"), ("URN", "PAN"), ("URN", "PER"), ("URN", "PRY"), ("URN", "SLV"),
-    ("URN", "URY"),
-
-    # WON (Onshore Wind) - No capacity in BRB
-    ("WON", "BRB"),
-}
+IMPLAUSIBLE_COMBINATIONS = _load_implausible_combinations()
 
 # Aggregation rules (same as region_consolidation.yaml)
 AGGREGATION_RULES = {

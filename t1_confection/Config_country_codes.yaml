@@ -197,6 +197,27 @@ template_generation:
   region: XX
   interconnections:
 
+# Implausible technology-country combinations based on OLADE 2023 installed capacity data
+# These combinations have zero installed capacity and are marked as NO with red highlighting
+# Source: "OLADE - Capacidad instalada por fuente - Anual.xlsx" (sieLAC-OLADE, Nov 2024)
+# Format: technology_code -> list of country codes where it is implausible
+implausible_combinations:
+  # BIO (Biomass) - No capacity in HTI, BRB
+  BIO: [HTI, BRB]
+  # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY
+  COA: [BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY]
+  # GAS (Natural Gas) - No capacity in CRI, HND, HTI, BRB, NIC, PRY, URY
+  GAS: [CRI, HND, HTI, BRB, NIC, PRY, URY]
+  # GEO (Geothermal) - Only in CHL, CRI, GTM, HND, MEX, NIC, SLV
+  GEO: [ARG, BOL, BRA, BRB, COL, DOM, ECU, HTI, PAN, PER, PRY, URY]
+  # HYD (Hydroelectric) - No capacity in BRB
+  HYD: [BRB]
+  # NGS (Natural Gas unified) - Same as GAS
+  NGS: [CRI, HND, HTI, BRB, NIC, PRY, URY]
+  # URN (Nuclear) - Only in ARG, BRA, MEX
+  URN: [BOL, BRB, CHL, COL, CRI, DOM, ECU, GTM, HND, HTI, NIC, PAN, PER, PRY, SLV, URY]
+  # WON (Onshore Wind) - No capacity in BRB
+  WON: [BRB]
 
 # Technology parameters
 # Renewable transmission technologies
