@@ -15,6 +15,10 @@ import warnings
 from typing import List, Dict, Any
 from pathlib import Path
 import yaml
+from Z_AUX_config_loader import (
+    get_olade_country_mapping, get_iso_country_map, get_code_to_energy,
+    get_first_year, get_add_missing_countries_from_olade
+)
 
 def list_scenario_suffixes(base_dir: Path) -> List[str]:
     """Return list like ['BAU_NoRPO','NDC','NDC+ELC'] from folders 'A1_Outputs_*'."""
@@ -40,124 +44,16 @@ OLADE_GENERATION_FILE = SCRIPT_DIR / "OLADE - Capacidad instalada por fuente - A
 # Model horizon years - data outside this range will be filtered/adjusted
 LAST_YEAR = 2050
 
-def get_olade_reference_year():
-    """
-    Read the reference year from the OLADE generation file.
-    The year is extracted from the sheet name (e.g., "1.2023" -> 2023).
-    Returns 2023 as default if file not found or parsing fails.
-    """
-    default_year = 2023
-    if not OLADE_GENERATION_FILE.exists():
-        print(f"[Warning] OLADE file not found, using default year: {default_year}")
-        return default_year
-
-    try:
-        from openpyxl import load_workbook
-        wb = load_workbook(OLADE_GENERATION_FILE, read_only=True)
-        # Look for sheet names like "1.2023", "1.2024", etc.
-        for sheet_name in wb.sheetnames:
-            if sheet_name.startswith("1."):
-                year_str = sheet_name.split(".")[1]
-                if year_str.isdigit():
-                    year = int(year_str)
-                    wb.close()
-                    print(f"[Info] OLADE reference year detected: {year}")
-                    return year
-        wb.close()
-    except Exception as e:
-        print(f"[Warning] Could not read OLADE year: {e}")
-
-    print(f"[Warning] Could not detect OLADE year, using default: {default_year}")
-    return default_year
-
-# Get FIRST_YEAR dynamically from OLADE file
-FIRST_YEAR = get_olade_reference_year()
+# Get FIRST_YEAR from centralized config
+FIRST_YEAR = get_first_year()
 
 # Default year range for sheets when no data is available
 MODEL_YEARS = list(range(FIRST_YEAR, LAST_YEAR + 1))
 
-# OLADE country name to model country code mapping (for reading OLADE generation data)
-OLADE_COUNTRY_MAPPING = {
-    'Argentina': 'ARG',
-    'Barbados': 'BRB',
-    'Belice': 'BLZ',
-    'Bolivia': 'BOL',
-    'Brasil': 'BRA',
-    'Chile': 'CHL',
-    'Colombia': 'COL',
-    'Costa Rica': 'CRI',
-    'Ecuador': 'ECU',
-    'El Salvador': 'SLV',
-    'Guatemala': 'GTM',
-    'Haiti': 'HTI',
-    'Honduras': 'HND',
-    'México': 'MEX',
-    'Nicaragua': 'NIC',
-    'Panamá': 'PAN',
-    'Paraguay': 'PRY',
-    'Perú': 'PER',
-    'República Dominicana': 'DOM',
-    'Uruguay': 'URY'
-}
-
-# ISO-3 country code to country name mapping for Latin America and the Caribbean
-iso_country_map = {
-    "CRI": "Costa Rica", 
-    "ARG": "Argentina", 
-    "BRA": "Brazil", 
-    "COL": "Colombia",
-    "BOL": "Bolivia",
-    "PER": "Peru",
-    "CHL": "Chile",
-    "MEX": "Mexico",
-    # "VEN": "Venezuela",
-    # "CUB": "Cuba",
-    "DOM": "Dominican Republic",
-    "PAN": "Panama",
-    "GTM": "Guatemala",
-    "ECU": "Ecuador",
-    "BOL": "Bolivia",
-    "URY": "Uruguay",
-    "PRY": "Paraguay",
-    "HND": "Honduras",
-    "NIC": "Nicaragua",
-    "SLV": "El Salvador",
-    "BRB": "Barbados",
-    "HTI": "Haiti",
-    'INT': 'International Markets'
-}
-
-# Mapping from code prefix to energy technology description
-code_to_energy = {
-    'MIN': 'Mining tradable commodity',
-    'RNW': 'Mining non-tradable (renewable) commodity',
-    'BIO': 'Biomass',
-    'GAS': 'Natural Gas',
-    'COA': 'Coal',
-    'GEO': 'Geothermal',
-    'HYD': 'Hydroelectric',
-    'OIL': 'Oil',
-    'OTH': 'Other',
-    'PET': 'Petroleum',
-    'SPV': 'Solar Photovoltaic',
-    'URN': 'Nuclear',
-    'WAV': 'Wave',
-    'WAS': 'Waste',
-    'WOF': 'Offshore Wind',
-    'WON': 'Onshore Wind',
-    'CCG': 'Combined Cycle Natural Gas',
-    'COG': 'Cogeneration',
-    'CSP': 'Concentrated Solar Power',
-    'NGS': 'Natural Gas',
-    'OCG': 'Open Cycle Natural Gas',
-    'TRN': 'Transmission technology',
-    'LDS': 'Long duration storage',
-    'SDS': 'Short duration storage',
-    'PWR': 'Power generator',
-    'ELC': 'Electricity',
-    'BCK': 'Backstop',
-    'CCS': 'Carbon Capture Storage with Coal'
-}
+# Country and technology mappings from centralized config
+OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
+iso_country_map = get_iso_country_map()
+code_to_energy = get_code_to_energy()
 
 #-------------------------------------Formated functions--------------------------------------------#
 def read_csv_files(input_dir):
@@ -1675,8 +1571,11 @@ def update_demand_demand_projection(df, output_excel_path, input_excel_path):
 
         records.append(record)
 
-    # Add missing countries from OLADE data
-    olade_data = read_olade_generation_data()
+    # Add missing countries from OLADE data (controlled by config flag)
+    if not get_add_missing_countries_from_olade():
+        olade_data = None
+    else:
+        olade_data = read_olade_generation_data()
     if olade_data:
         olade_countries = set(olade_data['data'].keys())
         # Only add countries that are in iso_country_map (model countries)
@@ -3061,27 +2960,53 @@ def update_yaml_xtra_scen(og_data, yaml_path):
         lines = f.readlines()
 
     updated_lines = []
-    for line in lines:
-        updated = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        matched = False
+
         for yaml_key, new_values in replacements.items():
             if yaml_key == "Region":
-                pattern = rf"^(\s*{yaml_key}:\s*)'(.*?)'(.*)$"
+                # Match Region with or without quotes
+                pattern = rf"^(\s*{yaml_key}:\s*).*$"
                 match = re.match(pattern, line)
                 if match:
-                    prefix, _, suffix = match.groups()
-                    line = f"{prefix}'{new_values}'{suffix}\n"
-                    updated = True
+                    prefix = match.group(1)
+                    updated_lines.append(f"{prefix}{new_values}\n")
+                    i += 1
+                    matched = True
                     break
             else:
-                pattern = rf"^(\s*{yaml_key}:\s*)\[[^\]]*\](.*)$"
-                match = re.match(pattern, line)
-                if match:
-                    prefix, suffix = match.groups()
+                # Check for inline list: Key: [item1, item2]
+                inline_pattern = rf"^(\s*{yaml_key}:\s*)\[.*\](.*)$"
+                inline_match = re.match(inline_pattern, line)
+                if inline_match:
+                    prefix, suffix = inline_match.groups()
                     formatted = ", ".join(map(str, new_values))
-                    line = f"{prefix}[{formatted}]{suffix}\n"
-                    updated = True
+                    updated_lines.append(f"{prefix}[{formatted}]{suffix}\n")
+                    i += 1
+                    matched = True
                     break
-        updated_lines.append(line)
+
+                # Check for multi-line list: Key:\n  - item1\n  - item2
+                multiline_pattern = rf"^(\s*){yaml_key}:\s*$"
+                multiline_match = re.match(multiline_pattern, line)
+                if multiline_match:
+                    indent = multiline_match.group(1)
+                    updated_lines.append(line)
+                    i += 1
+                    # Skip old list items
+                    while i < len(lines) and re.match(rf"^{indent}- ", lines[i]):
+                        i += 1
+                    # Insert new list items
+                    for val in new_values:
+                        updated_lines.append(f"{indent}- {val}\n")
+                    matched = True
+                    break
+
+        if not matched:
+            updated_lines.append(line)
+            i += 1
 
     with open(yaml_path, "w", encoding="utf-8") as f:
         f.writelines(updated_lines)
