@@ -12,33 +12,11 @@ import yaml
 import pandas as pd
 from typing import List
 from pathlib import Path
+from Z_AUX_config_loader import get_renewable_fuels, get_iso_country_map
 
-RENEWABLE_FUELS = {"BIO", "HYD", "CSP", "GEO", "SPV", "WAS", "WON", "WOF"}
-iso_country_map = {
-    "CRI": "Costa Rica", 
-    "ARG": "Argentina", 
-    "BRA": "Brazil", 
-    "COL": "Colombia",
-    "BOL": "Bolivia",
-    "PER": "Peru",
-    "CHL": "Chile",
-    "MEX": "Mexico",
-    "VEN": "Venezuela",
-    "CUB": "Cuba",
-    "DOM": "Dominican Republic",
-    "PAN": "Panama",
-    "GTM": "Guatemala",
-    "ECU": "Ecuador",
-    "BOL": "Bolivia",
-    "URY": "Uruguay",
-    "PRY": "Paraguay",
-    "HND": "Honduras",
-    "NIC": "Nicaragua",
-    "SLV": "El Salvador",
-    "BRB": "Barbados",
-    "HTI": "Haiti",
-    'INT': 'International Markets'
-}
+# Country and technology mappings from centralized config
+RENEWABLE_FUELS = get_renewable_fuels()
+iso_country_map = get_iso_country_map()
 
 # ---------------------------------------------------------------------------
 # Helper functions

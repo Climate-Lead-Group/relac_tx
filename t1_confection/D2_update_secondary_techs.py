@@ -9,61 +9,20 @@ Usage:
 """
 import openpyxl
 import sys
-import unicodedata
 from pathlib import Path
 from datetime import datetime
 import shutil
 import yaml
+from Z_AUX_config_loader import (
+    get_olade_country_mapping, get_olade_country_mapping_normalized,
+    get_olade_tech_mapping, get_shares_country_mapping, get_shares_tech_mapping,
+    strip_accents
+)
 
-# OLADE country name to model country code mapping
-# Barbados uses BRB (ISO-3166 standard code)
-OLADE_COUNTRY_MAPPING = {
-    'Argentina': 'ARG',
-    'Barbados': 'BRB',
-    'Belice': 'BLZ',
-    'Bolivia': 'BOL',
-    'Brasil': 'BRA',
-    'Chile': 'CHL',
-    'Colombia': 'COL',
-    'Costa Rica': 'CRI',
-    'Ecuador': 'ECU',
-    'El Salvador': 'SLV',
-    'Guatemala': 'GTM',
-    'Haiti': 'HTI',
-    'Honduras': 'HND',
-    'México': 'MEX',
-    'Nicaragua': 'NIC',
-    'Panamá': 'PAN',
-    'Paraguay': 'PRY',
-    'Perú': 'PER',
-    'República Dominicana': 'DOM',
-    'Uruguay': 'URY'
-}
-
-
-def strip_accents(text):
-    """Remove accents from text for fuzzy country name matching (e.g., 'Haití' -> 'Haiti')"""
-    nfkd = unicodedata.normalize('NFKD', str(text))
-    return ''.join(c for c in nfkd if not unicodedata.combining(c))
-
-
-# Normalized country mapping (accent-insensitive) for matching country names from external files
-OLADE_COUNTRY_MAPPING_NORMALIZED = {
-    strip_accents(name): code for name, code in OLADE_COUNTRY_MAPPING.items()
-}
-
-# OLADE technology to model tech code (3 chars) mapping
-OLADE_TECH_MAPPING = {
-    'Nuclear': 'URN',
-    'Gas natural': 'NGS',  # NGS is the unified natural gas code (CCG+OCG were merged into NGS)
-    'Carbón mineral': 'COA',
-    'Hidro': 'HYD',
-    'Geotermia': 'GEO',
-    'Eólica': 'WON',
-    'Solar': 'SPV'
-    # Note: BIO is special - sum of 'Biogás' + 'Biomasa sólida'
-    # Note: 'Petróleo y derivados' pending confirmation
-}
+# Country and technology mappings from centralized config
+OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
+OLADE_COUNTRY_MAPPING_NORMALIZED = get_olade_country_mapping_normalized()
+OLADE_TECH_MAPPING = get_olade_tech_mapping()
 
 
 def read_base_scenario():
@@ -333,25 +292,8 @@ def read_shares_data(shares_file_path):
         'SharesNDC+ELC': 'NDC+ELC'
     }
 
-    # Map country names from Shares to ISO3 codes
-    shares_country_to_iso3 = {
-        'Barbados': 'BRB',
-        'Bolivia': 'BOL',
-        'Chile': 'CHL',
-        'Colombia': 'COL',
-        'Costa Rica': 'CRI',
-        'Ecuador': 'ECU',
-        'El Salvador': 'SLV',
-        'Guatemala': 'GTM',
-        'Haiti': 'HTI',
-        'Honduras': 'HND',
-        'Nicaragua': 'NIC',
-        'Panamá': 'PAN',
-        'Paraguay': 'PRY',
-        'Perú': 'PER',
-        'República Dominicana': 'DOM',
-        'Uruguay': 'URY'
-    }
+    # Map country names from Shares to ISO3 codes (from centralized config)
+    shares_country_to_iso3 = get_shares_country_mapping()
 
     for sheet_name, scenario_code in sheet_scenario_map.items():
         if sheet_name not in wb.sheetnames:
@@ -848,42 +790,9 @@ def read_shares_total_data(shares_total_path):
         'SharesNDC+ELC': 'NDC+ELC'
     }
 
-    # Map country names from Shares_Total to model ISO3 codes
-    shares_country_to_iso3 = {
-        'Barbados': 'BRB',
-        'Bolivia': 'BOL',
-        'Chile': 'CHL',
-        'Colombia': 'COL',
-        'Costa Rica': 'CRI',
-        'Ecuador': 'ECU',
-        'El Salvador': 'SLV',
-        'Guatemala': 'GTM',
-        'Haiti': 'HTI',
-        'Honduras': 'HND',
-        'Nicaragua': 'NIC',
-        'Panamá': 'PAN',
-        'Paraguay': 'PRY',
-        'Perú': 'PER',
-        'República Dominicana': 'DOM',
-        'Uruguay': 'URY'
-    }
-
-    # Map Shares_Total technology names to model tech codes
-    # Note: Some technologies are combined (e.g., Búnker + Fuel oil → OIL)
-    shares_tech_to_code = {
-        'Biomasa': 'BIO',
-        'Búnker': 'OIL',      # Combined with Fuel oil
-        'Carbón': 'COA',
-        'Diésel': 'PET',
-        'Eólica': 'WON',
-        'Fuel oil': 'OIL',    # Combined with Búnker
-        'Gas natural': 'NGS',
-        'Geotérmica': 'GEO',
-        'Hidroeléctrica': 'HYD',
-        'Nuclear': 'URN',
-        'Solar (GD)': 'SPV',        # Combined with Solar (gran escala)
-        'Solar (gran escala)': 'SPV'  # Combined with Solar (GD)
-    }
+    # Map country and technology names from Shares_Total (from centralized config)
+    shares_country_to_iso3 = get_shares_country_mapping()
+    shares_tech_to_code = get_shares_tech_mapping()
 
     for sheet_name, scenario_code in sheet_scenario_map.items():
         if sheet_name not in wb.sheetnames:

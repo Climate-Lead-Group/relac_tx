@@ -14,50 +14,11 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import yaml
+from Z_AUX_config_loader import get_olade_country_mapping, get_olade_tech_mapping, get_country_names
 
-# OLADE country name to ISO-3 code mapping
-OLADE_COUNTRY_MAPPING = {
-    'Argentina': 'ARG',
-    'Barbados': 'BRB',
-    'Belice': 'BLZ',
-    'Bolivia': 'BOL',
-    'Brasil': 'BRA',
-    'Chile': 'CHI',
-    'Colombia': 'COL',
-    'Costa Rica': 'CRC',
-    'Cuba': 'CUB',
-    'Ecuador': 'ECU',
-    'El Salvador': 'SLV',
-    'Grenada': 'GRD',
-    'Guatemala': 'GTM',
-    'Guyana': 'GUY',
-    'Haiti': 'HTI',
-    'Honduras': 'HND',
-    'Jamaica': 'JAM',
-    'México': 'MEX',
-    'Nicaragua': 'NIC',
-    'Panamá': 'PAN',
-    'Paraguay': 'PRY',
-    'Perú': 'PER',
-    'República Dominicana': 'DOM',
-    'Suriname': 'SUR',
-    'Trinidad & Tobago': 'TTO',
-    'Uruguay': 'URY',
-    'Venezuela': 'VEN'
-}
-
-# OLADE technology to model tech code (3 chars) mapping
-OLADE_TECH_MAPPING = {
-    'Nuclear': 'URN',
-    'Gas natural': 'CCG',
-    'Carbón mineral': 'COA',
-    'Hidro': 'HYD',
-    'Geotermia': 'GEO',
-    'Eólica': 'WON',
-    'Solar': 'SPV'
-    # Note: BIO is special - sum of 'Biogás' + 'Biomasa sólida'
-    # Note: 'Petróleo y derivados' pending confirmation
-}
+# Country and technology mappings from centralized config
+OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
+OLADE_TECH_MAPPING = get_olade_tech_mapping()
 
 
 def read_base_scenario():
@@ -748,27 +709,10 @@ def create_editor_template(data, output_path):
     ws_demand.cell(4, 3).border = border_style
     ws_demand.cell(4, 3).alignment = Alignment(horizontal="center", vertical="center")
 
-    # Country list with growth rates (default 2.0%)
+    # Country list with growth rates (default 2.0%) from centralized config
+    country_names = get_country_names()
     demand_countries = [
-        ("ARG", "Argentina", 2.0),
-        ("BOL", "Bolivia", 2.0),
-        ("BRA", "Brazil", 2.0),
-        ("CHL", "Chile", 2.0),
-        ("COL", "Colombia", 2.0),
-        ("CRI", "Costa Rica", 2.0),
-        ("DOM", "Dominican Republic", 2.0),
-        ("ECU", "Ecuador", 2.0),
-        ("GTM", "Guatemala", 2.0),
-        ("HND", "Honduras", 2.0),
-        ("HTI", "Haiti", 2.0),
-        ("BRB", "Barbados", 2.0),
-        ("MEX", "Mexico", 2.0),
-        ("NIC", "Nicaragua", 2.0),
-        ("PAN", "Panama", 2.0),
-        ("PER", "Peru", 2.0),
-        ("PRY", "Paraguay", 2.0),
-        ("SLV", "El Salvador", 2.0),
-        ("URY", "Uruguay", 2.0),
+        (iso3, name, 2.0) for iso3, name in sorted(country_names.items())
     ]
 
     for row_idx, (code, name, rate) in enumerate(demand_countries, 5):
