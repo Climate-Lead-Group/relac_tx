@@ -6,66 +6,24 @@
 # ============================================================
 # Each country: iso3 key, english_name, olade_name (Spanish, for OLADE & Shares Excel files)
 country_data:
-  ARG:
-    english_name: "Argentina"
-    olade_name: "Argentina"
-  BOL:
-    english_name: "Bolivia"
-    olade_name: "Bolivia"
-  BRA:
-    english_name: "Brazil"
-    olade_name: "Brasil"
-  BRB:
-    english_name: "Barbados"
-    olade_name: "Barbados"
-  CHL:
-    english_name: "Chile"
-    olade_name: "Chile"
-  COL:
-    english_name: "Colombia"
-    olade_name: "Colombia"
-  CRI:
-    english_name: "Costa Rica"
-    olade_name: "Costa Rica"
-  DOM:
-    english_name: "Dominican Republic"
-    olade_name: "República Dominicana"
-  ECU:
-    english_name: "Ecuador"
-    olade_name: "Ecuador"
-  GTM:
-    english_name: "Guatemala"
-    olade_name: "Guatemala"
-  HND:
-    english_name: "Honduras"
-    olade_name: "Honduras"
-  HTI:
-    english_name: "Haiti"
-    olade_name: "Haiti"
-  MEX:
-    english_name: "Mexico"
-    olade_name: "México"
-  NIC:
-    english_name: "Nicaragua"
-    olade_name: "Nicaragua"
-  PAN:
-    english_name: "Panama"
-    olade_name: "Panamá"
-  PER:
-    english_name: "Peru"
-    olade_name: "Perú"
-  PRY:
-    english_name: "Paraguay"
-    olade_name: "Paraguay"
-  SLV:
-    english_name: "El Salvador"
-    olade_name: "El Salvador"
-  URY:
-    english_name: "Uruguay"
-    olade_name: "Uruguay"
-  NCC:
-    english_name: "NCC"
-    olade_name: "NCC"
+  BGD:
+    english_name: "Bangladesh"
+    olade_name: "Bangladesh"
+  BTN:
+    english_name: "Bhutan"
+    olade_name: "Bhutan"
+  IND:
+    english_name: "India"
+    olade_name: "India"
+  NPL:
+    english_name: "Nepal"
+    olade_name: "Nepal"
+  LKA:
+    english_name: "Sri Lanka"
+    olade_name: "Sri Lanka"
+  MDV:
+    english_name: "Maldives"
+    olade_name: "Maldives"
 
 # Special entries (not model countries, used in iso_country_map)
 special_entries:
@@ -81,6 +39,12 @@ first_year: 2023
 # Whether to add missing countries' demand data from OLADE generation file
 # When true, A1 reads OLADE Excel to fill in countries not present in the input CSVs
 add_missing_countries_from_olade: false
+
+# PWR technology cleanup mode (handles PWR00/PWR01 duplicates):
+#   "drop"  - drop PWR00 rows when PWR01 exists, then rename PWR01 (removes '01' suffix)
+#   "merge" - sum PWR00 values into PWR01, then drop PWR00, then rename PWR01
+#   false   - skip PWR cleanup entirely
+pwr_cleanup_mode: merge
 
 # ============================================================
 # TECHNOLOGY CONFIGURATION
@@ -160,25 +124,22 @@ shares_tech_mapping:
 
 # List of country codes (used by A2_AddTx for region pairs)
 countries:
-  - "BRB"  # Barbados (ISO-3166 standard code)
-  - "BOL"
-  - "CHL"
-  - "COL"
-  - "CRI"
-  - "ECU"
-  - "SLV"
-  - "GTM"
-  - "HTI"
-  - "HND"
-  - "NIC"
-  - "PAN"
-  - "PRY"
-  - "PER"
-  - "DOM"
-  - "URY"
-  - "BRA"
-  - "MEX"
-  - "ARG"
+  # - "BGD"
+  # - "BTN"
+  # - "IND"
+  # - "NPL"
+  # - "LKA"
+  # - "MDV"
+  - "BGD"
+  - "BTN"
+  - "INDEA"    # India East
+  - "INDNE"    # India North-East
+  - "INDNO"    # India North
+  - "INDSO"    # India South
+  - "INDWE"    # India West
+  - "NPL"
+  - "LKA"
+  - "MDV"
 
 # ============================================================
 # TEMPLATE GENERATION (for Z_generate_country_template.py)
@@ -192,32 +153,46 @@ countries:
 #                       leave empty for zero interconnections
 #                       remove the key entirely for legacy mode (copies reference topology)
 template_generation:
-  new_country: NCC
-  reference_country: ARG
+  new_country: MDV
+  reference_country: LKA
   region: XX
   interconnections:
 
-# Implausible technology-country combinations based on OLADE 2023 installed capacity data
-# These combinations have zero installed capacity and are marked as NO with red highlighting
-# Source: "OLADE - Capacidad instalada por fuente - Anual.xlsx" (sieLAC-OLADE, Nov 2024)
+# Implausible technology-country combinations based on OG_csvs_inputs data
+# (ResidualCapacity, CapitalCost, TotalAnnualMaxCapacityInvestment, TotalAnnualMaxCapacity)
+# A combo is implausible when all four parameters are zero for every year
 # Format: technology_code -> list of country codes where it is implausible
 implausible_combinations:
-  # BIO (Biomass) - No capacity in HTI, BRB
-  BIO: [HTI, BRB]
-  # COA (Coal) - No capacity in BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY
-  COA: [BOL, CRI, ECU, HND, HTI, BRB, NIC, PRY, SLV, URY]
-  # GAS (Natural Gas) - No capacity in CRI, HND, HTI, BRB, NIC, PRY, URY
-  GAS: [CRI, HND, HTI, BRB, NIC, PRY, URY]
-  # GEO (Geothermal) - Only in CHL, CRI, GTM, HND, MEX, NIC, SLV
-  GEO: [ARG, BOL, BRA, BRB, COL, DOM, ECU, HTI, PAN, PER, PRY, URY]
-  # HYD (Hydroelectric) - No capacity in BRB
-  HYD: [BRB]
-  # NGS (Natural Gas unified) - Same as GAS
-  NGS: [CRI, HND, HTI, BRB, NIC, PRY, URY]
-  # URN (Nuclear) - Only in ARG, BRA, MEX
-  URN: [BOL, BRB, CHL, COL, CRI, DOM, ECU, GTM, HND, HTI, NIC, PAN, PER, PRY, SLV, URY]
-  # WON (Onshore Wind) - No capacity in BRB
-  WON: [BRB]
+  # BIO (Biomass) - No biomass resources or grid-connected capacity
+  BIO: [BTN, MDV]
+  # CCS (Carbon Capture Storage with Coal) - No coal infrastructure to retrofit
+  CCS: [BTN, NPL, LKA, MDV]
+  # COA (Coal) - No coal plants, no coal resources, no plans
+  COA: [BTN, NPL, MDV]
+  # COG (Cogeneration) - No industrial base for cogeneration
+  COG: [BTN, NPL, MDV]
+  # CSP (Concentrated Solar Power) - Unsuitable climate/terrain or insufficient land area
+  CSP: [BGD, BTN, NPL, LKA, MDV]
+  # GAS (Natural Gas) - No PWRGAS technology in model; gas generation modeled via CCG/OCG → NGS
+  GAS: [BGD, BTN, IND, NPL, LKA, MDV]
+  # GEO (Geothermal) - No geothermal resources in any modeled country
+  GEO: [BGD, BTN, IND, NPL, LKA, MDV]
+  # HYD (Hydroelectric) - Flat coral atolls, no rivers or elevation
+  HYD: [MDV]
+  # NGS (Natural Gas unified) - No CCG/OCG/NGS power data
+  NGS: [BGD, BTN, NPL, MDV]
+  # OIL (Oil/Fuel Oil) - No oil-fired grid power plants
+  OIL: [BTN, NPL, MDV]
+  # URN (Nuclear) - No nuclear program or plans
+  URN: [BTN, NPL, LKA, MDV]
+  # WAS (Waste-to-Energy) - No waste-to-energy plants or plans
+  WAS: [BTN, MDV]
+  # WAV (Wave Energy) - No capacity or plans; BTN and NPL are landlocked
+  WAV: [BGD, BTN, IND, NPL, LKA, MDV]
+  # WOF (Offshore Wind) - BTN/NPL landlocked; MDV scale economically unviable
+  WOF: [BTN, NPL, MDV]
+  # WON (Onshore Wind) - No country lacks onshore wind data except MDV
+  WON: [MDV]
 
 # Technology parameters
 # Renewable transmission technologies
