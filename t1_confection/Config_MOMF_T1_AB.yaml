@@ -38,7 +38,7 @@ cplex_threads: 12
 cplex_random_seed: 12345      # Random seed for reproducibility
 
 # For Gurobi use
-gurobi_threads: 3
+gurobi_threads: 20
 gurobi_seed: 12345            # Random seed for reproducibility
 
 # For delete intermediate files

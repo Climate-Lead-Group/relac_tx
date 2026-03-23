@@ -17,7 +17,8 @@ from pathlib import Path
 import yaml
 from Z_AUX_config_loader import (
     get_olade_country_mapping, get_iso_country_map, get_code_to_energy,
-    get_first_year, get_add_missing_countries_from_olade, get_pwr_cleanup_mode
+    get_first_year, get_add_missing_countries_from_olade, get_pwr_cleanup_mode,
+    get_force_empty_max_capacity_investment_pwr
 )
 
 def list_scenario_suffixes(base_dir: Path) -> List[str]:
@@ -54,6 +55,9 @@ MODEL_YEARS = list(range(FIRST_YEAR, LAST_YEAR + 1))
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
 iso_country_map = get_iso_country_map()
 code_to_energy = get_code_to_energy()
+
+# Flag: force Projection.Mode=EMPTY for TotalAnnualMaxCapacityInvestment on PWR techs
+FORCE_EMPTY_MAX_CAP_INV_PWR = get_force_empty_max_capacity_investment_pwr()
 
 #-------------------------------------Formated functions--------------------------------------------#
 def read_csv_files(input_dir):
@@ -867,6 +871,25 @@ def consolidate_regions(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFr
                 unified=unified,
                 agg_method=agg_method
             )
+
+        # Consolidate set DataFrames (STORAGE, TECHNOLOGY, FUEL)
+        # These only have a VALUE column with codes that contain regional patterns
+        for set_name in ["STORAGE", "TECHNOLOGY", "FUEL"]:
+            if set_name not in og_data:
+                continue
+            df_set = og_data[set_name]
+            if "VALUE" not in df_set.columns:
+                continue
+            original_count = len(df_set)
+            df_set = df_set.copy()
+            df_set["VALUE"] = df_set["VALUE"].apply(
+                lambda x: replace_region_in_code(str(x), country_code, regions, unified) if pd.notna(x) else x
+            )
+            df_set = df_set.drop_duplicates(subset=["VALUE"]).reset_index(drop=True)
+            consolidated = original_count - len(df_set)
+            if consolidated > 0:
+                print(f"    {set_name} set: {original_count} -> {len(df_set)} entries (deduplicated)")
+            og_data[set_name] = df_set
 
         # Remove internal interconnections for this country
         print(f"\n    Removing internal interconnections ({country_code}{unified}{country_code}{unified}):")
@@ -2102,6 +2125,12 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
                 record["Projection.Mode"] = mode
                 for y in available_years:
                     record[int(y)] = year_values.get(y, float("nan"))
+
+            # Force EMPTY for TotalAnnualMaxCapacityInvestment on all PWR techs (if flag is active)
+            if (FORCE_EMPTY_MAX_CAP_INV_PWR
+                    and param == "TotalAnnualMaxCapacityInvestment"
+                    and tech.startswith("PWR")):
+                record["Projection.Mode"] = "EMPTY"
 
             target.append(record)
 
