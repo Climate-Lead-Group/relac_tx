@@ -8,6 +8,7 @@ Usage:
     python t1_confection/D2_update_secondary_techs.py
 """
 import openpyxl
+import re
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -1078,6 +1079,128 @@ class SecondaryTechsUpdater:
         shutil.copy2(file_path, backup_path)
         return backup_path
 
+    def set_empty_projection_mode_for_investment_params(self):
+        """
+        Set Projection.Mode to 'EMPTY' for investment and capacity parameters
+        that should be unconstrained in OSeMOSYS.
+
+        In OSeMOSYS, an absent parameter means unconstrained, while 0 means
+        a hard constraint (blocking). B1_Compiler skips rows with 'EMPTY'
+        Projection.Mode, making the parameter absent in the output CSV.
+
+        Rules:
+        - TotalAnnualMaxCapacityInvestment for PWR techs: always set to 'EMPTY'
+        - TotalAnnualMinCapacityInvestment: set to 'EMPTY' only if all year
+          columns are empty/None/0
+        - TotalAnnualMaxCapacity and TotalAnnualMaxCapacityInvestment for TRN
+          interconnections: set 'User defined' to 'EMPTY'
+        """
+        self.log("")
+        self.log("=" * 80)
+        self.log("SETTING PROJECTION.MODE FOR INVESTMENT PARAMETERS")
+        self.log("=" * 80)
+
+        interconnection_pattern = re.compile(r'^TRN[A-Z]{3}XX[A-Z]{3}XX$')
+
+        for scenario in self.scenarios:
+            param_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
+            if not param_path.exists():
+                self.log(f"  Skipping {scenario}: file not found", "WARNING")
+                continue
+
+            self.log(f"Processing {scenario}...")
+            wb = openpyxl.load_workbook(param_path)
+
+            if 'Secondary Techs' not in wb.sheetnames:
+                wb.close()
+                continue
+
+            ws = wb['Secondary Techs']
+
+            # Build year column map and find Projection.Mode column
+            year_col_map = {}
+            projection_mode_col = None
+            headers = [cell.value for cell in ws[1]]
+            for col_idx, header in enumerate(headers, 1):
+                if header:
+                    if str(header).isdigit():
+                        try:
+                            year = int(header)
+                            if 2000 <= year <= 2100:
+                                year_col_map[year] = col_idx
+                        except (ValueError, TypeError):
+                            pass
+                    elif str(header).strip() == "Projection.Mode":
+                        projection_mode_col = col_idx
+
+            if not projection_mode_col:
+                self.log(f"  Projection.Mode column not found in {scenario}", "WARNING")
+                wb.close()
+                continue
+
+            updated = 0
+            for row_idx in range(2, ws.max_row + 1):
+                tech = ws.cell(row_idx, 2).value   # Column B: Tech
+                param = ws.cell(row_idx, 5).value   # Column E: Parameter
+                proj_mode = ws.cell(row_idx, projection_mode_col).value
+
+                if not tech or not param:
+                    continue
+
+                tech_str = str(tech).strip()
+                param_str = str(param).strip()
+                current_mode = str(proj_mode).strip() if proj_mode else ''
+
+                # Rule 1: TotalAnnualMaxCapacityInvestment for PWR → always EMPTY
+                if param_str == 'TotalAnnualMaxCapacityInvestment' and tech_str.startswith('PWR'):
+                    if current_mode != 'EMPTY':
+                        ws.cell(row_idx, projection_mode_col, 'EMPTY')
+                        updated += 1
+                    continue
+
+                # Rule 2: TotalAnnualMaxCapacityInvestment and TotalAnnualMaxCapacity
+                #          for TRN interconnections → EMPTY if 'User defined'
+                if param_str in ('TotalAnnualMaxCapacityInvestment', 'TotalAnnualMaxCapacity'):
+                    if interconnection_pattern.match(tech_str) and current_mode == 'User defined':
+                        ws.cell(row_idx, projection_mode_col, 'EMPTY')
+                        updated += 1
+                    continue
+
+                # Rule 3: TotalAnnualMinCapacityInvestment → EMPTY if all years empty
+                if param_str == 'TotalAnnualMinCapacityInvestment':
+                    has_value = False
+                    for year, col_idx in year_col_map.items():
+                        cell_val = ws.cell(row_idx, col_idx).value
+                        if cell_val is not None and cell_val != '' and cell_val != 0 and cell_val != 0.0:
+                            has_value = True
+                            break
+                    if not has_value and current_mode != 'EMPTY':
+                        ws.cell(row_idx, projection_mode_col, 'EMPTY')
+                        updated += 1
+                    elif has_value and current_mode != 'User defined':
+                        ws.cell(row_idx, projection_mode_col, 'User defined')
+                        updated += 1
+
+                # Rule 4: TRN Activity limits → EMPTY if all years empty
+                if param_str in ('TotalTechnologyAnnualActivityLowerLimit',
+                                 'TotalTechnologyAnnualActivityUpperLimit'):
+                    if interconnection_pattern.match(tech_str):
+                        has_value = False
+                        for year, col_idx in year_col_map.items():
+                            cell_val = ws.cell(row_idx, col_idx).value
+                            if cell_val is not None and cell_val != '' and cell_val != 0 and cell_val != 0.0:
+                                has_value = True
+                                break
+                        if not has_value and current_mode != 'EMPTY':
+                            ws.cell(row_idx, projection_mode_col, 'EMPTY')
+                            updated += 1
+
+            wb.save(param_path)
+            wb.close()
+            self.log(f"  {scenario}: {updated} Projection.Mode values updated")
+
+        self.log("Investment parameter Projection.Mode update complete.")
+
     def find_and_update_row(self, ws, tech, parameter, year_values, year_col_map, projection_mode_col, is_olade=False, country=None):
         """
         Find the row matching tech and parameter, and update year values
@@ -1741,7 +1864,7 @@ class SecondaryTechsUpdater:
                                     demand_year = base_demand_pj * (1 + growth_rate * years_diff)
 
                                     # Apply scenario-specific demand adjustment if defined
-                                    adjustments_dict = self.ostram_config.get('scenarios_demand_adjustments', {})
+                                    adjustments_dict = self.olade_config.get('scenarios_demand_adjustments', {})
                                     adjustment_key = (region_key, scenario)
                                     if adjustment_key not in adjustments_dict:
                                         adjustment_key = (iso3_code, scenario)
@@ -2813,9 +2936,11 @@ class SecondaryTechsUpdater:
                 demand_pj = country_demand.get(year, 0.0)
                 share = tech_shares.get(fuel, {}).get(year, 0.0)
                 limit_value = demand_pj * share
-                #limit_value = share
                 result[tech_str][year] = round(limit_value, 4)
-                #print(country_code, year, result)
+                # Diagnostic logging for year 2025 to compare with reference values
+                if year == 2025 and limit_value > 0:
+                    self.log(f"  DIAG {country_code} {fuel}: demand={demand_pj:.4f} PJ, "
+                             f"share={share:.6f}, limit={limit_value:.4f} PJ")
         return result
 
     def adjust_capacity_factors_for_share_based_limits(self, wb, scenario, country_code, tech_shares,
@@ -3407,24 +3532,34 @@ class SecondaryTechsUpdater:
                             # No pre-capping needed - Universal Validation will increase MaxCapacity if needed
                             limit_value = round(limit_value, 4)
 
-                            # Update LowerLimit - ALWAYS write, even if 0, to clear old values
+                            # Update LowerLimit: only write meaningful values, clear otherwise
                             if update_lower and lower_row:
-                                ws.cell(lower_row, year_col_map[year], limit_value)
+                                if limit_value > 0:
+                                    ws.cell(lower_row, year_col_map[year], limit_value)
+                                else:
+                                    ws.cell(lower_row, year_col_map[year]).value = None
                                 activity_changes += 1
                                 values_updated += 1
 
-                            # Update UpperLimit = LowerLimit × 1.05 + 0.1 (proportional + fixed margin)
+                            # Update UpperLimit: only write when LowerLimit is meaningful
                             if update_upper and upper_row:
-                                upper_value = round(limit_value * 1.05 + 0.1, 4)
-                                ws.cell(upper_row, year_col_map[year], upper_value)
+                                if limit_value > 0:
+                                    upper_value = round(limit_value * 1.05, 4)
+                                    ws.cell(upper_row, year_col_map[year], upper_value)
+                                else:
+                                    ws.cell(upper_row, year_col_map[year]).value = None
                                 activity_changes += 1
 
-                        # Set Projection.Mode to "User defined"
+                        # Set Projection.Mode based on whether any year has a meaningful value
                         if values_updated > 0 and projection_mode_col:
-                            if update_lower and lower_row:
-                                ws.cell(lower_row, projection_mode_col, "User defined")
-                            if update_upper and upper_row:
-                                ws.cell(upper_row, projection_mode_col, "User defined")
+                            for row, flag in [(lower_row, update_lower), (upper_row, update_upper)]:
+                                if flag and row:
+                                    has_nonzero = any(
+                                        ws.cell(row, year_col_map[y]).value not in (None, 0, 0.0, '')
+                                        for y in all_years if y in year_col_map
+                                    )
+                                    ws.cell(row, projection_mode_col,
+                                            "User defined" if has_nonzero else "EMPTY")
                             self.log(f"  {country_code}-{tech_type}: Updated {values_updated} years")
 
                 # ============================================================
@@ -3498,10 +3633,10 @@ class SecondaryTechsUpdater:
                                 if max_adjusted:
                                     capacity_increases += 1
 
-                                    # Recalculate UpperLimit with new formula: LowerLimit × 1.05 + 0.1
+                                    # Recalculate UpperLimit: LowerLimit × 1.05
                                     upper_row = upper_limit_rows.get(tech_str)
                                     if upper_row:
-                                        new_upper = current_limit * 1.05 + 0.1
+                                        new_upper = current_limit * 1.05
                                         ws.cell(upper_row, col_idx, round(new_upper, 4))
 
                         # DEBUG: Special validation for PWRGEOHNDXX, year 2038, scenario NDC
@@ -4006,16 +4141,30 @@ class SecondaryTechsUpdater:
                 olade_instructions = self.generate_olade_instructions(sorted(all_years))
 
             # Combine instructions: OLADE takes priority for ResidualCapacity
-            # Filter out manual ResidualCapacity instructions for PWR techs if OLADE is enabled
+            # Only filter out manual ResidualCapacity for techs that OLADE actually covers
             if olade_instructions:
+                # Build set of fuel codes that OLADE has data for
+                olade_fuel_codes = set()
+                for ctry_techs in self.olade_data.get('data', {}).values():
+                    olade_fuel_codes.update(ctry_techs.keys())
+                # PETROLEUM in OLADE maps to PET and OIL in the model
+                if 'PETROLEUM' in olade_fuel_codes:
+                    olade_fuel_codes.update(['PET', 'OIL'])
+                    olade_fuel_codes.discard('PETROLEUM')
+
                 filtered_instructions = []
                 for instr in instructions:
-                    # Check if this is a ResidualCapacity instruction for a PWR tech
-                    if (instr.get('parameter') == 'ResidualCapacity' and
-                        instr.get('tech') and str(instr.get('tech')).upper().startswith('PWR')):
-                        # Skip it - OLADE will handle it
-                        self.log(f"Skipping manual ResidualCapacity for {instr['tech']} - using OLADE data", "DEBUG")
-                        continue
+                    tech_str = str(instr.get('tech', '')).upper()
+                    if (instr.get('parameter') == 'ResidualCapacity' and tech_str.startswith('PWR')):
+                        # Extract 3-char fuel code: PWRWASBRAXX -> WAS
+                        fuel_code = tech_str[3:6] if len(tech_str) >= 6 else ''
+                        if fuel_code in olade_fuel_codes:
+                            # OLADE covers this tech — skip manual instruction
+                            self.log(f"Skipping manual ResidualCapacity for {instr['tech']} - using OLADE data", "DEBUG")
+                            continue
+                        else:
+                            # OLADE has no data for this tech (e.g., WAS) — keep manual instruction
+                            self.log(f"Keeping manual ResidualCapacity for {instr['tech']} - not in OLADE data", "DEBUG")
                     filtered_instructions.append(instr)
                 instructions = filtered_instructions + olade_instructions
             else:
@@ -4036,6 +4185,9 @@ class SecondaryTechsUpdater:
             if (self.olade_config.get('activity_lower_limit_enabled') or
                 self.olade_config.get('activity_upper_limit_enabled')) and self.generation_data:
                 self.update_activity_limits(sorted(all_years))
+
+            # Set Projection.Mode to EMPTY for investment parameters that should be unconstrained
+            self.set_empty_projection_mode_for_investment_params()
 
             # Adjust demand by trade balance if enabled (runs LAST - must not affect activity limits)
             if self.olade_config.get('trade_balance_enabled') and self.trade_balance_data:
