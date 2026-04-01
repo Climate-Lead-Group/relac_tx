@@ -53,7 +53,7 @@ t1_confection/A1_Outputs/secondary_techs_update_log_*.txt
 RELAC_TX_Guia_instalacion_ejecucion.pdf
 
 # Secondary Techs Editor - temporary files
-t1_confection/Secondary_Techs_Editor.xlsx
+# t1_confection/Secondary_Techs_Editor.xlsx
 t1_confection/~$Secondary_Techs_Editor.xlsx
 t1_confection/A1_Outputs/*/A-O_Parametrization_backup_*.xlsx
 t1_confection/A1_Outputs/*/A-O_Demand_backup_*.xlsx
