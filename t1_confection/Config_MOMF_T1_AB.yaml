@@ -42,7 +42,7 @@ gurobi_threads: 20
 gurobi_seed: 12345            # Random seed for reproducibility
 
 # For delete intermediate files
-del_files: True
+del_files: False
 
 # For run only the main scenarios
 only_main_scenario: True
@@ -56,19 +56,19 @@ max_x_per_iter: 4
 A2_otoole_outputs: True
 
 # Write txt model
-write_txt_model: True
+write_txt_model: False
 
 # Create matrixes
-create_matrix: True
+create_matrix: False
 
 # Execute OSeMOSYS model
-execute_model: True
+execute_model: False
 
 # Concatenate otoole csv
-concat_otoole_csv: True
+concat_otoole_csv: False
 
 # Concatenate scenarios csv
 concat_scenarios_csv: True
 
 # Annualize capital investment
-annualize_capital: True
+annualize_capital: False

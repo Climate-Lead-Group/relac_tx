@@ -655,11 +655,20 @@ class OldInputsMigrator:
                 method = 'average'
             else:
                 method = self.equivalences.get_aggregation_method(param) if param else 'sum'
-            aggregated_years = defaultdict(list)
-
+            # Stage 1: Deduplicate within same base tech (e.g., PWRCCGARGXX00 vs PWRCCGARGXX01)
+            # to avoid double-counting when both suffixes carry the same capacity value.
+            # Group by base tech (strip trailing 2-digit suffix), take max per year.
+            base_tech_years = defaultdict(lambda: defaultdict(list))
             for old_tech, info in tech_list:
+                base_tech = re.sub(r'\d{2}$', '', old_tech)
                 for year, val in info['years'].items():
-                    aggregated_years[year].append(val)
+                    base_tech_years[base_tech][year].append(val)
+
+            # Stage 2: Aggregate across different base techs (CCG + OCG → NGS)
+            aggregated_years = defaultdict(list)
+            for base_tech, year_vals in base_tech_years.items():
+                for year, vals in year_vals.items():
+                    aggregated_years[year].append(max(vals))
 
             # Apply aggregation method
             final_values = {}
