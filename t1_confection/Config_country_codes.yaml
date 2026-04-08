@@ -81,7 +81,7 @@ first_year: 2023
 # Enable DSPTRN dispatch technology and 4-tier ELC routing (ELC00/01/02/03)
 # When true, A2_AddTx adds DSPTRN technology and rewrites TRN interconnection fuels to ELC03
 # When false, keeps 3-tier ELC routing (ELC00/01/02) without DSPTRN
-enable_dsptrn: True                                                                           
+enable_dsptrn: False                                                                           
 # Whether to add missing countries' demand data from OLADE generation file
 # When true, A1 reads OLADE Excel to fill in countries not present in the input CSVs
 add_missing_countries_from_olade: false
