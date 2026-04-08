@@ -740,6 +740,43 @@ def create_editor_template(data, output_path):
         current_row += 1
     current_row += 1
 
+    # TradeBalanceDemandAdjustment
+    ws_olade.cell(current_row, 1, "6b. TradeBalanceDemandAdjustment")
+    ws_olade.cell(current_row, 1).font = Font(bold=True, size=11)
+    ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+    current_row += 1
+
+    trade_desc = [
+        "Adjusts electricity demand by trade balance and sets TRN interconnection activity limits.",
+        "Requires TradeBalanceDemandAdjustment = YES in OLADE_Config.",
+        "",
+        "DATA SOURCE:",
+        "  File: 'Matriz Balance energético/flujos_energia_estimados_optimizacion.xlsx'",
+        "  Sheet 'Imp-Exp por País': Per-country import/export totals (GWh)",
+        "  Sheet 'Flujos por Interconexión': Bilateral flows between country pairs (GWh)",
+        "",
+        "PART 1 - DEMAND ADJUSTMENT:",
+        "  Modifies A-O_Demand.xlsx after all other demand/limit calculations.",
+        "  Formula: New_Demand = Current_Demand - Exports_PJ + Imports_PJ",
+        "  Conversion: 1 GWh = 0.0036 PJ",
+        "  For years beyond available trade data, uses last available year as constant.",
+        "",
+        "PART 2 - TRN INTERCONNECTION LIMITS:",
+        "  Sets LowerLimit and UpperLimit for TRN technologies in A-O_Parametrization.xlsx.",
+        "  Formula:",
+        "    LowerLimit = Bilateral_Flow (GWh) × 0.0036 × 0.95  (-5%)",
+        "    UpperLimit = Bilateral_Flow (GWh) × 0.0036 × 1.05  (+5%)",
+        "  Years with actual flow data: uses actual values.",
+        "  Years beyond available data: flat projection from last available year.",
+        "  Tech code format: TRN[ORIGIN]XX[DEST]XX (e.g., TRNARGXXBOLXX).",
+    ]
+    for line in trade_desc:
+        ws_olade.cell(current_row, 1, line)
+        ws_olade.cell(current_row, 1).font = Font(size=9)
+        ws_olade.merge_cells(f'A{current_row}:B{current_row}')
+        current_row += 1
+    current_row += 1
+
     # Technology mapping section
     ws_olade.cell(current_row, 1, "TECHNOLOGY MAPPING (OLADE -> Model)")
     ws_olade.cell(current_row, 1).font = Font(bold=True, size=11, color="366092")

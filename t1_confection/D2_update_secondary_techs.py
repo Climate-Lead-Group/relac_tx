@@ -713,6 +713,89 @@ def read_trade_balance_data(trade_balance_file_path):
     return trade_data
 
 
+def read_bilateral_flow_data(flow_file_path):
+    """
+    Read bilateral energy flow data from the 'Flujos por Interconexión' sheet.
+
+    Args:
+        flow_file_path: Path to flujos_energia_estimados_optimizacion.xlsx
+
+    Returns:
+        dict: {frozenset({code_a, code_b}): {year: flujo_total_gwh}}
+    """
+    if not flow_file_path.exists():
+        raise FileNotFoundError(f"Bilateral flow file not found: {flow_file_path}")
+
+    wb = openpyxl.load_workbook(flow_file_path, data_only=True)
+
+    # Find the sheet (handle accent in name)
+    target_sheet = None
+    for name in wb.sheetnames:
+        if strip_accents(name) == 'Flujos por Interconexion':
+            target_sheet = name
+            break
+
+    if not target_sheet:
+        wb.close()
+        raise ValueError(
+            f"Sheet 'Flujos por Interconexión' not found in {flow_file_path}. "
+            f"Available sheets: {wb.sheetnames}"
+        )
+
+    ws = wb[target_sheet]
+
+    # Parse header row to find column indices
+    headers = {}
+    for col_idx in range(1, ws.max_column + 1):
+        header = ws.cell(1, col_idx).value
+        if header:
+            headers[strip_accents(str(header).strip())] = col_idx
+
+    year_col = headers.get('Ano')
+    pais_a_col = headers.get('Pais A')
+    pais_b_col = headers.get('Pais B')
+    flujo_total_col = headers.get('Flujo Total (GWh)')
+
+    if not all([year_col, pais_a_col, pais_b_col, flujo_total_col]):
+        wb.close()
+        raise ValueError(
+            f"Missing required columns in '{target_sheet}'. "
+            f"Found headers: {list(headers.keys())}. "
+            f"Required: Año, País A, País B, Flujo Total (GWh)"
+        )
+
+    # Country name mapping (same as Z_AUX_D1b)
+    country_name_to_code = {strip_accents(k): v for k, v in OLADE_COUNTRY_MAPPING.items()}
+
+    flow_data = {}  # {frozenset({code_a, code_b}): {year: flujo_gwh}}
+
+    for row_idx in range(2, ws.max_row + 1):
+        year_val = ws.cell(row_idx, year_col).value
+        pais_a = ws.cell(row_idx, pais_a_col).value
+        pais_b = ws.cell(row_idx, pais_b_col).value
+        flujo = ws.cell(row_idx, flujo_total_col).value
+
+        if year_val is None or flujo is None or pais_a is None or pais_b is None:
+            continue
+
+        pais_a_clean = strip_accents(str(pais_a).strip())
+        pais_b_clean = strip_accents(str(pais_b).strip())
+
+        code_a = country_name_to_code.get(pais_a_clean)
+        code_b = country_name_to_code.get(pais_b_clean)
+
+        if not code_a or not code_b:
+            continue
+
+        pair = frozenset({code_a, code_b})
+        if pair not in flow_data:
+            flow_data[pair] = {}
+        flow_data[pair][int(year_val)] = float(flujo)
+
+    wb.close()
+    return flow_data
+
+
 def read_demand_data(demand_file_path):
     """
     Read projected electricity demand from A-O_Demand.xlsx
@@ -3783,6 +3866,162 @@ class SecondaryTechsUpdater:
         """Legacy wrapper - calls update_activity_limits"""
         self.update_activity_limits(all_years)
 
+    def update_trn_limits_from_flows(self, all_years):
+        """
+        Set TRN interconnection activity limits from bilateral flow data.
+
+        Reads estimated bilateral energy flows from the trade balance file
+        and writes Lower/Upper activity limits directly into A-O_Parametrization.xlsx.
+
+        - LowerLimit = Flujo Total (PJ) × 0.95  (-5%)
+        - UpperLimit = Flujo Total (PJ) × 1.05  (+5%)
+        - Years with actual data: use actual flow
+        - Years beyond available data: flat projection from last available year
+
+        Args:
+            all_years: list of years to populate
+        """
+        if not self.trade_balance_file_path or not self.trade_balance_file_path.exists():
+            self.log("Cannot update TRN limits: trade balance file not found", "WARNING")
+            return
+
+        self.log("")
+        self.log("=" * 80)
+        self.log("UPDATING TRN INTERCONNECTION LIMITS FROM BILATERAL FLOWS")
+        self.log("=" * 80)
+
+        GWH_TO_PJ = 0.0036
+        LOWER_FACTOR = 0.95
+        UPPER_FACTOR = 1.05
+
+        try:
+            bilateral_flows = read_bilateral_flow_data(self.trade_balance_file_path)
+        except Exception as e:
+            self.log(f"ERROR reading bilateral flow data: {e}", "ERROR")
+            return
+
+        self.log(f"Loaded bilateral flows for {len(bilateral_flows)} country pairs")
+        self.log(f"Conversion: 1 GWh = {GWH_TO_PJ} PJ")
+        self.log(f"LowerLimit factor: {LOWER_FACTOR} (-5%)")
+        self.log(f"UpperLimit factor: {UPPER_FACTOR} (+5%)")
+        self.log("")
+
+        trn_changes = 0
+
+        for scenario in self.scenarios:
+            param_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
+
+            if not param_path.exists():
+                self.log(f"  ✗ Parametrization file not found: {param_path}", "WARNING")
+                continue
+
+            self.log(f"Processing {scenario}...")
+
+            backup_path = self.create_backup(param_path)
+            self.log(f"  Backup: {backup_path.name}")
+
+            try:
+                wb = openpyxl.load_workbook(param_path)
+
+                if 'Secondary Techs' not in wb.sheetnames:
+                    wb.close()
+                    self.log(f"  ✗ 'Secondary Techs' sheet not found", "ERROR")
+                    continue
+
+                ws = wb['Secondary Techs']
+
+                # Build year column map and find Projection.Mode column
+                year_col_map = {}
+                projection_mode_col = None
+                for col_idx in range(1, ws.max_column + 1):
+                    header = ws.cell(1, col_idx).value
+                    if header:
+                        header_str = str(header).strip()
+                        if header_str.isdigit():
+                            year = int(header_str)
+                            if 2000 <= year <= 2100:
+                                year_col_map[year] = col_idx
+                        elif header_str == "Projection.Mode":
+                            projection_mode_col = col_idx
+
+                # Find TRN rows with LowerLimit / UpperLimit
+                scenario_changes = 0
+                for row_idx in range(2, ws.max_row + 1):
+                    tech_code = ws.cell(row_idx, 2).value
+                    parameter = ws.cell(row_idx, 5).value
+
+                    if not tech_code or not parameter:
+                        continue
+
+                    tech_str = str(tech_code).strip().upper()
+                    param_str = str(parameter).strip()
+
+                    if not tech_str.startswith('TRN'):
+                        continue
+
+                    if param_str == 'TotalTechnologyAnnualActivityLowerLimit':
+                        factor = LOWER_FACTOR
+                    elif param_str == 'TotalTechnologyAnnualActivityUpperLimit':
+                        factor = UPPER_FACTOR
+                    else:
+                        continue
+
+                    # Extract country pair: TRNARGXXBOLXX → origin=ARG, dest=BOL
+                    if len(tech_str) < 13:
+                        continue
+                    origin = tech_str[3:6]
+                    dest = tech_str[8:11]
+                    pair = frozenset({origin, dest})
+
+                    if pair not in bilateral_flows:
+                        continue
+
+                    pair_flows = bilateral_flows[pair]
+                    # Last available year for flat projection
+                    max_flow_year = max(pair_flows.keys())
+                    base_gwh = pair_flows[max_flow_year]
+
+                    values_written = 0
+                    for year in all_years:
+                        if year not in year_col_map:
+                            continue
+
+                        # Use actual data if available, otherwise flat from last year
+                        gwh = pair_flows.get(year, base_gwh)
+                        pj = gwh * GWH_TO_PJ
+                        limit_value = round(pj * factor, 6)
+
+                        ws.cell(row_idx, year_col_map[year], limit_value)
+                        values_written += 1
+
+                    # Set Projection.Mode to "User defined"
+                    if values_written > 0 and projection_mode_col:
+                        ws.cell(row_idx, projection_mode_col, "User defined")
+                        scenario_changes += values_written
+
+                        if scenario_changes <= 4:  # Log first few
+                            sample_year = min(all_years)
+                            sample_gwh = pair_flows.get(sample_year, base_gwh)
+                            limit_type = 'Lower' if factor < 1 else 'Upper'
+                            self.log(f"  {tech_str} {limit_type}: {sample_gwh:.1f} GWh → "
+                                     f"{round(sample_gwh * GWH_TO_PJ * factor, 6):.6f} PJ (year {sample_year})")
+
+                trn_changes += scenario_changes
+
+                wb.save(param_path)
+                wb.close()
+                self.log(f"  ✓ {scenario}: {scenario_changes} TRN limit values written")
+
+            except Exception as e:
+                self.log(f"  ✗ Error updating {scenario}: {e}", "ERROR")
+                try:
+                    wb.close()
+                except:
+                    pass
+
+        self.log("")
+        self.log(f"TRN interconnection limits completed: {trn_changes} values written")
+
     def read_interconnections_config(self):
         """
         Read the Interconnections sheet from Secondary_Techs_Editor.xlsx.
@@ -4226,6 +4465,10 @@ class SecondaryTechsUpdater:
                 interconnections_config = self.read_interconnections_config()
                 if interconnections_config:
                     self.apply_interconnections(interconnections_config)
+
+            # Update TRN interconnection limits from bilateral flow data
+            if self.olade_config.get('trade_balance_enabled') and self.trade_balance_file_path:
+                self.update_trn_limits_from_flows(sorted(all_years))
 
             # Summary
             self.log("")
