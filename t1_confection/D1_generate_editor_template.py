@@ -520,10 +520,12 @@ def create_editor_template(data, output_path):
     ws_olade.cell(8, 2, "NO").border = border_style
     dv_yes_no.add('B8')
 
-    # ActivityUpperLimitFromOLADE
+    # ActivityUpperLimitFromOLADE (tri-state: NO / YES_ALL / EXISTING_ONLY)
     ws_olade.cell(9, 1, "ActivityUpperLimitFromOLADE").border = border_style
     ws_olade.cell(9, 2, "NO").border = border_style
-    dv_yes_no.add('B9')
+    dv_upper_limit = DataValidation(type="list", formula1='"NO,YES_ALL,EXISTING_ONLY"', allow_blank=False)
+    ws_olade.add_data_validation(dv_upper_limit)
+    dv_upper_limit.add('B9')
 
     # TradeBalanceDemandAdjustment
     ws_olade.cell(10, 1, "TradeBalanceDemandAdjustment").border = border_style
@@ -674,13 +676,18 @@ def create_editor_template(data, output_path):
     upper_desc = [
         "Populates TotalTechnologyAnnualActivityUpperLimit in A-O_Parametrization.xlsx.",
         "",
+        "MODES:",
+        "  NO            - No UpperLimit updates",
+        "  YES_ALL       - Update UpperLimit for all technologies",
+        "  EXISTING_ONLY - Only update technologies that already have UpperLimit values",
+        "                  defined and Projection.Mode = 'User defined'",
+        "",
         "FORMULA:",
-        "  UpperLimit(tech,year) = LowerLimit(tech,year) + 0.1",
+        "  UpperLimit(tech,year) = LowerLimit(tech,year) × 1.05",
         "",
         "NOTES:",
         "  - Can be enabled independently of LowerLimit",
-        "  - If only UpperLimit is enabled, base value is calculated using same formula as LowerLimit",
-        "  - The +0.1 margin allows slight flexibility in the optimization",
+        "  - The ×1.05 margin allows slight flexibility in the optimization",
     ]
     for line in upper_desc:
         ws_olade.cell(current_row, 1, line)
@@ -1432,7 +1439,7 @@ def create_editor_template(data, output_path):
     ws_doc[f'A{doc_row}'] = '  • Share_technology: Technology share (from Shares_Total or Renewability_Targets)'
 
     doc_row += 2
-    ws_doc[f'A{doc_row}'] = 'UpperLimit = LowerLimit + 0.1'
+    ws_doc[f'A{doc_row}'] = 'UpperLimit = LowerLimit × 1.05'
     ws_doc[f'A{doc_row}'].font = Font(italic=True)
 
     # Section 2: Validation 1
@@ -1467,7 +1474,7 @@ def create_editor_template(data, output_path):
     doc_row += 1
     ws_doc[f'A{doc_row}'] = '    → LowerLimit = 0'
     doc_row += 1
-    ws_doc[f'A{doc_row}'] = '    → UpperLimit = 0.1'
+    ws_doc[f'A{doc_row}'] = '    → UpperLimit = 0'
     doc_row += 1
     ws_doc[f'A{doc_row}'] = '    → Value is CAPPED'
     doc_row += 2
@@ -1479,7 +1486,7 @@ def create_editor_template(data, output_path):
     doc_row += 1
     ws_doc[f'A{doc_row}'] = '         → LowerLimit = max(0, MaxAllowed)'
     doc_row += 1
-    ws_doc[f'A{doc_row}'] = '         → UpperLimit = LowerLimit + 0.1'
+    ws_doc[f'A{doc_row}'] = '         → UpperLimit = LowerLimit × 1.05'
     doc_row += 1
     ws_doc[f'A{doc_row}'] = '         → Value is CAPPED'
 
@@ -1575,7 +1582,7 @@ def create_editor_template(data, output_path):
     ws_doc[f'A{doc_row}'] = '  Final LowerLimit = 20.90 PJ'
     ws_doc[f'A{doc_row}'].font = Font(color='00B050', bold=True)
     doc_row += 1
-    ws_doc[f'A{doc_row}'] = '  Final UpperLimit = 20.90 + 0.1 = 21.00 PJ'
+    ws_doc[f'A{doc_row}'] = '  Final UpperLimit = 20.90 × 1.05 = 21.945 PJ'
     ws_doc[f'A{doc_row}'].font = Font(color='00B050', bold=True)
 
     doc_row += 2
