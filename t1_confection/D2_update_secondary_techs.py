@@ -3261,7 +3261,7 @@ class SecondaryTechsUpdater:
 
         Uses renewability targets from Renewability_Targets sheet to calculate shares.
         Formula: Generation_OLADE × (1 + growth_rate × (year - ref_year)) × Share_technology
-        UpperLimit = LowerLimit + 0.1
+        UpperLimit = LowerLimit × 1.05
 
         IMPORTANT: LowerLimit is capped to ensure it doesn't exceed what the MaxCapacity can produce.
         MaxPossibleActivity = MaxCapacity × CapacityToActivityUnit × AvailabilityFactor × sum(CapacityFactor × YearSplit)
