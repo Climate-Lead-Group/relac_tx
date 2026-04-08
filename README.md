@@ -149,7 +149,7 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
    | `PetroleumSplitMode` | OIL_only o Split_PET_OIL - Modo de división de petróleo |
    | `DemandFromOLADE` | YES/NO - Habilitar integración OLADE para demanda eléctrica |
    | `ActivityLowerLimitFromOLADE` | YES/NO - Habilitar integración OLADE para TotalTechnologyAnnualActivityLowerLimit |
-   | `ActivityUpperLimitFromOLADE` | YES/NO - Habilitar integración OLADE para TotalTechnologyAnnualActivityUpperLimit |
+   | `ActivityUpperLimitFromOLADE` | NO/YES_ALL/EXISTING_ONLY - Controlar actualización de TotalTechnologyAnnualActivityUpperLimit |
 
    **PetroleumSplitMode**:
    - `OIL_only`: Asigna toda la capacidad de petróleo a OIL (Fuel oil)
@@ -165,7 +165,12 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
    - Usa datos de generación eléctrica de OLADE combinados con shares de tecnologías de `Shares_Power_Generation_Technologies.xlsx`
    - Configura objetivos de renovabilidad opcionales en la hoja `Renewability_Targets`
    - Configura pesos personalizados de tecnologías en la hoja `Technology_Weights`
-   - Fórmula: `ActivityLimit(tech,año) = Generación_Total(PJ) × (1 + tasa × (año - 2023)) × Share(tech,año)`
+   - Fórmula LowerLimit: `LowerLimit(tech,año) = Demanda × Share_normalizado`
+   - Fórmula UpperLimit: `UpperLimit(tech,año) = LowerLimit(tech,año) × 1.05`
+   - **Modos de UpperLimit**:
+     - `NO` — No actualiza UpperLimit
+     - `YES_ALL` — Actualiza UpperLimit para todas las tecnologías
+     - `EXISTING_ONLY` — Solo actualiza tecnologías que ya tienen UpperLimit definido y Projection.Mode = "User defined"
    - Incluye validación automática contra capacidades disponibles
    - Ver hoja `Documentation` en el editor para detalles completos de cálculo y validación
 
