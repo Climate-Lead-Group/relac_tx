@@ -115,13 +115,15 @@ def read_olade_config(editor_path):
 
     # Read configuration values
     # Row 5 = ResidualCapacitiesFromOLADE, Row 6 = PetroleumSplitMode, Row 7 = DemandFromOLADE
-    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE
+    # Row 8 = ActivityLowerLimitFromOLADE, Row 9 = ActivityUpperLimitFromOLADE (NO/YES_ALL/EXISTING_ONLY)
     # Row 10 = TradeBalanceDemandAdjustment, Row 11 = InterconnectionsControl
     enabled = str(ws['B5'].value).upper() == 'YES' if ws['B5'].value else False
     petroleum_split_mode = str(ws['B6'].value) if ws['B6'].value else 'Split_PET_OIL'
     demand_enabled = str(ws['B7'].value).upper() == 'YES' if ws['B7'].value else False
     activity_lower_limit_enabled = str(ws['B8'].value).upper() == 'YES' if ws['B8'].value else False
-    activity_upper_limit_enabled = str(ws['B9'].value).upper() == 'YES' if ws['B9'].value else False
+    upper_limit_val = str(ws['B9'].value).strip().upper() if ws['B9'].value else 'NO'
+    activity_upper_limit_mode = upper_limit_val if upper_limit_val in ('YES_ALL', 'EXISTING_ONLY') else 'NO'
+    activity_upper_limit_enabled = activity_upper_limit_mode != 'NO'
     trade_balance_enabled = str(ws['B10'].value).upper() == 'YES' if ws['B10'].value else False
     interconnections_enabled = str(ws['B11'].value).upper() == 'YES' if ws['B11'].value else False
 
@@ -292,6 +294,7 @@ def read_olade_config(editor_path):
         'demand_enabled': demand_enabled,
         'activity_lower_limit_enabled': activity_lower_limit_enabled,
         'activity_upper_limit_enabled': activity_upper_limit_enabled,
+        'activity_upper_limit_mode': activity_upper_limit_mode,
         'trade_balance_enabled': trade_balance_enabled,
         'interconnections_enabled': interconnections_enabled,
         'demand_growth_rates': demand_growth_rates,
@@ -3273,7 +3276,8 @@ class SecondaryTechsUpdater:
         limit_method = 'DemandBased'
 
         update_lower = self.olade_config.get('activity_lower_limit_enabled', False)
-        update_upper = self.olade_config.get('activity_upper_limit_enabled', False)
+        upper_mode = self.olade_config.get('activity_upper_limit_mode', 'NO')
+        update_upper = upper_mode != 'NO'
 
         if not update_lower and not update_upper:
             return
@@ -3296,7 +3300,7 @@ class SecondaryTechsUpdater:
 
         self.log(f"Reference year: {ref_year}")
         self.log(f"Update LowerLimit: {'YES' if update_lower else 'NO'}")
-        self.log(f"Update UpperLimit: {'YES' if update_upper else 'NO'}")
+        self.log(f"Update UpperLimit: {upper_mode}")
         self.log(f"Base scenario: {base_scenario}")
         self.log(f"Renewability targets defined for: {len(renewability_targets)} country/scenario combinations")
         self.log("Calculation Method: LowerLimit = Demand × Normalized_Share")
@@ -3507,6 +3511,18 @@ class SecondaryTechsUpdater:
                         if not lower_row and not upper_row:
                             continue
 
+                        # For EXISTING_ONLY mode: skip UpperLimit if the tech doesn't already
+                        # have values defined with Projection.Mode = "User defined"
+                        skip_upper = False
+                        if upper_mode == 'EXISTING_ONLY' and upper_row:
+                            has_existing = any(
+                                ws.cell(upper_row, year_col_map[y]).value not in (None, 0, 0.0, '')
+                                for y in all_years if y in year_col_map
+                            )
+                            proj_mode = ws.cell(upper_row, projection_mode_col).value if projection_mode_col else None
+                            if not has_existing or str(proj_mode).strip() != "User defined":
+                                skip_upper = True
+
                         # Get CapacityToActivityUnit for this tech (default 31.536 for power plants)
                         c2a = capacity_to_activity.get(tech_str, 31.536)
 
@@ -3542,7 +3558,7 @@ class SecondaryTechsUpdater:
                                 values_updated += 1
 
                             # Update UpperLimit: only write when LowerLimit is meaningful
-                            if update_upper and upper_row:
+                            if update_upper and upper_row and not skip_upper:
                                 if limit_value > 0:
                                     upper_value = round(limit_value * 1.05, 4)
                                     ws.cell(upper_row, year_col_map[year], upper_value)
@@ -3552,7 +3568,7 @@ class SecondaryTechsUpdater:
 
                         # Set Projection.Mode based on whether any year has a meaningful value
                         if values_updated > 0 and projection_mode_col:
-                            for row, flag in [(lower_row, update_lower), (upper_row, update_upper)]:
+                            for row, flag in [(lower_row, update_lower), (upper_row, update_upper and not skip_upper)]:
                                 if flag and row:
                                     has_nonzero = any(
                                         ws.cell(row, year_col_map[y]).value not in (None, 0, 0.0, '')
@@ -3634,10 +3650,21 @@ class SecondaryTechsUpdater:
                                     capacity_increases += 1
 
                                     # Recalculate UpperLimit: LowerLimit × 1.05
+                                    # Respect EXISTING_ONLY mode: skip if tech had no pre-existing UpperLimit
                                     upper_row = upper_limit_rows.get(tech_str)
-                                    if upper_row:
+                                    if upper_row and upper_mode != 'EXISTING_ONLY':
                                         new_upper = current_limit * 1.05
                                         ws.cell(upper_row, col_idx, round(new_upper, 4))
+                                    elif upper_row and upper_mode == 'EXISTING_ONLY':
+                                        # Check if this tech has pre-existing UpperLimit values
+                                        has_existing_upper = any(
+                                            ws.cell(upper_row, year_col_map[y]).value not in (None, 0, 0.0, '')
+                                            for y in all_years if y in year_col_map
+                                        )
+                                        proj_mode = ws.cell(upper_row, projection_mode_col).value if projection_mode_col else None
+                                        if has_existing_upper and str(proj_mode).strip() == "User defined":
+                                            new_upper = current_limit * 1.05
+                                            ws.cell(upper_row, col_idx, round(new_upper, 4))
 
                         # DEBUG: Special validation for PWRGEOHNDXX, year 2038, scenario NDC
                         if scenario == "NDC" and year == 2038 and tech_str == "PWRGEOHNDXX":
@@ -4047,7 +4074,8 @@ class SecondaryTechsUpdater:
             if lower_enabled or upper_enabled:
                 self.log("")
                 self.log(f"ActivityLowerLimit integration: {'ENABLED' if lower_enabled else 'DISABLED'}")
-                self.log(f"ActivityUpperLimit integration: {'ENABLED' if upper_enabled else 'DISABLED'}")
+                upper_mode = self.olade_config.get('activity_upper_limit_mode', 'NO')
+                self.log(f"ActivityUpperLimit integration: {upper_mode}")
 
                 # Log renewability targets info
                 renewability_targets = self.olade_config.get('renewability_targets', {})
