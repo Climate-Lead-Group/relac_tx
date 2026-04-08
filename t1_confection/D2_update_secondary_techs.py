@@ -26,6 +26,9 @@ OLADE_COUNTRY_MAPPING_NORMALIZED = get_olade_country_mapping_normalized()
 OLADE_TECH_MAPPING = get_olade_tech_mapping()
 MULTI_REGION_MAP = get_multi_region_map()
 
+# Unit conversion constant
+GWH_TO_PJ = 0.0036  # 1 GWh = 0.0036 PJ
+
 
 def elc_country_key(fuel_str):
     """Extract the country/region key from an ELC fuel code.
@@ -1015,6 +1018,9 @@ class SecondaryTechsUpdater:
         self.trade_balance_data = None
         # DEBUG: Cache for DemandBased normalized shares
         self.demand_based_shares_cache = {}  # {(scenario, country): {fuel: {year: share}}}
+        # In-memory demand and generation caches (populated by update_demand_files / _compute_generation)
+        self._demand_by_scenario_country = {}       # {scenario: {country_code: {year: demand_pj}}}
+        self._generation_by_scenario_country = {}   # {scenario: {country_code: {year: generation_pj}}}
 
     def log(self, message, level="INFO"):
         """Add message to log"""
@@ -1755,9 +1761,14 @@ class SecondaryTechsUpdater:
 
     def update_demand_files(self, all_years):
         """
-        Update A-O_Demand.xlsx files with electricity demand from OLADE generation data
+        Update A-O_Demand.xlsx files with electricity demand from OLADE generation data.
 
-        Applies linear growth: Demand(year) = Demand(2023) × (1 + rate × (year - 2023))
+        Base demand incorporates trade balance:
+            base_demand = gen_OLADE_pj + imports_pj(ref_year) - exports_pj(ref_year)
+        Then applies linear growth:
+            Demand(year) = base_demand × (1 + rate × (year - ref_year))
+
+        Also stores computed demand in self._demand_by_scenario_country for downstream use.
 
         Args:
             all_years: list of years to populate
@@ -1780,8 +1791,13 @@ class SecondaryTechsUpdater:
         ref_year = self.generation_data['reference_year']
         growth_rates = self.olade_config.get('demand_growth_rates', {})
 
+        trade_in_base = bool(self.trade_balance_data)
         self.log(f"Reference year: {ref_year}")
         self.log(f"Growth type: Linear")
+        if trade_in_base:
+            self.log(f"Trade balance: INCLUDED in base demand (Demand = Gen + Imports - Exports)")
+        else:
+            self.log(f"Trade balance: NOT available (Demand = Gen)")
         self.log("")
 
         demand_changes = 0
@@ -1849,6 +1865,10 @@ class SecondaryTechsUpdater:
                                     )
                                     ws.cell(row_idx, 3, name_val)
 
+                # Initialize scenario demand cache
+                if scenario not in self._demand_by_scenario_country:
+                    self._demand_by_scenario_country[scenario] = {}
+
                 # Update existing ELC demand rows with generation data
                 for country_key, row_idx in existing_countries.items():
                     # Check if we have generation data for this country
@@ -1857,16 +1877,28 @@ class SecondaryTechsUpdater:
                     if country_key not in self.generation_data['data'] and iso3 not in self.generation_data['data']:
                         continue
 
-                    base_demand_pj = self.generation_data['data'].get(country_key,
-                                     self.generation_data['data'].get(iso3))
-                    growth_rate = lookup_growth_rate(growth_rates, country_key)
+                    gen_olade_pj = self.generation_data['data'].get(country_key,
+                                   self.generation_data['data'].get(iso3))
 
-                    self.log(f"  {country_key}: Base={base_demand_pj:.2f} PJ, Growth={growth_rate*100:.1f}%")
+                    # Incorporate trade balance into base demand:
+                    # base_demand = gen_OLADE + imports - exports (at reference year)
+                    base_demand_pj = gen_olade_pj
+                    if trade_in_base and iso3 in self.trade_balance_data:
+                        imp_gwh, exp_gwh = self._get_trade_for_year(iso3, ref_year)
+                        base_demand_pj = gen_olade_pj + (imp_gwh * GWH_TO_PJ) - (exp_gwh * GWH_TO_PJ)
+                        self.log(f"  {country_key}: Gen={gen_olade_pj:.2f} PJ, "
+                                 f"Imp={imp_gwh:.1f} GWh, Exp={exp_gwh:.1f} GWh → "
+                                 f"Base Demand={base_demand_pj:.2f} PJ")
+                    else:
+                        self.log(f"  {country_key}: Base={base_demand_pj:.2f} PJ")
+
+                    growth_rate = lookup_growth_rate(growth_rates, country_key)
+                    self.log(f"    Growth={growth_rate*100:.1f}%")
 
                     # Update each year with linear growth
                     for year in all_years:
                         if year in year_col_map:
-                            # Linear growth: Demand(year) = Demand(ref_year) × (1 + rate × (year - ref_year))
+                            # Linear growth: Demand(year) = base_demand × (1 + rate × (year - ref_year))
                             years_diff = year - ref_year
                             demand_year = base_demand_pj * (1 + growth_rate * years_diff)
 
@@ -1888,6 +1920,11 @@ class SecondaryTechsUpdater:
                             ws.cell(row_idx, year_col_map[year], demand_year)
                             demand_changes += 1
 
+                            # Store in-memory for downstream generation calculation
+                            if country_key not in self._demand_by_scenario_country[scenario]:
+                                self._demand_by_scenario_country[scenario][country_key] = {}
+                            self._demand_by_scenario_country[scenario][country_key][year] = demand_year
+
                 # Add missing countries that have generation data but aren't in the sheet.
                 # OLADE generation data uses 3-char ISO codes (e.g., "IND"), while
                 # existing_countries uses region-aware keys (e.g., "INDEA", "INDNE").
@@ -1907,7 +1944,13 @@ class SecondaryTechsUpdater:
 
                     # Add a row for each missing country/region
                     for iso3_code in sorted(missing_countries):
-                        base_demand_pj = self.generation_data['data'][iso3_code]
+                        gen_olade_pj = self.generation_data['data'][iso3_code]
+
+                        # Incorporate trade balance into base demand
+                        base_demand_pj = gen_olade_pj
+                        if trade_in_base and iso3_code in self.trade_balance_data:
+                            imp_gwh, exp_gwh = self._get_trade_for_year(iso3_code, ref_year)
+                            base_demand_pj = gen_olade_pj + (imp_gwh * GWH_TO_PJ) - (exp_gwh * GWH_TO_PJ)
 
                         # Find country name from OLADE mapping
                         country_name = None
@@ -1965,6 +2008,11 @@ class SecondaryTechsUpdater:
                                     ws.cell(new_row, year_col_map[year], demand_year)
                                     demand_changes += 1
 
+                                    # Store in-memory for downstream generation calculation
+                                    if region_key not in self._demand_by_scenario_country[scenario]:
+                                        self._demand_by_scenario_country[scenario][region_key] = {}
+                                    self._demand_by_scenario_country[scenario][region_key][year] = demand_year
+
                 # Save
                 wb.save(demand_path)
                 wb.close()
@@ -1979,6 +2027,57 @@ class SecondaryTechsUpdater:
 
         self.log("")
         self.log(f"Demand updates completed: {demand_changes} values written")
+
+    def _compute_generation_from_demand(self, all_years):
+        """
+        Derive generation from projected demand by reversing the trade adjustment.
+
+        Generation(country, year) = Demand(country, year) + Exports_PJ(year) - Imports_PJ(year)
+
+        If no trade data is available for a country, generation equals demand.
+        Reads from self._demand_by_scenario_country (populated by update_demand_files).
+        Stores results in self._generation_by_scenario_country.
+        """
+        self.log("")
+        self.log("=" * 80)
+        self.log("DERIVING GENERATION FROM PROJECTED DEMAND")
+        self.log("=" * 80)
+        self.log("Formula: Generation = Demand + Exports_PJ - Imports_PJ")
+        self.log("")
+
+        for scenario, countries in self._demand_by_scenario_country.items():
+            self._generation_by_scenario_country[scenario] = {}
+
+            for country_code, year_demands in countries.items():
+                iso3 = country_code[:3]
+                has_trade = self.trade_balance_data and iso3 in self.trade_balance_data
+
+                self._generation_by_scenario_country[scenario][country_code] = {}
+                first_year_logged = False
+
+                for year in all_years:
+                    demand_pj = year_demands.get(year, 0.0)
+
+                    if has_trade:
+                        imp_gwh, exp_gwh = self._get_trade_for_year(iso3, year)
+                        generation_pj = demand_pj + (exp_gwh * GWH_TO_PJ) - (imp_gwh * GWH_TO_PJ)
+                    else:
+                        generation_pj = demand_pj
+
+                    generation_pj = round(generation_pj, 2)
+                    self._generation_by_scenario_country[scenario][country_code][year] = generation_pj
+
+                    if not first_year_logged and has_trade:
+                        self.log(f"  {scenario}/{country_code} (year {year}): "
+                                 f"Demand={demand_pj:.2f} + Exp={exp_gwh * GWH_TO_PJ:.4f} "
+                                 f"- Imp={imp_gwh * GWH_TO_PJ:.4f} → Gen={generation_pj:.2f} PJ")
+                        first_year_logged = True
+
+            country_count = len(self._generation_by_scenario_country[scenario])
+            self.log(f"  {scenario}: {country_count} countries computed")
+
+        self.log("")
+        self.log("Generation derivation completed")
 
     def _get_trade_for_year(self, country_iso3, year):
         """
@@ -2024,8 +2123,6 @@ class SecondaryTechsUpdater:
         """
         if not self.olade_config.get('trade_balance_enabled') or not self.trade_balance_data:
             return
-
-        GWH_TO_PJ = 0.0036
 
         self.log("")
         self.log("=" * 80)
@@ -2855,35 +2952,38 @@ class SecondaryTechsUpdater:
 
         return (required_cap, max_adjusted, residual_adjusted)
 
-    def calculate_demand_based_limits(self, scenario, country_code, all_years, demand_data,
+    def calculate_demand_based_limits(self, scenario, country_code, all_years, activity_data,
                                         base_scenario='BAU', base_shares=None):
         """
-        Calculate LowerLimits using DemandBased method.
+        Calculate LowerLimits from activity data (generation or demand) and technology shares.
 
-        Formula: LowerLimit[tech,year] = Demand[country,year] × Share[tech,year]
+        Formula: LowerLimit[tech,year] = Activity[country,year] × Share[tech,year]
+
+        When generation data is available (trade enabled), activity_data contains generation
+        values (Demand + Exports - Imports). Otherwise it contains raw demand values.
 
         Steps:
         1. Read % renewable from Renewability_Targets (with interpolation)
         2. Calculate shares from renewability using OLADE weights
         3. Normalize shares year-by-year (Σ = 1.0)
         4. For non-base scenarios, apply base scenario override for 2023-2025
-        5. LowerLimit = Demand × Share for each tech/year
+        5. LowerLimit = Activity × Share for each tech/year
 
         Args:
             scenario: scenario name (BAU, NDC, etc.)
             country_code: ISO3 country code
             all_years: list of years
-            demand_data: {country_code: {year: demand_pj}} from read_demand_data()
+            activity_data: {country_code: {year: pj}} - generation or demand data
             base_scenario: base scenario name from YAML (default: 'BAU')
             base_shares: Optional pre-calculated base scenario shares for override
 
         Returns:
             dict: {tech_str: {year: lower_limit_pj}}
         """
-        # Get demand for this country
-        country_demand = demand_data.get(country_code, {})
-        if not country_demand:
-            self.log(f"  No demand data for {country_code}", "WARNING")
+        # Get activity (generation or demand) for this country
+        country_activity = activity_data.get(country_code, {})
+        if not country_activity:
+            self.log(f"  No activity data for {country_code}", "WARNING")
             return {}
 
         # Get renewability target configuration for this country/scenario
@@ -3012,20 +3112,20 @@ class SecondaryTechsUpdater:
         non_zero_techs = sum(1 for fuel in tech_shares if any(tech_shares[fuel].values()))
         self.log(f"  DEBUG: Stored {non_zero_techs} technologies with shares for {country_code}/{scenario}")
 
-        # Calculate LowerLimits: Demand × Share
+        # Calculate LowerLimits: Activity (generation or demand) × Share
         result = {}
         for fuel in all_fuels:
             tech_str = f"PWR{fuel}{country_code}XX"
             result[tech_str] = {}
 
             for year in all_years:
-                demand_pj = country_demand.get(year, 0.0)
+                activity_pj = country_activity.get(year, 0.0)
                 share = tech_shares.get(fuel, {}).get(year, 0.0)
-                limit_value = demand_pj * share
+                limit_value = activity_pj * share
                 result[tech_str][year] = round(limit_value, 4)
                 # Diagnostic logging for year 2025 to compare with reference values
                 if year == 2025 and limit_value > 0:
-                    self.log(f"  DIAG {country_code} {fuel}: demand={demand_pj:.4f} PJ, "
+                    self.log(f"  DIAG {country_code} {fuel}: activity={activity_pj:.4f} PJ, "
                              f"share={share:.6f}, limit={limit_value:.4f} PJ")
         return result
 
@@ -3385,9 +3485,14 @@ class SecondaryTechsUpdater:
         self.log(f"Update LowerLimit: {'YES' if update_lower else 'NO'}")
         self.log(f"Update UpperLimit: {upper_mode}")
         self.log(f"Base scenario: {base_scenario}")
+        use_generation = bool(self._generation_by_scenario_country)
         self.log(f"Renewability targets defined for: {len(renewability_targets)} country/scenario combinations")
-        self.log("Calculation Method: LowerLimit = Demand × Normalized_Share")
-        self.log("  - Reads demand from A-O_Demand.xlsx")
+        if use_generation:
+            self.log("Calculation Method: LowerLimit = Generation × Normalized_Share")
+            self.log("  - Uses in-memory generation data (Demand + Exports - Imports)")
+        else:
+            self.log("Calculation Method: LowerLimit = Demand × Normalized_Share")
+            self.log("  - Reads demand from A-O_Demand.xlsx (no trade data available)")
         self.log("  - Distributes shares using OLADE weights")
         self.log(f"  - Non-base scenarios: years 2023-2025 use {base_scenario} shares")
         self.log("")
@@ -3491,32 +3596,42 @@ class SecondaryTechsUpdater:
                         country_code = pwr_country_key(tech_str)
                         countries_in_sheet.add(country_code)
 
-                # For DemandBased method: read demand data and prepare BAU shares for NDC override
-                demand_data = {}
-                bau_demand_data = {}
+                # Get activity data (generation if available, otherwise demand from Excel)
+                activity_data = {}
+                bau_activity_data = {}
                 bau_shares_cache = {}  # {country_code: {fuel: {year: share}}}
 
                 if limit_method == 'DemandBased' and update_lower:
-                    # Read demand data for this scenario
-                    demand_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
-                    if demand_path.exists():
-                        try:
-                            demand_data = read_demand_data(demand_path)
-                            self.log(f"  Loaded demand data for {len(demand_data)} countries")
-                        except Exception as e:
-                            self.log(f"  ✗ Error reading demand data: {e}", "WARNING")
-                    else:
-                        self.log(f"  ✗ Demand file not found: {demand_path}", "WARNING")
+                    if use_generation and scenario in self._generation_by_scenario_country:
+                        # Use in-memory generation data (includes trade adjustment)
+                        activity_data = self._generation_by_scenario_country[scenario]
+                        self.log(f"  Using generation data for {len(activity_data)} countries")
 
-                    # For non-base scenarios, also read base scenario demand for override
-                    if scenario != base_scenario:
-                        base_demand_path = self.base_path / f"A1_Outputs_{base_scenario}" / "A-O_Demand.xlsx"
-                        if base_demand_path.exists():
+                        # For non-base scenarios, get base scenario generation for override
+                        if scenario != base_scenario and base_scenario in self._generation_by_scenario_country:
+                            bau_activity_data = self._generation_by_scenario_country[base_scenario]
+                            self.log(f"  Using {base_scenario} generation data for override")
+                    else:
+                        # Fallback: read demand from Excel (no trade data available)
+                        demand_path = self.base_path / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
+                        if demand_path.exists():
                             try:
-                                bau_demand_data = read_demand_data(base_demand_path)
-                                self.log(f"  Loaded {base_scenario} demand data for override")
+                                activity_data = read_demand_data(demand_path)
+                                self.log(f"  Loaded demand data for {len(activity_data)} countries (fallback)")
                             except Exception as e:
-                                self.log(f"  ✗ Error reading {base_scenario} demand data: {e}", "WARNING")
+                                self.log(f"  ✗ Error reading demand data: {e}", "WARNING")
+                        else:
+                            self.log(f"  ✗ Demand file not found: {demand_path}", "WARNING")
+
+                        # For non-base scenarios, also read base scenario demand for override
+                        if scenario != base_scenario:
+                            base_demand_path = self.base_path / f"A1_Outputs_{base_scenario}" / "A-O_Demand.xlsx"
+                            if base_demand_path.exists():
+                                try:
+                                    bau_activity_data = read_demand_data(base_demand_path)
+                                    self.log(f"  Loaded {base_scenario} demand data for override (fallback)")
+                                except Exception as e:
+                                    self.log(f"  ✗ Error reading {base_scenario} demand data: {e}", "WARNING")
 
                 # Process each country
                 for country_code in countries_in_sheet:
@@ -3544,7 +3659,7 @@ class SecondaryTechsUpdater:
                     # DEBUG: Store shares for CSV export
                     all_shares_data[(scenario, country_code)] = tech_shares
 
-                    # Use DemandBased method: LowerLimit = Demand × Normalized_Share
+                    # Calculate LowerLimit = Activity (generation or demand) × Normalized_Share
                     demand_based_limits = {}
 
                     if update_lower:
@@ -3554,13 +3669,13 @@ class SecondaryTechsUpdater:
                             # Calculate base scenario shares for this country
                             base_limits = self.calculate_demand_based_limits(
                                 base_scenario, country_code, all_years,
-                                bau_demand_data if bau_demand_data else demand_data,
+                                bau_activity_data if bau_activity_data else activity_data,
                                 base_scenario=base_scenario  # No override for base scenario itself
                             )
                             # Convert from {tech_str: {year: limit}} to {fuel: {year: share}}
                             # We need the shares, not the limits, for the override
-                            if base_limits and bau_demand_data:
-                                base_country_demand = bau_demand_data.get(country_code, {})
+                            if base_limits and bau_activity_data:
+                                base_country_activity = bau_activity_data.get(country_code, {})
                                 base_shares_fuel = {}
                                 for tech_str, year_limits in base_limits.items():
                                     # Extract fuel code from tech_str (PWRHYDARGXX -> HYD)
@@ -3568,16 +3683,16 @@ class SecondaryTechsUpdater:
                                         fuel = tech_str[3:6]
                                         base_shares_fuel[fuel] = {}
                                         for year, limit in year_limits.items():
-                                            demand = base_country_demand.get(year, 0.0)
-                                            if demand > 0:
-                                                base_shares_fuel[fuel][year] = limit / demand
+                                            activity = base_country_activity.get(year, 0.0)
+                                            if activity > 0:
+                                                base_shares_fuel[fuel][year] = limit / activity
                                             else:
                                                 base_shares_fuel[fuel][year] = 0.0
                                 bau_shares_cache[country_code] = base_shares_fuel
 
                         base_shares_for_country = bau_shares_cache.get(country_code)
                         demand_based_limits = self.calculate_demand_based_limits(
-                            scenario, country_code, all_years, demand_data,
+                            scenario, country_code, all_years, activity_data,
                             base_scenario=base_scenario, base_shares=base_shares_for_country
                         )
 
@@ -3890,7 +4005,6 @@ class SecondaryTechsUpdater:
         self.log("UPDATING TRN INTERCONNECTION LIMITS FROM BILATERAL FLOWS")
         self.log("=" * 80)
 
-        GWH_TO_PJ = 0.0036
         LOWER_FACTOR = 0.95
         UPPER_FACTOR = 1.05
 
@@ -4444,11 +4558,15 @@ class SecondaryTechsUpdater:
             else:
                 self.log("No manual instructions to process.")
 
-            # Update demand files if enabled
+            # Step 1-2: Update demand (trade balance incorporated into base) and apply growth
             if self.olade_config.get('demand_enabled') and self.generation_data:
                 self.update_demand_files(sorted(all_years))
 
-            # Update activity limits if enabled (LowerLimit and/or UpperLimit)
+            # Step 3: Derive generation from projected demand (reverse trade adjustment)
+            if self.generation_data and self._demand_by_scenario_country:
+                self._compute_generation_from_demand(sorted(all_years))
+
+            # Step 4: Activity limits from generation (or demand if no trade data)
             if (self.olade_config.get('activity_lower_limit_enabled') or
                 self.olade_config.get('activity_upper_limit_enabled')) and self.generation_data:
                 self.update_activity_limits(sorted(all_years))
@@ -4456,9 +4574,8 @@ class SecondaryTechsUpdater:
             # Set Projection.Mode to EMPTY for investment parameters that should be unconstrained
             self.set_empty_projection_mode_for_investment_params()
 
-            # Adjust demand by trade balance if enabled (runs LAST - must not affect activity limits)
-            if self.olade_config.get('trade_balance_enabled') and self.trade_balance_data:
-                self.update_demand_with_trade_balance(sorted(all_years))
+            # NOTE: update_demand_with_trade_balance() is no longer called here.
+            # Trade balance is now incorporated into base demand in update_demand_files().
 
             # Apply interconnection controls if enabled
             if self.olade_config.get('interconnections_enabled'):
