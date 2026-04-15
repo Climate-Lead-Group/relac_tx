@@ -111,7 +111,8 @@ def read_olade_config(editor_path):
             'demand_growth_rates': {},
             'scenarios_demand_adjustments': {},
             'renewability_targets': {},
-            'technology_weights': {}
+            'technology_weights': {},
+            'lowerlimit_flat_overrides': {}
         }
 
     ws = wb['OLADE_Config']
@@ -289,6 +290,17 @@ def read_olade_config(editor_path):
                         'non_renewable': non_renewable_weights
                     }
 
+    # Read LowerLimits flat override configuration from LowerLimits_Flat sheet
+    # Structure: {tech_code: True} — presence means flatten this tech's limits
+    lowerlimit_flat_overrides = {}
+    if 'LowerLimits_Flat' in wb.sheetnames:
+        ws_flat = wb['LowerLimits_Flat']
+        # Data rows start at row 5; Column C = Tech Code (auto-filled via VLOOKUP)
+        for row_idx in range(5, ws_flat.max_row + 1):
+            tech_code = ws_flat.cell(row_idx, 3).value  # Column C: Tech Code
+            if tech_code and str(tech_code).strip():
+                lowerlimit_flat_overrides[str(tech_code).strip().upper()] = True
+
     wb.close()
 
     return {
@@ -303,7 +315,8 @@ def read_olade_config(editor_path):
         'demand_growth_rates': demand_growth_rates,
         'scenarios_demand_adjustments': scenarios_demand_adjustments,
         'renewability_targets': renewability_targets,
-        'technology_weights': technology_weights
+        'technology_weights': technology_weights,
+        'lowerlimit_flat_overrides': lowerlimit_flat_overrides
     }
 
 
@@ -3485,6 +3498,9 @@ class SecondaryTechsUpdater:
         self.log(f"Update LowerLimit: {'YES' if update_lower else 'NO'}")
         self.log(f"Update UpperLimit: {upper_mode}")
         self.log(f"Base scenario: {base_scenario}")
+        flat_overrides_count = len(self.olade_config.get('lowerlimit_flat_overrides', {}))
+        if flat_overrides_count > 0:
+            self.log(f"LowerLimit flat overrides: {flat_overrides_count} technologies will be flattened")
         use_generation = bool(self._generation_by_scenario_country)
         self.log(f"Renewability targets defined for: {len(renewability_targets)} country/scenario combinations")
         if use_generation:
@@ -3554,6 +3570,7 @@ class SecondaryTechsUpdater:
                 max_capacity_rows = {}  # {tech_code: row_idx}
                 residual_capacity_rows = {}  # {tech_code: row_idx}
                 availability_rows = {}  # {tech_code: row_idx}
+                min_capacity_investment_rows = {}  # {tech_code: row_idx}
 
                 for row_idx in range(2, ws.max_row + 1):
                     tech_code = ws.cell(row_idx, 2).value
@@ -3571,6 +3588,8 @@ class SecondaryTechsUpdater:
                             residual_capacity_rows[tech_str] = row_idx
                         elif param_str == 'AvailabilityFactor':
                             availability_rows[tech_str] = row_idx
+                        elif param_str == 'TotalAnnualMinCapacityInvestment':
+                            min_capacity_investment_rows[tech_str] = row_idx
 
                 # Read CapacityToActivityUnit from Fixed Horizon Parameters
                 capacity_to_activity = {}  # {tech_code: value}
@@ -3695,6 +3714,23 @@ class SecondaryTechsUpdater:
                             scenario, country_code, all_years, activity_data,
                             base_scenario=base_scenario, base_shares=base_shares_for_country
                         )
+
+                    # Apply flat override: for technologies listed in LowerLimits_Flat sheet,
+                    # take the first non-zero year's value and repeat it across all years
+                    flat_overrides = self.olade_config.get('lowerlimit_flat_overrides', {})
+                    if flat_overrides and demand_based_limits:
+                        for tech_str_flat, year_limits in demand_based_limits.items():
+                            if tech_str_flat in flat_overrides:
+                                first_value = None
+                                for year in sorted(year_limits.keys()):
+                                    val = year_limits.get(year, 0.0)
+                                    if val is not None and val > 0:
+                                        first_value = val
+                                        break
+                                if first_value is not None:
+                                    for year in year_limits:
+                                        year_limits[year] = first_value
+                                    self.log(f"    FLAT OVERRIDE: {tech_str_flat} -> {first_value:.4f} PJ (constant)")
 
                     # Update each technology
                     for tech_type, year_shares in tech_shares.items():
@@ -3923,6 +3959,75 @@ class SecondaryTechsUpdater:
                     self.log(f"  ✓ Universal Validation: Increased MaxCapacity for {capacity_increases} technology-year combinations")
                 else:
                     self.log(f"  ✓ Universal Validation: No capacity adjustments needed")
+
+                # ============================================================
+                # MCI VALIDATION: UpperLimit vs MinCapacityInvestment
+                # Ensure UpperLimit >= activity that MinCapacityInvestment can produce
+                # min_activity = MinCapInv × C2A × AvailabilityFactor × sum(CF × YearSplit)
+                # If UpperLimit < min_activity → UpperLimit = min_activity × 1.05
+                # ============================================================
+                mci_adjustments = 0
+                for tech_str, upper_row in upper_limit_rows.items():
+                    if not tech_str.startswith('PWR'):
+                        continue
+                    mci_row = min_capacity_investment_rows.get(tech_str)
+                    if not mci_row:
+                        continue
+
+                    c2a = capacity_to_activity.get(tech_str, 31.536)
+                    avail_row_mci = availability_rows.get(tech_str)
+
+                    for year in all_years:
+                        if year not in year_col_map:
+                            continue
+                        col_idx = year_col_map[year]
+
+                        # Read MinCapacityInvestment
+                        mci_val = ws.cell(mci_row, col_idx).value
+                        if mci_val is None:
+                            continue
+                        try:
+                            mci = float(mci_val)
+                        except (ValueError, TypeError):
+                            continue
+                        if mci <= 0:
+                            continue
+
+                        # Read current UpperLimit
+                        upper_val = ws.cell(upper_row, col_idx).value
+                        if upper_val is None:
+                            continue
+                        try:
+                            upper_limit_val = float(upper_val)
+                        except (ValueError, TypeError):
+                            continue
+
+                        # Get AvailabilityFactor
+                        avail_mci = 1.0
+                        if avail_row_mci:
+                            av = ws.cell(avail_row_mci, col_idx).value
+                            if av is not None:
+                                try:
+                                    avail_mci = float(av)
+                                except (ValueError, TypeError):
+                                    pass
+
+                        # Get CF × YearSplit sum
+                        cf_sum = self.read_capacity_factors_sum(wb, tech_str, year)
+
+                        # Convert MinCapInv to minimum activity
+                        min_activity = mci * c2a * avail_mci * cf_sum
+
+                        if upper_limit_val < min_activity:
+                            new_upper = round(min_activity * 1.05, 4)
+                            ws.cell(upper_row, col_idx, new_upper)
+                            mci_adjustments += 1
+                            self.log(f"    MCI: {tech_str} {year}: UpperLimit {upper_limit_val:.4f} < MinCapInv activity {min_activity:.4f} -> {new_upper:.4f}")
+
+                if mci_adjustments > 0:
+                    self.log(f"  ✓ MCI Validation: Adjusted UpperLimit for {mci_adjustments} technology-year combinations")
+                else:
+                    self.log(f"  ✓ MCI Validation: No UpperLimit adjustments needed")
 
                 # Validate row count before saving
                 final_row_count = ws.max_row

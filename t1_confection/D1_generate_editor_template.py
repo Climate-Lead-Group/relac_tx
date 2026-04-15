@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import yaml
-from Z_AUX_config_loader import get_olade_country_mapping, get_olade_tech_mapping, get_country_names, get_multi_region_map
+from Z_AUX_config_loader import get_olade_country_mapping, get_olade_tech_mapping, get_country_names, get_multi_region_map, get_code_to_energy
 
 # Country and technology mappings from centralized config
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
@@ -1345,6 +1345,112 @@ def create_editor_template(data, output_path):
         print(f"  Interconnections sheet created with {len(trn_data)} technologies ({(row_idx - 5)} rows)")
     else:
         print("  No TRN interconnections found - skipping Interconnections sheet")
+
+    # =========================================================================
+    # Create LowerLimits_Flat sheet (dropdown-based, like Editor sheet)
+    # =========================================================================
+    max_flat_rows = 50  # Number of empty rows with data validation
+
+    ws_flat = wb.create_sheet("LowerLimits_Flat", 7)
+    ws_flat.column_dimensions['A'].width = 15   # Country
+    ws_flat.column_dimensions['B'].width = 40   # Tech.Name
+    ws_flat.column_dimensions['C'].width = 20   # Tech Code (auto-fill)
+    ws_flat.column_dimensions['D'].width = 14   # Flat Override
+
+    # Colors (consistent with Interconnections sheet)
+    flat_header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    flat_header_font = Font(bold=True, color="FFFFFF")
+
+    # Title
+    cell = ws_flat.cell(1, 1, "LOWERLIMITS FLAT OVERRIDE")
+    cell.font = Font(size=14, bold=True, color="366092")
+    ws_flat.merge_cells('A1:D1')
+
+    # Instructions
+    ws_flat.cell(2, 1, "Add technologies whose LowerLimit should use the first year's value as constant across all years. Requires ActivityLowerLimitFromOLADE = YES.")
+    ws_flat.merge_cells('A2:D2')
+    ws_flat.cell(2, 1).font = Font(italic=True)
+
+    # Header row (row 4)
+    flat_headers = ['Country', 'Tech.Name', 'Tech Code', 'Flat Override']
+    for col_idx, header in enumerate(flat_headers, 1):
+        cell = ws_flat.cell(4, col_idx, header)
+        cell.fill = flat_header_fill
+        cell.font = flat_header_font
+        cell.border = border_style
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Country dropdown (column A) - reuses _Countries hidden sheet
+    dv_flat_country = DataValidation(
+        type="list",
+        formula1=f"=_Countries!$A$1:$A${len(data['countries'])}",
+        allow_blank=True
+    )
+    dv_flat_country.error = 'Please select a valid country'
+    dv_flat_country.errorTitle = 'Invalid Country'
+    ws_flat.add_data_validation(dv_flat_country)
+    dv_flat_country.add(f'A5:A{4 + max_flat_rows}')
+
+    # Tech.Name dropdown (column B) - INDIRECT based on country in column A
+    dv_flat_tech = DataValidation(
+        type="list",
+        formula1='=INDIRECT("Tech_"&$A5)',
+        allow_blank=True
+    )
+    dv_flat_tech.error = 'Please select a valid technology for this country'
+    dv_flat_tech.errorTitle = 'Invalid Tech.Name'
+    ws_flat.add_data_validation(dv_flat_tech)
+    dv_flat_tech.add(f'B5:B{4 + max_flat_rows}')
+
+    # Column C: Tech Code auto-fill via VLOOKUP (locked)
+    for row_idx in range(5, 5 + max_flat_rows):
+        formula = f'=IFERROR(VLOOKUP(B{row_idx},_TechMapping!$A:$B,2,FALSE),"")'
+        ws_flat.cell(row_idx, 3, formula)
+        ws_flat.cell(row_idx, 3).protection = Protection(locked=True)
+        ws_flat.cell(row_idx, 3).font = Font(color="808080")
+        ws_flat.cell(row_idx, 3).alignment = Alignment(horizontal="center")
+
+    # Column D: Auto-fill "YES" when Tech Code is present (locked)
+    for row_idx in range(5, 5 + max_flat_rows):
+        formula = f'=IF(C{row_idx}<>"","YES","")'
+        ws_flat.cell(row_idx, 4, formula)
+        ws_flat.cell(row_idx, 4).protection = Protection(locked=True)
+        ws_flat.cell(row_idx, 4).font = Font(bold=True, color="006100")
+        ws_flat.cell(row_idx, 4).alignment = Alignment(horizontal="center")
+
+    # Apply borders to data area
+    for row_idx in range(5, 5 + max_flat_rows):
+        for col_idx in range(1, 5):
+            ws_flat.cell(row_idx, col_idx).border = border_style
+
+    # Notes section at bottom
+    note_row = 5 + max_flat_rows + 1
+    flat_notes = [
+        "HOW IT WORKS:",
+        "  - Select a Country, then select a Technology from the dropdown",
+        "  - Tech Code and Flat Override columns are auto-filled",
+        "  - After D2 calculates LowerLimit values normally, technologies listed here",
+        "    will have their FIRST year's calculated value applied as a CONSTANT to ALL years",
+        "  - UpperLimit is also flattened accordingly: UpperLimit = FlatLowerLimit x 1.05",
+        "",
+        "WHEN TO USE:",
+        "  - When a technology's generation should remain constant (no growth/decline)",
+        "  - Example: Hydro limited by geography, or Nuclear with fixed capacity",
+        "",
+        "REQUIREMENTS:",
+        "  - ActivityLowerLimitFromOLADE must be set to YES in OLADE_Config sheet",
+        "  - Only PWR generation technologies are affected (not TRN or storage)",
+    ]
+    for note in flat_notes:
+        ws_flat.cell(note_row, 1, note)
+        ws_flat.cell(note_row, 1).font = Font(size=9)
+        ws_flat.merge_cells(f'A{note_row}:D{note_row}')
+        note_row += 1
+
+    # Freeze panes
+    ws_flat.freeze_panes = 'A5'
+
+    print(f"  LowerLimits_Flat sheet created with {max_flat_rows} empty rows for user selection")
 
     # =========================================================================
     # Create Scenarios_Demand_Growth sheet (after Demand_Growth, before Renewability_Targets)
