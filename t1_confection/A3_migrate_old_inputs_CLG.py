@@ -23,20 +23,6 @@ import shutil
 from collections import defaultdict
 from Z_AUX_config_loader import get_force_empty_max_capacity_investment_pwr                                                                           
 
-# Import the CSV profile normalization script
-try:
-    from Z_AUX_fix_all_profiles_normalization import (
-        normalize_specified_demand_profile,
-        normalize_year_split,
-        normalize_day_split
-    )
-    NORMALIZATION_AVAILABLE = True
-    print("[INIT] ✓ Profile normalization module (CSV) loaded successfully")
-except ImportError as e:
-    NORMALIZATION_AVAILABLE = False
-    print(f"[INIT] ✗ Failed to import profile normalization module: {e}")
-    print("[INIT]   Normalization will be skipped")
-
 # Import the Excel profile normalization script
 try:
     from Z_AUX_fix_excel_profiles import normalize_excel_profiles
@@ -1327,76 +1313,6 @@ class OldInputsMigrator:
             self.log(f"Error processing Storage: {e}", "ERROR")
             self.stats['errors'] += 1
 
-    def normalize_profiles(self):
-        """Normalize temporal profiles after demand migration"""
-        # 🔔 ENTRY POINT - Always log that we reached this method
-        self.log("")
-        self.log("🔔" * 40)
-        self.log("🔔 NORMALIZE_PROFILES() METHOD CALLED 🔔")
-        self.log("🔔" * 40)
-
-        # Check 1: Module availability
-        self.log(f"[CHECK 1] NORMALIZATION_AVAILABLE = {NORMALIZATION_AVAILABLE}")
-        if not NORMALIZATION_AVAILABLE:
-            self.log("❌ WARNING: Profile normalization module not available", "WARNING")
-            self.log("❌ NORMALIZATION SKIPPED - Module import failed")
-            return
-
-        # Check 2: Dry-run mode
-        self.log(f"[CHECK 2] dry_run mode = {self.dry_run}")
-        if self.dry_run:
-            self.log("⚠️  Skipping profile normalization in dry-run mode")
-            self.log("⚠️  NORMALIZATION SKIPPED - Dry-run mode active")
-            return
-
-        # All checks passed - proceeding with normalization
-        self.log("")
-        self.log("✅ All checks passed - proceeding with normalization")
-        self.log("")
-        self.log("=" * 70)
-        self.log("⚡ NORMALIZING TEMPORAL PROFILES ⚡")
-        self.log("=" * 70)
-
-        inputs_dir = self.base_path / "OG_csvs_inputs"
-        self.log(f"📁 Target directory: {inputs_dir}")
-        self.log(f"📁 Directory exists: {inputs_dir.exists()}")
-
-        try:
-            self.log("")
-            self.log("🔄 Starting normalization process...")
-            self.log("")
-
-            results = {
-                "SpecifiedDemandProfile": normalize_specified_demand_profile(inputs_dir),
-                "YearSplit": normalize_year_split(inputs_dir),
-                "DaySplit": normalize_day_split(inputs_dir)
-            }
-
-            # Log results
-            self.log("")
-            self.log("=" * 70)
-            self.log("📊 PROFILE NORMALIZATION RESULTS:")
-            self.log("=" * 70)
-            for profile_name, success in results.items():
-                status = "✅ SUCCESS" if success else "❌ FAILED"
-                self.log(f"  {status} - {profile_name}")
-
-            if all(results.values()):
-                self.log("")
-                self.log("🎉 ALL PROFILES NORMALIZED SUCCESSFULLY! 🎉")
-            else:
-                self.log("")
-                self.log("⚠️  SOME PROFILES FAILED NORMALIZATION", "WARNING")
-
-        except Exception as e:
-            self.log("")
-            self.log("=" * 70)
-            self.log(f"❌ ERROR DURING PROFILE NORMALIZATION: {e}", "ERROR")
-            self.log("=" * 70)
-            import traceback
-            self.log(traceback.format_exc())
-            self.stats['errors'] += 1
-
     def normalize_excel_profiles(self):
         """Normalize demand profiles in Excel files (A-O_Demand.xlsx)"""
         # 🔔 ENTRY POINT
@@ -1618,14 +1534,9 @@ class OldInputsMigrator:
         self.log("🎯 ALL SCENARIO MIGRATIONS COMPLETE")
         self.log("=" * 80)
 
-        # Step 1: Normalize CSV profiles (OG_csvs_inputs)
+        # Normalize Excel profiles (A-O_Demand.xlsx files)
         self.log("")
-        self.log("📄 Step 1: Normalizing CSV profiles (OG_csvs_inputs)")
-        self.normalize_profiles()
-
-        # Step 2: Normalize Excel profiles (A-O_Demand.xlsx files)
-        self.log("")
-        self.log("📊 Step 2: Normalizing Excel profiles (A-O_Demand.xlsx)")
+        self.log("📊 Normalizing Excel profiles (A-O_Demand.xlsx)")
         self.normalize_excel_profiles()
 
         # Summary
