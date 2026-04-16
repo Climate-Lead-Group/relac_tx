@@ -19,6 +19,7 @@ from Z_AUX_config_loader import (
     get_olade_tech_mapping, get_shares_country_mapping, get_shares_tech_mapping,
     strip_accents, get_enable_dsptrn, get_multi_region_map
 )
+from Z_AUX_D1b_set_trn_limits_from_flows import read_flow_data, fill_editor
 
 # Country and technology mappings from centralized config
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
@@ -4593,6 +4594,23 @@ class SecondaryTechsUpdater:
                 self.log("Interconnections Control: DISABLED")
 
             self.log("")
+
+            # Pre-populate TRN activity limits in Editor from bilateral flow data
+            # Runs after trade balance loading and before Editor instructions are read,
+            # so the calculated TRN limits are picked up as manual instructions.
+            if self.olade_config.get('trade_balance_enabled') and self.trade_balance_file_path \
+                    and self.trade_balance_file_path.exists() and self.editor_path.exists():
+                self.log("=" * 80)
+                self.log("PRE-POPULATING TRN LIMITS IN EDITOR FROM FLOW DATA (Z_AUX_D1b)")
+                self.log("=" * 80)
+                try:
+                    flow_data = read_flow_data(self.trade_balance_file_path)
+                    fill_editor(self.editor_path, flow_data)
+                    self.log(f"✓ Editor TRN limits pre-populated from {self.trade_balance_file_path.name}")
+                except Exception as e:
+                    self.log(f"✗ Failed to pre-populate TRN limits: {e}", "WARNING")
+                    self.log("Continuing without TRN pre-population...", "WARNING")
+                self.log("")
 
             # Read editor file
             instructions = self.read_editor_file()
