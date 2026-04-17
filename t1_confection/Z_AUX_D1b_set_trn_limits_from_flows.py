@@ -12,6 +12,7 @@ and writes Lower/Upper activity limits into Secondary_Techs_Editor.xlsx.
 Usage:
     python t1_confection/D1b_set_trn_limits_from_flows.py
 """
+import argparse
 import openpyxl
 import unicodedata
 from pathlib import Path
@@ -145,21 +146,56 @@ def read_flow_data(flow_file_path):
     return flow_data
 
 
-def fill_editor(editor_path, flow_data):
-    """
-    Write Lower/Upper activity limits into the Editor sheet.
+def _build_pair_to_tech_map(wb):
+    """Build {frozenset({code_a, code_b}): (tech_code, tech_name, origin)} from _TechMapping."""
+    if '_TechMapping' not in wb.sheetnames:
+        raise ValueError("'_TechMapping' sheet not found in Editor workbook")
+    ws = wb['_TechMapping']
+    pair_to_tech = {}
+    for row_idx in range(2, ws.max_row + 1):
+        tech_name = ws.cell(row_idx, 1).value
+        tech_code = ws.cell(row_idx, 2).value
+        if not tech_code or not tech_name:
+            continue
+        tc = str(tech_code).strip().upper()
+        if tc.startswith('TRN') and len(tc) >= 13:
+            origin = tc[3:6]
+            dest = tc[8:11]
+            pair_to_tech[frozenset({origin, dest})] = (tc, str(tech_name).strip(), origin)
+    return pair_to_tech
 
-    Two-pass approach:
-    1. First read with data_only=True to resolve VLOOKUP formulas in column D
-    2. Then open without data_only to write values (preserving formulas)
+
+def fill_editor(editor_path, flow_data, scenarios=None):
     """
+    Create Lower/Upper activity limit rows for TRN interconnections in the Editor sheet.
+
+    Idempotent: on each call, rows previously written by this function are cleared
+    (rows where column D contains a plain TRN code, i.e. not a VLOOKUP formula) and
+    rebuilt from flow_data.
+
+    Args:
+        editor_path: Path to Secondary_Techs_Editor.xlsx
+        flow_data: {frozenset({code_a, code_b}): {year: flujo_gwh}}
+        scenarios: None | str | list[str]
+            - None (default): write each row with Scenario="ALL"
+            - str or list: write one row per specified scenario (e.g. "BAU" or ["BAU","NDC"])
+    """
+    # Normalize scenarios argument
+    if scenarios is None:
+        scenarios = ["ALL"]
+    elif isinstance(scenarios, str):
+        scenarios = [s.strip() for s in scenarios.split(',') if s.strip()] or ["ALL"]
+    else:
+        scenarios = [str(s).strip() for s in scenarios if str(s).strip()]
+
     print(f"\nProcessing Editor: {editor_path.name}")
+    print(f"  Target scenarios: {scenarios}")
 
-    # --- Pass 1: Read tech codes (resolving formulas) ---
+    # --- Pass 1: Read _TechMapping and Editor year columns (resolving formulas) ---
     wb_read = openpyxl.load_workbook(editor_path, data_only=True)
-    ws_read = wb_read['Editor']
+    pair_to_tech = _build_pair_to_tech_map(wb_read)
 
-    # Build year-column map from header
+    ws_read = wb_read['Editor']
     year_col_map = {}
     for col_idx in range(1, ws_read.max_column + 1):
         header = ws_read.cell(1, col_idx).value
@@ -167,99 +203,80 @@ def fill_editor(editor_path, flow_data):
             year = int(str(header).strip())
             if EDITOR_FIRST_YEAR <= year <= EDITOR_LAST_YEAR:
                 year_col_map[year] = col_idx
-
-    print(f"  Year columns: {min(year_col_map)} to {max(year_col_map)} ({len(year_col_map)} years)")
-
-    # Read row info: tech codes and parameters
-    row_info = {}  # {row_idx: {'tech_code': str, 'parameter': str}}
-    for row_idx in range(2, ws_read.max_row + 1):
-        tech_code = ws_read.cell(row_idx, 4).value  # Column D (resolved VLOOKUP)
-        parameter = ws_read.cell(row_idx, 5).value   # Column E
-
-        if tech_code and parameter:
-            tech_str = str(tech_code).strip().upper()
-            param_str = str(parameter).strip()
-            if tech_str.startswith('TRN'):
-                row_info[row_idx] = {
-                    'tech_code': tech_str,
-                    'parameter': param_str
-                }
-
     wb_read.close()
 
-    print(f"  Found {len(row_info)} TRN rows in Editor")
+    print(f"  Year columns: {min(year_col_map)} to {max(year_col_map)} ({len(year_col_map)} years)")
+    print(f"  TRN tech mappings loaded: {len(pair_to_tech)}")
 
-    # --- Pass 2: Write values (preserving formulas) ---
+    # --- Pass 2: Open writable, clear previous rows, create new rows ---
     wb_write = openpyxl.load_workbook(editor_path)
     ws_write = wb_write['Editor']
+    max_col = ws_write.max_column
 
-    updated_count = 0
-    unmatched_techs = []
+    # Determine end of VLOOKUP template (last row with a formula in column D).
+    # Our rows are appended *beyond* the template so users' manual-entry
+    # template rows (where D has =IFERROR(VLOOKUP(...))) are preserved.
+    template_end = 1
+    for row_idx in range(2, ws_write.max_row + 1):
+        d_val = ws_write.cell(row_idx, 4).value
+        if d_val and str(d_val).startswith('='):
+            template_end = row_idx
 
-    for row_idx, info in sorted(row_info.items()):
-        tech_code = info['tech_code']
-        parameter = info['parameter']
-
-        # Determine limit factor
-        if parameter == 'TotalTechnologyAnnualActivityLowerLimit':
-            factor = LOWER_LIMIT_FACTOR
-            limit_type = 'Lower'
-        elif parameter == 'TotalTechnologyAnnualActivityUpperLimit':
-            factor = UPPER_LIMIT_FACTOR
-            limit_type = 'Upper'
-        else:
+    # Step A: Clear previously-written fill_editor rows (beyond the template)
+    rows_cleared = 0
+    for row_idx in range(template_end + 1, ws_write.max_row + 1):
+        d_val = ws_write.cell(row_idx, 4).value
+        if d_val is None:
             continue
+        if str(d_val).strip().upper().startswith('TRN'):
+            for col in range(1, max_col + 1):
+                ws_write.cell(row_idx, col).value = None
+            rows_cleared += 1
 
-        # Extract country pair from tech code
-        # Format: TRN[3-char]XX[3-char]XX (e.g., TRNARGXXBOLXX)
-        # Positions: [3:6] = origin, then skip XX, [8:11] = destination
-        origin = tech_code[3:6]
-        dest = tech_code[8:11]
+    # Step B: Create rows per scenario × pair × parameter starting after template
+    PARAMS = [
+        ('TotalTechnologyAnnualActivityLowerLimit', LOWER_LIMIT_FACTOR, 'Lower'),
+        ('TotalTechnologyAnnualActivityUpperLimit', UPPER_LIMIT_FACTOR, 'Upper'),
+    ]
+    rows_created = 0
+    unmatched_pairs = []
+    next_row = template_end + 1
 
-        # Bidirectional lookup in flow data
-        pair = frozenset({origin, dest})
-
-        if pair not in flow_data:
-            unmatched_techs.append(tech_code)
+    for pair, pair_flows in sorted(flow_data.items(), key=lambda kv: sorted(kv[0])):
+        if pair not in pair_to_tech:
+            unmatched_pairs.append(sorted(pair))
             continue
+        tech_code, tech_name, origin_country = pair_to_tech[pair]
+        base_year = max(pair_flows.keys())
+        base_gwh = pair_flows[base_year]
 
-        pair_flows = flow_data[pair]
-        base_value_gwh = pair_flows.get(FLAT_PROJECTION_BASE_YEAR, 0.0)
+        for scenario in scenarios:
+            for parameter, factor, limit_type in PARAMS:
+                ws_write.cell(next_row, 1).value = scenario
+                ws_write.cell(next_row, 2).value = origin_country
+                ws_write.cell(next_row, 3).value = tech_name
+                ws_write.cell(next_row, 4).value = tech_code
+                ws_write.cell(next_row, 5).value = parameter
+                for year in range(EDITOR_FIRST_YEAR, EDITOR_LAST_YEAR + 1):
+                    if year not in year_col_map:
+                        continue
+                    gwh = pair_flows.get(year, base_gwh)
+                    limit_value = round(gwh * GWH_TO_PJ * factor, 6)
+                    ws_write.cell(next_row, year_col_map[year]).value = limit_value
+                rows_created += 1
+                next_row += 1
 
-        # Write values for each year
-        for year in range(EDITOR_FIRST_YEAR, EDITOR_LAST_YEAR + 1):
-            if year not in year_col_map:
-                continue
-
-            # Use actual data if available, otherwise flat from base year
-            if year in pair_flows:
-                gwh = pair_flows[year]
-            else:
-                gwh = base_value_gwh
-
-            # Convert GWh → PJ and apply factor
-            pj = gwh * GWH_TO_PJ
-            limit_value = round(pj * factor, 6)
-
-            ws_write.cell(row_idx, year_col_map[year], limit_value)
-
-        updated_count += 1
-        # Log first few for verification
-        sample_2023 = pair_flows.get(2023, base_value_gwh)
-        sample_2025 = pair_flows.get(2025, 0.0)
-        print(f"  Row {row_idx:3d}: {tech_code} {limit_type:5s} | "
-              f"2023: {sample_2023:.1f} GWh → {round(sample_2023 * GWH_TO_PJ * factor, 6):.6f} PJ | "
-              f"2025 (flat): {sample_2025:.1f} GWh → {round(sample_2025 * GWH_TO_PJ * factor, 6):.6f} PJ")
-
-    # Save
     wb_write.save(editor_path)
     wb_write.close()
 
-    print(f"\n  Updated {updated_count} rows")
-    if unmatched_techs:
-        print(f"  WARNING: {len(unmatched_techs)} TRN techs without matching flow data:")
-        for tech in unmatched_techs:
-            print(f"    - {tech}")
+    print(f"  Template ends at row {template_end} (preserved)")
+    print(f"  Cleared {rows_cleared} previously-written TRN rows")
+    print(f"  Created {rows_created} rows "
+          f"({len(flow_data) - len(unmatched_pairs)} pairs × {len(scenarios)} scenarios × {len(PARAMS)} params)")
+    if unmatched_pairs:
+        print(f"  WARNING: {len(unmatched_pairs)} pair(s) without matching _TechMapping entry:")
+        for p in unmatched_pairs:
+            print(f"    - {'-'.join(p)}")
 
 
 # ============================================================================
@@ -267,6 +284,19 @@ def fill_editor(editor_path, flow_data):
 # ============================================================================
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Pre-populate TRN interconnection activity limits in Secondary_Techs_Editor.xlsx from bilateral flow data."
+    )
+    parser.add_argument(
+        '--scenarios',
+        default='ALL',
+        help='Comma-separated list of scenarios to write rows for (default: "ALL" = applies to all scenarios). '
+             'Example: --scenarios BAU,NDC'
+    )
+    args = parser.parse_args()
+
+    scenarios = [s.strip() for s in args.scenarios.split(',') if s.strip()] or ["ALL"]
+
     script_dir = Path(__file__).parent
 
     flow_file = script_dir / "Matriz Balance energético" / "flujos_energia_estimados_optimizacion.xlsx"
@@ -285,6 +315,7 @@ def main():
     print("=" * 80)
     print(f"  Source: {flow_file.name}")
     print(f"  Target: {editor_file.name}")
+    print(f"  Scenarios: {scenarios}")
     print(f"  Conversion: GWh × {GWH_TO_PJ} = PJ")
     print(f"  Lower factor: {LOWER_LIMIT_FACTOR} (-5%)")
     print(f"  Upper factor: {UPPER_LIMIT_FACTOR} (+5%)")
@@ -295,7 +326,7 @@ def main():
     flow_data = read_flow_data(flow_file)
 
     # Step 2 & 3: Fill editor with limits
-    fill_editor(editor_file, flow_data)
+    fill_editor(editor_file, flow_data, scenarios=scenarios)
 
     print("\nDone!")
 
