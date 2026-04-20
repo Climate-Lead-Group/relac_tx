@@ -196,15 +196,41 @@ def read_olade_config(editor_path):
     scenarios_demand_adjustments = {}
     if 'Scenarios_Demand_Growth' in wb.sheetnames:
         ws_scen_demand = wb['Scenarios_Demand_Growth']
-        # Get year columns from header (row 5)
+
+        # Locate main header row dynamically (editor may include a "SCENARIO ACTIVATION"
+        # sub-table above it that shifts the main table down). Fall back to row 5 for
+        # editors generated before the activation sub-table was introduced.
+        main_header_row = 5
+        for candidate_row in range(5, 31):
+            if str(ws_scen_demand.cell(candidate_row, 1).value or '').strip().lower() == 'country':
+                main_header_row = candidate_row
+                break
+
+        # Read the activation sub-table (scenario -> YES/NO). Unknown scenarios
+        # default to enabled, preserving behavior for older editors without the table.
+        scenario_enabled = {}
+        for row_idx in range(5, main_header_row):
+            name = ws_scen_demand.cell(row_idx, 1).value
+            flag = ws_scen_demand.cell(row_idx, 2).value
+            if not name or not flag:
+                continue
+            name_str = str(name).strip()
+            flag_str = str(flag).strip().upper()
+            if flag_str in ('YES', 'NO'):
+                scenario_enabled[name_str] = (flag_str == 'YES')
+
+        disabled_scenarios = sorted(s for s, enabled in scenario_enabled.items() if not enabled)
+        if disabled_scenarios:
+            print(f"  Scenarios_Demand_Growth: adjustments disabled for: {', '.join(disabled_scenarios)}")
+
+        # Get year columns from main header row
         year_cols = {}
         for col_idx in range(3, ws_scen_demand.max_column + 1):
-            header = ws_scen_demand.cell(5, col_idx).value
+            header = ws_scen_demand.cell(main_header_row, col_idx).value
             if header and str(header).isdigit():
                 year_cols[int(header)] = col_idx
 
-        # Data starts at row 6
-        for row_idx in range(6, ws_scen_demand.max_row + 1):
+        for row_idx in range(main_header_row + 1, ws_scen_demand.max_row + 1):
             country = ws_scen_demand.cell(row_idx, 1).value
             scenario = ws_scen_demand.cell(row_idx, 2).value
 
@@ -213,6 +239,10 @@ def read_olade_config(editor_path):
 
             country_str = str(country).strip().upper()
             scenario_str = str(scenario).strip()
+
+            # Skip scenarios the user has toggled off in the activation sub-table.
+            if not scenario_enabled.get(scenario_str, True):
+                continue
 
             adjustments = {}
             for year, col_idx in year_cols.items():

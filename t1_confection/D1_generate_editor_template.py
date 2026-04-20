@@ -1461,33 +1461,72 @@ def create_editor_template(data, output_path):
 
     ws_scenarios_demand = wb.create_sheet("Scenarios_Demand_Growth", 3)
     ws_scenarios_demand.column_dimensions['A'].width = 15
-    ws_scenarios_demand.column_dimensions['B'].width = 15
+    ws_scenarios_demand.column_dimensions['B'].width = 18
 
     # OLADE base year is 2023 - filter years to start from 2023
     olade_base_year = 2023
     demand_adj_years = [y for y in data['years'] if y >= olade_base_year]
+    last_col_letter = openpyxl.utils.get_column_letter(2 + len(demand_adj_years))
 
     # Title
     cell = ws_scenarios_demand.cell(1, 1, "SCENARIO-SPECIFIC DEMAND GROWTH ADJUSTMENTS")
     cell.font = Font(size=14, bold=True, color="366092")
-    ws_scenarios_demand.merge_cells(f'A1:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}1')
+    ws_scenarios_demand.merge_cells(f'A1:{last_col_letter}1')
 
     # Instructions
     ws_scenarios_demand.cell(2, 1, f"Define percentage adjustments to electricity demand for each scenario (excluding base scenario '{base_scenario}').")
-    ws_scenarios_demand.merge_cells(f'A2:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}2')
+    ws_scenarios_demand.merge_cells(f'A2:{last_col_letter}2')
     ws_scenarios_demand.cell(2, 1).font = Font(italic=True)
 
     ws_scenarios_demand.cell(3, 1, "Each percentage is applied INDEPENDENTLY to the base demand of that year (not cumulative).")
-    ws_scenarios_demand.merge_cells(f'A3:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}3')
+    ws_scenarios_demand.merge_cells(f'A3:{last_col_letter}3')
     ws_scenarios_demand.cell(3, 1).font = Font(italic=True, bold=True, size=9)
 
-    # Headers
+    # Header styles (reused by both the activation sub-table and the main table)
     scenarios_demand_header_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
     scenarios_demand_header_font = Font(bold=True, color="FFFFFF")
 
+    # Scenario activation sub-table: YES/NO toggle per non-base scenario.
+    # When a scenario is set to NO, D2 skips its rows when reading the main table,
+    # so the user can disable a scenario's adjustments without losing the values.
+    if scenarios_for_demand:
+        cell = ws_scenarios_demand.cell(5, 1, "SCENARIO ACTIVATION")
+        cell.font = Font(size=11, bold=True, color="366092")
+        ws_scenarios_demand.merge_cells('A5:B5')
+
+        for col_idx, header in enumerate(['Scenario', 'Apply Adjustments'], 1):
+            cell = ws_scenarios_demand.cell(6, col_idx, header)
+            cell.fill = scenarios_demand_header_fill
+            cell.font = scenarios_demand_header_font
+            cell.border = border_style
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        dv_scen_apply = DataValidation(type="list", formula1='"YES,NO"', allow_blank=False)
+        dv_scen_apply.error = 'Please select YES or NO'
+        dv_scen_apply.errorTitle = 'Invalid value'
+        ws_scenarios_demand.add_data_validation(dv_scen_apply)
+
+        scen_activation_first_row = 7
+        for i, scenario in enumerate(scenarios_for_demand):
+            row = scen_activation_first_row + i
+            ws_scenarios_demand.cell(row, 1, scenario).border = border_style
+            ws_scenarios_demand.cell(row, 1).alignment = Alignment(horizontal="center")
+            apply_cell = ws_scenarios_demand.cell(row, 2, "YES")
+            apply_cell.border = border_style
+            apply_cell.alignment = Alignment(horizontal="center")
+            apply_cell.font = Font(bold=True, color="006100")
+
+        scen_activation_last_row = scen_activation_first_row + len(scenarios_for_demand) - 1
+        dv_scen_apply.add(f'B{scen_activation_first_row}:B{scen_activation_last_row}')
+
+        main_header_row = scen_activation_last_row + 2
+    else:
+        main_header_row = 5
+
+    # Main table headers
     scenarios_demand_headers = ['Country', 'Scenario'] + [str(year) for year in demand_adj_years]
     for col_idx, header in enumerate(scenarios_demand_headers, 1):
-        cell = ws_scenarios_demand.cell(5, col_idx, header)
+        cell = ws_scenarios_demand.cell(main_header_row, col_idx, header)
         cell.fill = scenarios_demand_header_fill
         cell.font = scenarios_demand_header_font
         cell.border = border_style
@@ -1496,10 +1535,10 @@ def create_editor_template(data, output_path):
             ws_scenarios_demand.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 8
 
     # Pre-populate rows for each country+scenario combination (excluding base scenario)
-    row_idx = 6
+    row_idx = main_header_row + 1
     if not scenarios_for_demand:
         ws_scenarios_demand.cell(row_idx, 1, f"No additional scenarios found (only base scenario '{base_scenario}' exists).")
-        ws_scenarios_demand.merge_cells(f'A{row_idx}:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}{row_idx}')
+        ws_scenarios_demand.merge_cells(f'A{row_idx}:{last_col_letter}{row_idx}')
         ws_scenarios_demand.cell(row_idx, 1).font = Font(italic=True, color="808080")
         row_idx += 1
     else:
@@ -1546,15 +1585,18 @@ def create_editor_template(data, output_path):
         "  - Positive percentages increase demand, negative percentages decrease demand",
         "  - Default is 0% (same as base scenario)",
         f"  - Base scenario '{base_scenario}' is excluded from this sheet",
+        "  - Use the SCENARIO ACTIVATION table above to toggle YES/NO whether a scenario's",
+        "    adjustments are applied. Setting a scenario to NO keeps its values in this sheet",
+        "    but skips them when D2 runs.",
     ]
     for note in notes:
         ws_scenarios_demand.cell(note_row, 1, note)
         ws_scenarios_demand.cell(note_row, 1).font = Font(size=9)
-        ws_scenarios_demand.merge_cells(f'A{note_row}:{openpyxl.utils.get_column_letter(2 + len(demand_adj_years))}{note_row}')
+        ws_scenarios_demand.merge_cells(f'A{note_row}:{last_col_letter}{note_row}')
         note_row += 1
 
     # Freeze panes
-    ws_scenarios_demand.freeze_panes = 'C6'
+    ws_scenarios_demand.freeze_panes = f'C{main_header_row + 1}'
 
     # =========================================================================
     # Create Documentation sheet for Activity Limits validation (moved after Instructions)
