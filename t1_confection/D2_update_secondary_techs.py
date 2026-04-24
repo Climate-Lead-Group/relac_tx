@@ -19,7 +19,7 @@ from Z_AUX_config_loader import (
     get_olade_tech_mapping, get_shares_country_mapping, get_shares_tech_mapping,
     strip_accents, get_enable_dsptrn, get_multi_region_map
 )
-from Z_AUX_D1b_set_trn_limits_from_flows import read_flow_data, fill_editor
+from Z_AUX_D1b_set_trn_limits_from_flows import read_flow_data, fill_trn_sheet
 
 # Country and technology mappings from centralized config
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
@@ -1073,24 +1073,34 @@ class SecondaryTechsUpdater:
         self.log_lines.append(log_line)
         print(log_line)
 
-    def read_editor_file(self):
+    def read_editor_file(self, sheet_name='Editor'):
         """
         Read and parse the editor Excel file
+
+        Args:
+            sheet_name: Name of the sheet to read (default 'Editor').
+                        For auxiliary sheets like 'TRN_Flow_Limits', returns []
+                        if the sheet doesn't exist (instead of raising).
 
         Returns:
             list of dicts with editing instructions
         """
-        self.log("Reading editor file...")
+        self.log(f"Reading '{sheet_name}' sheet...")
 
         if not self.editor_path.exists():
             raise FileNotFoundError(f"Editor file not found: {self.editor_path}")
 
         wb = openpyxl.load_workbook(self.editor_path, data_only=True)
 
-        if 'Editor' not in wb.sheetnames:
-            raise ValueError("'Editor' sheet not found in template file")
+        if sheet_name not in wb.sheetnames:
+            wb.close()
+            if sheet_name == 'Editor':
+                raise ValueError("'Editor' sheet not found in template file")
+            # Auxiliary sheet is optional
+            self.log(f"  '{sheet_name}' sheet not found, skipping")
+            return []
 
-        ws = wb['Editor']
+        ws = wb[sheet_name]
 
         # Read header to get year columns
         headers = []
@@ -4625,25 +4635,30 @@ class SecondaryTechsUpdater:
 
             self.log("")
 
-            # Pre-populate TRN activity limits in Editor from bilateral flow data
-            # Runs after trade balance loading and before Editor instructions are read,
-            # so the calculated TRN limits are picked up as manual instructions.
+            # Pre-populate TRN activity limits in a DEDICATED sheet (TRN_Flow_Limits)
+            # This keeps the Editor sheet untouched so manual edits are preserved.
+            # The new sheet is read with the same logic as Editor and its
+            # instructions are merged before apply_instructions_batch().
             if self.olade_config.get('trade_balance_enabled') and self.trade_balance_file_path \
                     and self.trade_balance_file_path.exists() and self.editor_path.exists():
                 self.log("=" * 80)
-                self.log("PRE-POPULATING TRN LIMITS IN EDITOR FROM FLOW DATA (Z_AUX_D1b)")
+                self.log("PRE-POPULATING TRN_Flow_Limits SHEET FROM FLOW DATA (Z_AUX_D1b)")
                 self.log("=" * 80)
                 try:
                     flow_data = read_flow_data(self.trade_balance_file_path)
-                    fill_editor(self.editor_path, flow_data)
-                    self.log(f"✓ Editor TRN limits pre-populated from {self.trade_balance_file_path.name}")
+                    fill_trn_sheet(self.editor_path, flow_data)
+                    self.log(f"✓ TRN_Flow_Limits sheet pre-populated from {self.trade_balance_file_path.name}")
                 except Exception as e:
-                    self.log(f"✗ Failed to pre-populate TRN limits: {e}", "WARNING")
+                    self.log(f"✗ Failed to pre-populate TRN_Flow_Limits: {e}", "WARNING")
                     self.log("Continuing without TRN pre-population...", "WARNING")
                 self.log("")
 
-            # Read editor file
+            # Read editor file (Editor sheet = manual edits, TRN_Flow_Limits = auto-generated TRN limits)
             instructions = self.read_editor_file()
+            trn_flow_instructions = self.read_editor_file(sheet_name='TRN_Flow_Limits')
+            if trn_flow_instructions:
+                self.log(f"Merging {len(trn_flow_instructions)} TRN instructions from TRN_Flow_Limits sheet")
+                instructions.extend(trn_flow_instructions)
 
             # Get all years from first available scenario to determine year range
             all_years = set()

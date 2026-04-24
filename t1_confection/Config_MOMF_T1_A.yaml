@@ -106,7 +106,7 @@ dict_dist_fam_to_name_spa:
   LIG: Carga Liviana
   NONMOT: No motorizada
 xtra_scen:
-  Main_Scenario: NDC
+  Main_Scenario: BAU
   Other_Scenarios: []
   Region: GLOBAL
   Mode_of_Operation:
