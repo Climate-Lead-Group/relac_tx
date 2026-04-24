@@ -2076,7 +2076,10 @@ def update_parametrization_primary_secondary_demand_techs(og_data, output_excel_
 
         for param in PARAMETERS:
             # Determine target list based on tech type and parameter
-            if is_demand_tech and param in ["CapitalCost", "FixedCost", "ResidualCapacity"]:
+            if is_demand_tech and param in [
+                "CapitalCost", "FixedCost", "ResidualCapacity",
+                "TotalAnnualMaxCapacityInvestment",
+            ]:
                 target = demand_records
             elif is_demand_tech:
                 continue

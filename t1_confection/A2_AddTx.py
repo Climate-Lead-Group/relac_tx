@@ -424,7 +424,9 @@ def process_projections(path, pairs, enable_dsptrn=False):
 # 3. Process A-O_Parametrization.xlsx
 # ---------------------------------------------------------------------------
 PARAM_LIST = [
-    'CapitalCost','FixedCost','ResidualCapacity','TotalAnnualMinCapacityInvestment', 'TotalAnnualMaxCapacity'
+    'CapitalCost','FixedCost','ResidualCapacity',
+    'TotalAnnualMinCapacityInvestment','TotalAnnualMaxCapacity',
+    'TotalAnnualMaxCapacityInvestment',
 ]
 
 def process_parametrization(path, pairs, yaml_data, enable_dsptrn=False):

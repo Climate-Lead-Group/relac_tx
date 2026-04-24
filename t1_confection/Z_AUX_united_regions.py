@@ -247,7 +247,8 @@ if parametrization:
     parameters_sum = [
         "ResidualCapacity",
         "TotalAnnualMinCapacityInvestment",
-        "TotalAnnualMaxCapacity"
+        "TotalAnnualMaxCapacity",
+        "TotalAnnualMaxCapacityInvestment",
     ]
 
     # 3) Detect year columns (2021-2050), whether int or str
