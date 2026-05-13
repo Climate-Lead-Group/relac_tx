@@ -9,7 +9,7 @@ enabled: true
 # from ELC{ISO3}XX01 to ELC{ISO3}XX02. Applied at CSV-load time, so it
 # propagates to all downstream sheets (Secondary Techs, Model Base Year
 # Secondary, Projection Secondary).
-pwrbck_output_to_elc02: false
+pwrbck_output_to_elc02: true
 
 # Countries with multiple regions to consolidate
 # Each country entry specifies:
