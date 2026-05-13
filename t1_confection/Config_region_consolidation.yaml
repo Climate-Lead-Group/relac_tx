@@ -5,6 +5,12 @@
 # Enable/disable region consolidation globally
 enabled: true
 
+# When true, remap OutputActivityRatio FUEL for PWRBCK* technologies
+# from ELC{ISO3}XX01 to ELC{ISO3}XX02. Applied at CSV-load time, so it
+# propagates to all downstream sheets (Secondary Techs, Model Base Year
+# Secondary, Projection Secondary).
+pwrbck_output_to_elc02: false
+
 # Countries with multiple regions to consolidate
 # Each country entry specifies:
 #   - regions: list of region codes to consolidate

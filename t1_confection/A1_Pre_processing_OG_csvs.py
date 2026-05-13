@@ -904,6 +904,58 @@ def consolidate_regions(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFr
     return og_data
 
 
+def remap_pwrbck_output_fuel(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """
+    When 'pwrbck_output_to_elc02' is enabled in Config_region_consolidation.yaml,
+    remap OutputActivityRatio FUEL for PWRBCK* technologies from
+    'ELC{ISO3}XX01' to 'ELC{ISO3}XX02'. Applied here at CSV-load time so
+    every downstream sheet picks it up.
+    """
+    config = load_region_consolidation_config()
+    if not config.get("pwrbck_output_to_elc02", False):
+        return og_data
+
+    if "OutputActivityRatio" not in og_data:
+        print("[Warning] pwrbck_output_to_elc02 enabled but OutputActivityRatio not found.")
+        return og_data
+
+    df = og_data["OutputActivityRatio"]
+    if df.empty or "TECHNOLOGY" not in df.columns or "FUEL" not in df.columns:
+        return og_data
+
+    mask = (
+        df["TECHNOLOGY"].str.startswith("PWRBCK", na=False)
+        & df["FUEL"].str.endswith("01", na=False)
+    )
+    if not mask.any():
+        print("[Info] pwrbck_output_to_elc02 enabled, but no PWRBCK→ELC*01 rows in OutputActivityRatio.")
+        return og_data
+
+    src_fuels = sorted(df.loc[mask, "FUEL"].unique())
+    target_fuels = [f[:-2] + "02" for f in src_fuels]
+
+    # Validate target fuels exist somewhere in the rest of og_data
+    other_fuels: set = set()
+    for name, other_df in og_data.items():
+        if name == "OutputActivityRatio":
+            continue
+        if isinstance(other_df, pd.DataFrame) and "FUEL" in other_df.columns:
+            other_fuels.update(other_df["FUEL"].dropna().unique())
+
+    missing = [t for t in target_fuels if t not in other_fuels]
+    if missing:
+        print(f"[WARN] PWRBCK remap: estos FUEL destino no aparecen en otros CSVs: {missing}")
+
+    df.loc[mask, "FUEL"] = df.loc[mask, "FUEL"].str.slice(0, -2) + "02"
+    og_data["OutputActivityRatio"] = df
+
+    print("\n" + "=" * 70)
+    print(f"[Info] PWRBCK OutputActivityRatio remap: "
+          f"{len(src_fuels)} fuels ({int(mask.sum())} filas) → ELC*02.")
+    print("=" * 70 + "\n")
+    return og_data
+
+
 def clean_pwr_technologies(og_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
     """
     Clean PWR technology codes by:
@@ -3481,6 +3533,9 @@ def main():
         OG_Input_Data = merge_pwr_technologies(OG_Input_Data, matrix_config)
     else:
         print("[Info] PWR technology cleanup is disabled (pwr_cleanup_mode = false).")
+
+    # Optional remap of OutputActivityRatio FUEL for PWRBCK* (ELC*01 -> ELC*02)
+    OG_Input_Data = remap_pwrbck_output_fuel(OG_Input_Data)
 
     scenario_suffixes = list_scenario_suffixes(OUTPUT_FOLDER)
     for scen in scenario_suffixes:
