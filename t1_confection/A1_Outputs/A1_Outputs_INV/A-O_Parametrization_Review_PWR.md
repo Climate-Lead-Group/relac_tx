@@ -1,0 +1,556 @@
+# Auditoría de `TotalAnnualMinCapacityInvestment` — Secondary Techs PWR
+
+## Resumen ejecutivo
+
+- Puntos evaluados: **261**
+- Conservar: **26**
+- Conservar con ajuste: **15**
+- Quitar: **220**
+- GW totales en archivo original: **98.48 GW**
+- GW totales sugeridos tras auditoría: **15.89 GW**
+- Diferencia neta: **-82.59 GW**
+
+## Conservados por tipo de evidencia
+
+| Tipo evidencia | Filas | GW |
+|----------------|-------|----|
+| PPA | 13 | 1.89 |
+| construccion | 17 | 5.96 |
+| financial_close | 1 | 0.03 |
+| operacion | 1 | 0.02 |
+| pruebas | 3 | 6.56 |
+| subasta_adjudicada | 6 | 0.34 |
+
+## Resumen por país
+
+| País | Puntos | Conservar | Ajustar | Quitar | GW actual | GW sugerido | Fuente principal |
+|------|--------|-----------|---------|--------|-----------|-------------|------------------|
+| ARG | 7 | 2 | 0 | 5 | 5.358 | 0.498 | Plan Nuclear Argentino 2025 + Secretaría de Energía (MATER/RenovAr pipelines); no hay plan decenal unificado vigente en 2025 |
+| BOL | 13 | 0 | 0 | 13 | 4.227 | 0.000 | Plan Eléctrico Referencial del Estado Plurinacional de Bolivia 2035 |
+| BRA | 7 | 1 | 1 | 5 | 28.352 | 2.010 | PDE 2034 - Plano Decenal de Expansão de Energia 2034 |
+| BRB | 3 | 0 | 0 | 3 | 1.338 | 0.000 | Barbados National Energy Policy (BNEP) 2019-2030 + Barbados Energy Transition and Investment Plan (SEforALL, 2025) |
+| CHL | 9 | 2 | 0 | 7 | 7.507 | 0.923 | PELP 2023-2027 - Planificación Energética de Largo Plazo, Ministerio de Energía de Chile |
+| COL | 23 | 2 | 3 | 18 | 7.126 | 5.065 | Plan de Expansión de Referencia Generación-Transmisión 2024-2038 / Plan Indicativo 2023-2037 |
+| CRI | 19 | 7 | 0 | 12 | 2.206 | 0.240 | Plan de Expansion de la Generacion Electrica (PEG) 2024-2040 - ICE |
+| DOM | 16 | 0 | 0 | 16 | 3.563 | 0.000 | Plan Energetico Nacional 2022-2036 - CNE / MEM |
+| ECU | 23 | 5 | 1 | 17 | 7.354 | 1.187 | Plan Maestro de Electricidad (PME) 2023-2032 |
+| GTM | 11 | 1 | 0 | 10 | 1.356 | 0.031 | Plan de Expansión Indicativo del Sistema de Generación 2024-2054 (MEM/CNEE) |
+| HND | 18 | 0 | 0 | 18 | 1.770 | 0.000 | Plan Indicativo de Expansión de la Generación 2024-2033 (PIEG, ENEE/CND) |
+| MEX | 10 | 1 | 3 | 6 | 14.785 | 4.562 | PRODESEN 2024-2038 + CFE Plan de Fortalecimiento y Expansion 2025-2030 |
+| NIC | 9 | 1 | 1 | 7 | 0.623 | 0.050 | Plan de Expansión de la Generación Eléctrica de Nicaragua 2019-2033 (MEM) |
+| PAN | 21 | 1 | 0 | 20 | 2.600 | 0.043 | Plan Indicativo de Generacion 2025-2039 (Tomo II) - ASEP / ETESA |
+| PER | 16 | 3 | 2 | 11 | 3.852 | 0.912 | Plan Energético Nacional 2014-2025 (vigente) + MINEM pipeline 26 proyectos al 2027 |
+| PRY | 11 | 0 | 2 | 9 | 1.200 | 0.270 | Plan Maestro de Generación ANDE 2021-2040 |
+| SLV | 15 | 0 | 1 | 14 | 1.903 | 0.025 | Plan Indicativo de la Expansión de la Generación Eléctrica 2021-2031 (DGEHM/CNE) |
+| URY | 30 | 0 | 1 | 29 | 3.365 | 0.075 | UTE Plan de Expansión + Hoja de Ruta Hidrógeno Verde (MIEM) - Segunda Transición Energética |
+
+## Detalle por país
+
+### ARG
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2025 | 0.27 | Quitar | 0 | plan_solamente | La Nación; Dialogue Earth; Represas Patagonia | Las represas Cóndor Cliff/La Barrancosa estuvieron paralizadas desde dic/2023 hasta mar/2026. No hay proyectos hidroeléctricos específicos con COD 202 |
+| HYD | 2026 | 1.898 | Quitar | 0 | plan_solamente | La Nación; Dinamicarg Presupuesto 2026 | La Barrancosa tiene 42% de avance y Cóndor Cliff apenas 20% al abr/2026. La Barrancosa podría completarse hacia 2030 y Cóndor Cliff sigue paralizado.  |
+| HYD | 2027 | 1.31 | Quitar | 0 | plan_solamente | La Nación; Dialogue Earth | No hay evidencia pública de 1.31 GW de adiciones hidroeléctricas en 2027. La Barrancosa (360 MW) mejor escenario COD ~2030, Cóndor Cliff (950 MW) much |
+| HYD | 2029 | 0.182 | Quitar | 0 | plan_solamente | La Nación; Dinamicarg | La Barrancosa está en construcción (42% de avance, reactivada mar/2026), pero el COD estimado oficial es ~2030, no 2029. El valor 182 MW en 2029 no co |
+| SPV | 2026 | 0.435 | Conservar | 0.435 | construccion | PV Tech - Verano Energy San Rafael 200 MW; Energía Estratégica - CAMMESA MATER adjudicación 515 MW nov/2025; PV Magazine | Evidencia explícita de construcción y adjudicación: Verano Energy (San Rafael 200 MW) comenzó construcción oct/2024 con COD Q1/2026; CAMMESA adjudicó  |
+| URN | 2028 | 1.2 | Quitar | 0 | plan_solamente | World Nuclear Association; Buenos Aires Herald; IRI UNLP Plan Nuclear 2025 | CAREM (32 MW) paralizado desde sep/2024 con 85% de avance (construcción detenida, no en pruebas). Atucha III reemplazada por plan de 4 SMR ACR-300 con |
+| WON | 2025 | 0.063 | Conservar | 0.063 | construccion | Infobae/Tenaris La Rinconada; Mejor Energía PCR Bahía Blanca; Shale24 | Evidencia explícita de construcción: Tenaris inició construcción de Parque Eólico La Rinconada (94.5 MW, 21 turbinas Vestas, USD 214M) en Olavarría en |
+
+### BOL
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2032 | 0.6 | Quitar | 0 | plan_solamente | Plan Electrico Referencial Bolivia 2035 | STRICT: Ivirizu 290 MW (91.8% avance mar-2025) entra operacion 2025 no 2032; pertenece a ResidualCapacity. Miguillas 205 MW (51% avance) COD dic-2026. |
+| HYD | 2036 | 0.46 | Quitar | 0 | ninguna | Plan Electrico Referencial Bolivia 2035 | STRICT: 2036 supera horizonte plan oficial; sin proyecto hidro especifico en construccion. |
+| HYD | 2040 | 0.38 | Quitar | 0 | ninguna | Plan Electrico Referencial Bolivia 2035 | STRICT: ano 2040 excede horizonte plan; sin evidencia concreta. |
+| HYD | 2045 | 0.4 | Quitar | 0 | ninguna | Plan Electrico Referencial Bolivia 2035 | STRICT: 2045 muy fuera del horizonte plan; ningun proyecto. |
+| SPV | 2026 | 0.03 | Quitar | 0 | plan_solamente | ENDE - planes expansion Uyuni fase II | STRICT: 30 MW solar 2026 agregado sin proyecto adjudicado con construccion o PPA especifico. Uyuni Fase II (2.5 MW) es solo fraccion menor. |
+| SPV | 2027 | 0.12 | Quitar | 0 | plan_solamente | ENDE/PEEPB 2035 | STRICT: 120 MW solar 2027 plan agregado sin proyectos adjudicados con COD 2027. |
+| SPV | 2029 | 0.12 | Quitar | 0 | plan_solamente | ENDE expansion solar | STRICT: proyeccion sin proyectos concretos adjudicados. |
+| SPV | 2030 | 0.24 | Quitar | 0 | plan_solamente | Plan Electrico Referencial 2035 | STRICT: 240 MW solar 2030 meta agregada sin proyectos especificos adjudicados/en construccion. |
+| SPV | 2031 | 0.48 | Quitar | 0 | plan_solamente | Plan Electrico Referencial 2035 | STRICT: 480 MW meta plan sin construccion/PPA especifica con COD 2031. |
+| SPV | 2032 | 0.23 | Quitar | 0 | plan_solamente | Plan Electrico Referencial 2035 | STRICT: 230 MW solar 2032 plan agregado sin proyectos especificos. |
+| WON | 2026 | 0.1 | Quitar | 0 | plan_solamente | ENDE expansion Santa Cruz | STRICT: San Julian/Warnes/El Dorado (108 MW) ya operan (ResidualCapacity). Sin parque eolico especifico nuevo adjudicado/en construccion con COD 2026. |
+| WON | 2028 | 0.134 | Quitar | 0 | plan_solamente | Plan Electrico Referencial 2035 | STRICT: plan agregado sin parque eolico nuevo especifico con adjudicacion/construccion para COD 2028. |
+| WON | 2032 | 0.933 | Quitar | 0 | ninguna | Plan Electrico Referencial 2035 | STRICT: 933 MW eolico 2032 irreal (demanda pico ~1.8 GW); sin parques especificos adjudicados/en construccion. No respaldado en plan oficial. |
+
+### BRA
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2033 | 0.118 | Quitar | 0 | plan_solamente | PDE 2034 - EPE/MME | 118 MW de adição hídrica em 2033 corresponde a meta agregada de PCH no PDE 2034 sem projeto específico com PPA firmado ou obra em andamento com COD 20 |
+| HYD | 2034 | 1.05 | Quitar | 0 | pre_feasibility | PDE 2034 - EPE; IHU/InfoAmazonia sobre UHEs amazônicas | 1.05 GW de adição hídrica em 2034 pressupõe UHEs amazônicas (Bem Querer, Tabajara, Castanheira) em licenciamento com oposição indígena/ambiental. Nenh |
+| NGS | 2025 | 1.379 | Conservar_con_ajuste | 0.605 | pruebas | ANEEL - autorização UTE GNA II (maio 2025); UTE Novo Tempo Barcarena (fase de testes set/2025) | GNA II (1.7 GW) iniciou operação comercial em 31/05/2025 segundo ANEEL — já operando, deveria estar em ResidualCapacity e não como adição 2025. UTE No |
+| SPV | 2029 | 8.6 | Quitar | 0 | plan_solamente | PDE 2034 - EPE; ABSOLAR Infográfico | 8.6 GW é trajetória média extraída do PDE 2034 para crescimento de microgeração distribuída + geração centralizada até 2034. Não corresponde a projeto |
+| URN | 2029 | 1.405 | Conservar | 1.405 | construccion | Eletronuclear - Angra 3 status; Governo Federal; CNN Brasil | Angra 3 (1.405 GW PWR Siemens Pre-Konvoi) está em construção com 67% de avanço físico e 92% de equipamentos entregues; operação comercial prevista par |
+| WAS | 2034 | 2.7 | Quitar | 0 | plan_solamente | PDE 2034 - EPE | 2.7 GW de biomassa/resíduos em 2034 é meta agregada do PDE sem projeto específico com PPA ou construção. Leilão A-5 2025 focou em PCH, não biomassa em |
+| WON | 2029 | 13.1 | Quitar | 0 | plan_solamente | PDE 2034 - EPE; EPE Leilão A-5 2025 | 13.1 GW de eólica onshore em um único ano (2029) deriva de meta agregada do PDE 2034 (~24 GW em 10 anos). Não existem parques eólicos específicos com  |
+
+### BRB
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| OIL | 2025 | 0.9 | Quitar | 0 | ninguna | Barbados National Energy Policy 2019-2030 (BNEP); Barbados Energy Transition and Investment Plan (SEforALL 2025) | Barbados tem meta de 100% energias renováveis para 2030. Adicionar 900 MW de diesel em 2025 é inconsistente com a política nacional (BLPC está licitan |
+| PET | 2040 | 0.258 | Quitar | 0 | ninguna | Barbados National Energy Policy 2019-2030; SEforALL Energy Transition and Investment Plan | Barbados eliminará combustíveis fósseis até 2030 (meta 100% renovável). Não há anúncio público nem contrato de construção de 258 MW de petróleo em 204 |
+| SPV | 2040 | 0.18 | Quitar | 0 | plan_solamente | BNEP 2019-2030; Renewstable Barbados (IDB Invest, HDF Energy) | Meta BNEP solar 314 MW PV é para 2030, não 2040. Renewstable Barbados (50 MWp + BESS + H2) com PPA firmado 25 anos com BLPC foi lançado em fev/2025 —  |
+
+### CHL
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| GEO | 2030 | 0.43 | Quitar | 0 | plan_solamente | Universidad de Chile - CEGA; PiensaGeotermia | Chile tiene 81 MW operativos (Cerro Pabellón 48+33). CEGA estima potencial 599 MW 2017-2030 pero sin pipeline de construcción concreta para 430 MW adi |
+| HYD | 2030 | 0.147 | Quitar | 0 | plan_solamente | PELP 2023-2027 Ministerio de Energía | 147 MW hidro en 2030 es agregado de PCH/mini-hidro del PELP sin proyectos específicos nombrados en construcción con COD 2030. Criterio estricto: plan  |
+| HYD | 2039 | 0.194 | Quitar | 0 | plan_solamente | PELP 2023-2027 | 194 MW hidro en 2039 es trayectoria PELP; sin proyecto específico en construcción ni PPA firmado. Año más allá del horizonte de construcción típico. C |
+| WON | 2027 | 0.423 | Conservar | 0.423 | construccion | Coordinador Eléctrico Nacional; ENGIE Pampa Fidelia; Electromineria/CNE 196 proyectos ERNC | Evidencia explícita de construcción: ENGIE inició construcción de Pampa Fidelia (306 MW, 51 turbinas) en Antofagasta con COD 1H/2027; Pemuco (194.4 MW |
+| WON | 2028 | 0.5 | Conservar | 0.5 | construccion | CNE/Coordinador; Engie Horizonte expansion; Kallpa Wind (ex Lomas de Taltal) | CNE informa que 196 proyectos ERNC están en construcción con entrada en operación al 2028, con 841 MW eólicos. Kallpa Wind (342 MW) esperando COD; Hor |
+| WON | 2029 | 0.875 | Quitar | 0 | plan_solamente | PELP 2023-2027; Coordinador Eléctrico Nacional | Pipeline específico en construcción del Coordinador cubre COD hasta 2028. 875 MW en 2029 se basa en trayectoria PELP agregada, no en parques nombrados |
+| WON | 2030 | 3.309 | Quitar | 0 | plan_solamente | PELP 2023-2027; Energía Estratégica | 3.3 GW en un único año es meta agregada del PELP (WON 2030 aggregate). Sin parques específicos con PPA firmado o construcción iniciada para COD 2030 t |
+| WON | 2040 | 0.758 | Quitar | 0 | plan_solamente | PELP 2023-2027 | 758 MW en 2040 es extrapolación PELP de largo plazo sin proyectos específicos. Año más allá del horizonte de compromiso concreto. Criterio estricto →  |
+| WON | 2044 | 0.871 | Quitar | 0 | plan_solamente | PELP 2023-2027 | 2044 más allá de horizonte PELP con proyectos específicos. Sin compromiso público concreto. Criterio estricto → Quitar. |
+
+### COL
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| BIO | 2031 | 0.025 | Quitar | 0 | plan_solamente | UPME Plan Indicativo de Expansion de Generacion 2023-2037 | STRICT: no hay proyecto bioenergetico especifico 25 MW con construccion iniciada, PPA firmado, ni subasta adjudicada con COD 2031. Solo potencial gene |
+| BIO | 2033 | 0.01 | Quitar | 0 | plan_solamente | UPME - potencial biomasa residual agroindustrial | STRICT: sin proyecto especifico 10 MW bajo construccion o PPA firmado con COD 2033. Ano muy lejano sin compromiso concreto. |
+| HYD | 2031 | 0.224 | Quitar | 0 | plan_solamente | UPME Plan Expansion 2024-2038 | STRICT: Hidroituango 8 unidades completara dic 2027 (EPM 94.48% avance mar-2025), no justifica 224 MW en 2031. No hay hidros especificas >100 MW en co |
+| HYD | 2033 | 0.661 | Quitar | 0 | ninguna | UPME Plan Expansion 2024-2038 | STRICT: sin proyecto hidroelectrico 661 MW en construccion ni adjudicado con COD 2033. Ituango ya estara completa. |
+| HYD | 2034 | 0.045 | Quitar | 0 | plan_solamente | UPME PCH cartera | STRICT: sin PCH especifica 45 MW en construccion o con PPA para COD 2034. Solo registro UPME generico. |
+| SPV | 2025 | 0.049 | Conservar | 0.049 | construccion | UPME SIMEC Seguimiento proyectos Junio 2025 - proyectos solares en pruebas/construccion | STRICT: 49 MW es consistente con proyectos pequenos en pruebas/construccion reportados SIMEC junio 2025 (Alma Solar 2, etc.). |
+| SPV | 2026 | 0.152 | Conservar | 0.152 | construccion | UPME SIMEC - proyectos solares en construccion con COD 2026 | STRICT: 152 MW consistente con proyectos solares especificos en construccion SIMEC con COD 2026. |
+| SPV | 2027 | 0.057 | Conservar_con_ajuste | 2.2 | subasta_adjudicada | Subasta CxC feb 2024 - 4,441 MW solares adjudicados con COD dic/2027 | STRICT: subasta CxC 2024 adjudico 4,441 MW solares con compromiso COD 1-dic-2027. Asumiendo 50% materializa en 2027: ~2.2 GW. |
+| SPV | 2028 | 0.057 | Conservar_con_ajuste | 2.2 | subasta_adjudicada | Subasta CxC feb 2024 - rezago ejecucion adjudicados | STRICT: resto de 4,441 MW solares adjudicados CxC 2024 materializan en 2028 por atrasos tipicos ~50%. |
+| SPV | 2029 | 0.055 | Quitar | 0 | plan_solamente | UPME cartera proyectos | STRICT: sin proyecto solar 55 MW especifico en construccion o con PPA/subasta adjudicada con COD 2029. |
+| SPV | 2030 | 0.349 | Quitar | 0 | plan_solamente | UPME estrategia 6GW + plan 2024-2038 | STRICT: 349 MW es meta agregada del plan UPME sin proyecto adjudicado/construccion especifico con COD 2030. |
+| SPV | 2031 | 0.449 | Quitar | 0 | plan_solamente | UPME Plan Expansion 2024-2038 | STRICT: meta agregada de plan sin proyecto concreto adjudicado/PPA/construccion con COD 2031. |
+| SPV | 2032 | 1.04 | Quitar | 0 | plan_solamente | UPME Plan Expansion 2024-2038 | STRICT: 1.04 GW es proyeccion del plan UPME sin proyectos concretos adjudicados con COD 2032. |
+| SPV | 2033 | 0.085 | Quitar | 0 | plan_solamente | UPME Plan Expansion 2024-2038 | STRICT: ano fuera de lead time razonable sin compromiso concreto. |
+| SPV | 2034 | 0.772 | Quitar | 0 | plan_solamente | UPME Plan Expansion 2024-2038 | STRICT: 772 MW es proyeccion plan sin proyectos especificos adjudicados con COD 2034. |
+| WON | 2025 | 0.492 | Quitar | 0 | ninguna | AES Colombia - construccion AES Jemeiwaa inicia 2026; Windpeshi reactivacion fin 2025/inicio 2026 | STRICT: AES Jemeiwaa (JK1/JK2 259 MW) inicia construccion 2026 con COD 2028. Windpeshi en reactivacion, COD 2028. No hay 492 MW en construccion con CO |
+| WON | 2027 | 0.754 | Quitar | 0 | plan_solamente | AES/Ecopetrol Jemeiwaa Ka'I | STRICT: construccion AES inicia 2026 con COD previsto 2028. Windpeshi COD 2028. No hay parques eolicos en construccion con COD 2027. |
+| WON | 2028 | 0.299 | Conservar_con_ajuste | 0.464 | construccion | AES Jemeiwaa JK1+JK2 (259 MW) + Windpeshi (205 MW) con COD previsto 2028 | STRICT: JK1/JK2 259 MW con licencia ambiental y construccion 2026 + Windpeshi 205 MW reactivado con acuerdos comunitarios y COD 2028 = 464 MW. Proyect |
+| WON | 2029 | 0.1 | Quitar | 0 | plan_solamente | UPME cartera eolica | STRICT: sin parque eolico especifico 100 MW en construccion con COD 2029. |
+| WON | 2030 | 0.352 | Quitar | 0 | plan_solamente | UPME 16 proyectos eolicos La Guajira | STRICT: 16 proyectos registrados UPME pero sin construccion/PPA especifica con COD 2030; JK3-JK6 de AES sin cronograma firme. |
+| WON | 2031 | 0.231 | Quitar | 0 | plan_solamente | UPME cartera eolica La Guajira | STRICT: sin proyecto eolico especifico adjudicado/construccion con COD 2031. |
+| WON | 2033 | 0.718 | Quitar | 0 | plan_solamente | UPME Plan 2024-2038 | STRICT: proyeccion sin proyectos concretos. Consultas previas Wayuu estancan ejecucion. |
+| WON | 2034 | 0.15 | Quitar | 0 | plan_solamente | UPME Plan 2024-2038 | STRICT: ano 2034 sin proyectos adjudicados/en construccion. |
+
+### CRI
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| BIO | 2026 | 0.02 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: 20 MW biomasa 2026 referido solo a meta agregada PEG (~20 MW 2025-2027) sin proyecto bio-energetico especifico con construccion, PPA o adjudic |
+| GEO | 2027 | 0.055 | Conservar | 0.055 | construccion | Borinquen I - ICE / PiensaGeotermia | STRICT: Borinquen I (55 MW) en construccion con >40% avance constructivo (reportes ICE 2023-2024), financiamiento JICA firmado, COD 2026-2027 (ICE ha  |
+| GEO | 2029 | 0.012 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE - PLB-01 | STRICT: Proyecto PLB-01 (12 MW) listado solo en Plan Recomendado PEG 2024 sin evidencia de obra, EIA aprobado, contrato adjudicado ni financiamiento.  |
+| GEO | 2031 | 0.055 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE - Borinquen 2 | STRICT: Borinquen 2 (55 MW) previsto en PEG 2024 ~2032 pero aun en fase de estudios preliminares sin construccion iniciada, sin financiamiento, sin co |
+| GEO | 2032 | 0.055 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: PEG 2024 identifica solo estudios preliminares de geotermia post-Borinquen. Sin proyecto nombrado en construccion o licitacion. Plan-only |
+| HYD | 2026 | 0.02 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: 20 MW hidro 2026 sin proyecto especifico con construccion/PPA/adjudicacion publicada. Referencia generica a 'pequenas hidroelectricas privadas |
+| HYD | 2028 | 0.05 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: 50 MW hidro 2028 sin proyecto especifico nombrado en construccion o con contrato adjudicado. Plan-only |
+| HYD | 2029 | 0.02 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: 20 MW hidro 2029 sin proyecto especifico en construccion. Plan-only |
+| HYD | 2030 | 0.1176 | Quitar | 0 | pre_feasibility | PEG 2024-2040 ICE - Fourth Cliff / Cuarto Cliffs | STRICT: Proyecto Fourth Cliff (53 MW) en Siquirres aun en fase de planificacion/desarrollo (no construccion iniciada, sin contrato EPC, sin financiami |
+| HYD | 2032 | 0.064 | Quitar | 0 | plan_solamente | PEG 2024-2040 ICE | STRICT: Sin proyecto hidro especifico identificado para 2032 en PEG con estatus de construccion o adjudicacion. Plan-only |
+| HYD | 2033 | 0.646 | Quitar | 0 | ninguna | PEG 2024-2040 ICE; Diquis cancelado 2018 | STRICT: 646 MW hidro en un solo ano sin soporte. Diquis (650 MW) cancelado definitivamente noviembre 2018. Sin evidencia publica de proyecto hidro gra |
+| HYD | 2034 | 0.156 | Quitar | 0 | ninguna | PEG 2024-2040 ICE | STRICT: Sin proyecto hidro nombrado para 2034 en construccion o adjudicado. Ninguna evidencia |
+| OIL | 2028 | 0.75 | Quitar | 0 | ninguna | PEG 2024-2040 ICE | STRICT: Costa Rica matriz ~98.6% renovable (2025). PEG 2024-2040 no contempla ninguna planta OIL/diesel 750 MW nueva. Contradice explicitamente politi |
+| SPV | 2024 | 0.05 | Conservar | 0.05 | subasta_adjudicada | ICE adjudicaciones 2024 - pv-magazine | STRICT: ICE adjudico en abril 2024 cinco proyectos fotovoltaicos por 86 MW con ejecucion 2025-2026. 50 MW en 2024 dentro del bloque adjudicado - evide |
+| SPV | 2025 | 0.02 | Conservar | 0.02 | PPA | ICE contratos privados - reve.aeeolica 09/2024 | STRICT: ICE firmo 9 contratos (PPA) con empresa privada por 166 MW eolico+solar para COD 2026-2027 en septiembre 2024. 20 MW solar 2025 dentro de cont |
+| SPV | 2026 | 0.025 | Conservar | 0.025 | PPA | ICE contratos privados 166 MW; adjudicaciones 2024 | STRICT: 25 MW solar 2026 dentro de los 166 MW de contratos PPA firmados por ICE con privados (COD 2026-2027). Evidencia de contratos firmados |
+| WON | 2024 | 0.02 | Conservar | 0.02 | PPA | ICE contratos eolicos privados Ley 7200 | STRICT: 20 MW eolico 2024 dentro de 9 contratos PPA (166 MW) firmados por ICE con privados |
+| WON | 2025 | 0.05 | Conservar | 0.05 | PPA | ICE contratos eolicos privados 166 MW | STRICT: 50 MW eolico 2025 dentro de contratos PPA firmados por ICE (166 MW eolico+solar) con COD 2026-2027 |
+| WON | 2026 | 0.02 | Conservar | 0.02 | PPA | ICE contratos privados - Presidencia CR | STRICT: 20 MW eolico 2026 consistente con proyectos ICE a entrar operacion 2025-2026 (412 MW promovidos con inversion $539 mill). PPA firmados |
+
+### DOM
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| NGS | 2033 | 0.06 | Quitar | 0 | plan_solamente | PEN 2022-2036; Manzanillo Gas & Power | STRICT: Manzanillo Gas & Power (840 MW, 40% avance, COD fin-2027/inicios-2028) ya se contabilizaria en 2027-2028, no 2033. 60 MW NGS 2033 sin proyecto |
+| NGS | 2038 | 0.18 | Quitar | 0 | ninguna | PEN 2022-2036 (horizonte excedido) | STRICT: Ano 2038 excede horizonte PEN 2036 y lead time construccion CC (~5 anos). Sin compromiso publico de 180 MW NGS 2038. Ninguna evidencia |
+| NGS | 2040 | 0.18 | Quitar | 0 | ninguna | PEN 2022-2036 (horizonte excedido) | STRICT: Ano 2040 fuera del horizonte PEN 2036. Sin proyecto NGS 180 MW adjudicado/en construccion/contratado. Ninguna evidencia |
+| SPV | 2030 | 0.05 | Quitar | 0 | plan_solamente | PEN 2022-2036; EDES-LP-NGR-01-2025 | STRICT: La licitacion EDES-LP-NGR-01-2025 adjudico 8 proyectos por 605 MW (Taino I 84.7, Botoncillo 44.2, Mella 100, Dicayagua 145, otros) con COD tip |
+| SPV | 2031 | 0.063 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 63 MW solar 2031 sin proyecto especifico con PPA/construccion/adjudicacion para ese ano. Los 605 MW de EDES-2025 tienen COD 2027-2028. Concesi |
+| SPV | 2032 | 0.07 | Quitar | 0 | plan_solamente | PEN 2022-2036; concesiones CNE | STRICT: 70 MW solar 2032 sin proyecto con PPA firmado/construccion/adjudicacion. Plan-only |
+| SPV | 2033 | 0.08 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 80 MW solar 2033 es meta agregada PEN sin proyecto especifico adjudicado/en construccion para ese ano. Plan-only |
+| SPV | 2034 | 0.09 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 90 MW solar 2034 es meta agregada PEN sin proyecto especifico. Plan-only |
+| SPV | 2035 | 0.1 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 100 MW solar 2035 sin proyecto especifico adjudicado. Plan-only |
+| SPV | 2036 | 0.11 | Quitar | 0 | plan_solamente | PEN 2022-2036 horizonte final | STRICT: 110 MW solar 2036 es meta final PEN sin proyecto especifico. Plan-only |
+| WON | 2026 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036; CNE parques eolicos | STRICT: Matafongo (34 MW, 17 x Gamesa G97 2 MW) en fase de puesta en marcha por Solida Energias Renovables/GEDOM (ya casi residual). Larimar II (48 MW |
+| WON | 2027 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 430 MW eolico 2027 sin proyecto especifico adjudicado/en construccion. PEN meta eolica total ~350 MW al 2030 - 430 MW en un solo ano excede pl |
+| WON | 2028 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 430 MW eolico 2028 sin proyecto especifico. Plan-only |
+| WON | 2029 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 430 MW eolico 2029 sin proyecto especifico. Plan-only |
+| WON | 2030 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: 430 MW eolico 2030 sin proyecto especifico. Plan-only |
+| WON | 2031 | 0.43 | Quitar | 0 | plan_solamente | PEN 2022-2036 | STRICT: Post-2030 sin compromisos especificos eolico 430 MW. Patron plano 0.43 GW/ano 2026-2031 claramente inverosimil - probable valor default/residu |
+
+### ECU
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| BIO | 2028 | 0.03 | Quitar | 0 | plan_solamente | PME 2023-2032 - mencion generica biomasa en portafolio 37 plantas | STRICT: sin proyecto de biomasa 30 MW especifico adjudicado/en construccion con COD 2028. |
+| HYD | 2023 | 0.0555 | Quitar | 0 | operacion | PME 2018-2027 - PCHs ya operativas | STRICT: 2023 ya transcurrido; si PCHs son reales ya operan, pertenecen a ResidualCapacity no MinCapacityInvestment. |
+| HYD | 2024 | 0.2054 | Quitar | 0 | operacion | CELEC EP - Toachi-Pilaton fases parciales | STRICT: 2024 ya transcurrido; si Toachi-Pilaton o PCHs entraron en 2024 deberian reflejarse en ResidualCapacity. No hay proyecto especifico 205 MW con |
+| HYD | 2026 | 0.0698 | Quitar | 0 | plan_solamente | PME 2023-2032 - portafolio hidro | STRICT: 70 MW hidro 2026 no corresponde a PCH especifica en construccion con COD 2026. |
+| HYD | 2027 | 0.208 | Quitar | 0 | plan_solamente | PME 2023-2032 | STRICT: plan sin proyecto hidro especifico adjudicado/en construccion con COD 2027. |
+| HYD | 2028 | 0.25 | Quitar | 0 | plan_solamente | PME 2023-2032 | STRICT: plan agregado sin proyecto adjudicado especifico con COD 2028. |
+| HYD | 2030 | 0.8456 | Quitar | 0 | pre_feasibility | PME - Cardenillo 596 MW en fase de contratacion de estructurador | STRICT: Cardenillo esta en fase de contratacion de estructurador internacional, no en construccion ni adjudicado. Sin FID. Lead time hidro >8 anos no  |
+| HYD | 2031 | 1.2 | Quitar | 0 | pre_feasibility | PME - Santiago 3,600 MW en estudios APP | STRICT: Santiago esta en fase conceptual APP, sin construccion ni FID. No cumple criterio 1-5. |
+| HYD | 2032 | 1.2 | Quitar | 0 | pre_feasibility | PME - Santiago fase final (estudios) | STRICT: Santiago no cuenta con construccion iniciada ni FID; sin respaldo concreto. |
+| PET | 2024 | 0.4 | Conservar | 0.4 | PPA | MERNNR - 4 contratos barcazas firmados desde ago-2024 por >USD 260M (Karpowership/Murat Bey) | STRICT: contratos de alquiler de barcazas firmados 2024 por Ecuador ante crisis hidrica. Evidencia explicita de PPA/contrato emergencia operativo. |
+| PET | 2025 | 0.3 | Conservar | 0.3 | PPA | MERNNR - extension barcazas y termicas hasta 2028 | STRICT: contratos de barcazas extendidos a 2028 con montos comprometidos; evidencia de PPA/contrato explicito. |
+| PET | 2026 | 0.077 | Conservar | 0.077 | PPA | MERNNR - gobierno mantiene barcazas y termicas alquiladas en 2026 | STRICT: renovacion de 5 contratos de barcazas/termicas en 2026 anunciada oficialmente. PPA/contrato vigente. |
+| PET | 2027 | 0.11 | Conservar | 0.11 | PPA | MERNNR - barcazas alquiladas hasta 2028 | STRICT: contratos extendidos hasta 2028; PPA vigente. |
+| PET | 2028 | 0.6 | Conservar_con_ajuste | 0.1 | PPA | MERNNR - 300 MW barcazas extension hasta 2028 | STRICT: contratos extienden a 2028 ~300 MW acumulados (no 600 MW adicionales). Ajuste a valor marginal consistente con renovaciones contratadas. |
+| PET | 2029 | 0.2 | Quitar | 0 | ninguna | PME 2023-2032 - descarbonizacion | STRICT: sin PPA firmado ni construccion especifica de petroleo con COD 2029. Plan PME prioriza descarbonizacion. |
+| SPV | 2025 | 0.2 | Conservar | 0.2 | PPA | El Aromo 200 MW - contrato firmado Solarpack mar-2023, construccion en marcha con COD 2025/inicio 2026 | STRICT: El Aromo 200 MW tiene contrato PPA firmado marzo-2023 con Solarpack, incluido en PME con COD 2025 (o inicio 2026 segun PME actualizado). Crite |
+| SPV | 2026 | 0.3176 | Quitar | 0 | plan_solamente | PME 2023-2032 bloque ERNC | STRICT: 317.6 MW solar 2026 es agregado del portafolio ERNC sin PPA firmado/construccion especifica con COD 2026. |
+| SPV | 2027 | 0.17 | Quitar | 0 | plan_solamente | PME 2023-2032 | STRICT: plan ERNC sin proyectos especificos adjudicados/PPA con COD 2027. |
+| SPV | 2028 | 0.33 | Quitar | 0 | plan_solamente | PME 2023-2032 | STRICT: plan ERNC agregado sin proyecto especifico adjudicado con COD 2028. |
+| WON | 2023 | 0.05 | Quitar | 0 | operacion | Huascachaca 50 MW ya operativa desde dic-2022 | STRICT: Huascachaca ya operativa antes de 2023. Pertenece a ResidualCapacity, no MinCapacityInvestment. |
+| WON | 2025 | 0.11 | Quitar | 0 | construccion | Villonaco III 110.4 MW - adenda contrato firmada ene-2025, COD 2027 | STRICT: Villonaco III tiene contrato firmado (adenda ene-2025) pero COD es 2027 no 2025. Ano equivocado; quitar de 2025. |
+| WON | 2026 | 0.045 | Quitar | 0 | plan_solamente | PME 2023-2032 | STRICT: 45 MW eolico 2026 sin parque especifico adjudicado/en construccion con COD 2026. |
+| WON | 2028 | 0.38 | Quitar | 0 | plan_solamente | PME 2023-2032 portafolio ERNC | STRICT: plan ERNC agregado sin parque especifico adjudicado con COD 2028. Villonaco II esta retrasado sin adjudicacion firme. |
+
+### GTM
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2026 | 0.0308 | Conservar | 0.0308 | subasta_adjudicada | CNEE - PEG-4 adjudicaciones 2023 incluyeron pequeñas hidroelectricas con COD 2025-2026 | PEG-4 adjudico 255 MW renovables 2023 incluyendo pequeñas hidros. 30.8 MW compatible con hidro adjudicada con COD 2026. Evidencia PEG es subasta adjud |
+| HYD | 2033 | 0.03 | Quitar | 0 | plan_solamente | PEG-5 adjudicacion final abril 2026 - dominan solar con almacenamiento | PEG-5 adjudicada 16 abr 2026 favorecio solar (1242 MW) sobre hidro. No hay hidroelectrica especifica adjudicada para COD 2033. STRICT: sin adjudicacio |
+| HYD | 2034 | 0.005 | Quitar | 0 | plan_solamente | CNEE - sin proyecto hidro adjudicado 2034 | PEG-5 sin adjudicaciones hidro relevantes. 2034 fuera de horizonte PEG-5 ejecutivo. STRICT: plan solamente. |
+| NGS | 2035 | 0.05 | Quitar | 0 | ninguna | Generadora Gatun 440 MW ya operando desde 2024 (ResidualCapacity) | Guatemala no tiene proyecto NGS nuevo en construccion ni adjudicado con COD 2035. Gatun 440 MW ya opera desde 2024. PEG-5 excluyo gas de gran escala.  |
+| NGS | 2046 | 0.6 | Quitar | 0 | ninguna | Sin plan ejecutivo con horizonte 2046 para NGS | 600 MW gas en 2046 sin respaldo documental de proyecto en construccion ni adjudicado. Guatemala infraestructura limitada de gas. STRICT: sin evidencia |
+| SPV | 2036 | 0.15 | Quitar | 0 | plan_solamente | PEG-5 adjudicada abril 2026 con COD 2030-2045 | PEG-5 adjudicacion final abr 2026 cubre COD 2030-2045 pero los proyectos solares especificos (Estranzuela, etc.) tienen COD tempranos 2030-2033. 150 M |
+| SPV | 2037 | 0.05 | Quitar | 0 | plan_solamente | Sin adjudicacion solar especifica para 2037 | Año fuera de COD especificas de PEG-5. Sin proyecto solar adjudicado. STRICT: plan solamente. |
+| SPV | 2038 | 0.11 | Quitar | 0 | plan_solamente | Sin adjudicacion solar especifica para 2038 | 110 MW solar sin adjudicacion puntual. Fuera de COD ejecutivas PEG-5. STRICT: plan solamente. |
+| WON | 2036 | 0.05 | Quitar | 0 | plan_solamente | PEG-5 dominada por solar con almacenamiento; escaso eolico adjudicado | No hay proyecto eolico especifico adjudicado con COD 2036. STRICT: plan solamente. |
+| WON | 2037 | 0.24 | Quitar | 0 | ninguna | Sin proyecto eolico especifico para 2037 | 240 MW eolicos sin respaldo de licitacion adjudicada ni PPA firmado. STRICT: sin evidencia. |
+| WON | 2039 | 0.04 | Quitar | 0 | ninguna | Sin proyecto eolico para 2039 | Sin adjudicacion ni PPA firmado para eolico COD 2039. STRICT: sin evidencia. |
+
+### HND
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| GEO | 2028 | 0.02 | Quitar | 0 | pre_feasibility | PIEG 2024-2033 ENEE - San Ignacio/Azacualpa (solo factibilidad) | Sitios geotermicos San Ignacio 20 MW y Azacualpa 20 MW en exploracion/factibilidad. Platanares 35 MW Ormat ya opera desde 2017 (residual). Sin adjudic |
+| GEO | 2033 | 0.02 | Quitar | 0 | plan_solamente | PIEG 2024-2033 (plan solamente) | Sin proyecto geotermico especifico adjudicado ni en construccion con COD 2033. STRICT: plan solamente. |
+| HYD | 2025 | 0.004 | Quitar | 0 | plan_solamente | Sin proyecto hidro especifico identificado para COD 2025 | 4 MW es agregado de plan sin proyecto micro hidro especifico con contrato firmado o en construccion confirmada. STRICT: plan solamente. |
+| HYD | 2026 | 0.198 | Quitar | 0 | operacion | ENEE Patuca III (104 MW, operando desde 2019/2020, admin ENEE jul-2024) | Patuca III (104 MW) culmino construccion septiembre 2019 y opera desde 2020. ENEE asumio admin el 1-jul-2024. Ya pertenece a ResidualCapacity. No se a |
+| HYD | 2030 | 0.098 | Quitar | 0 | plan_solamente | PIEG 2024-2033 - El Tablon 17 MW y pequeñas hidros (plan solamente) | Sin proyecto hidro en construccion ni PPA firmado con COD 2030. El Tablon sigue sin inicio de obras. STRICT: plan solamente. |
+| OIL | 2029 | 0.1 | Quitar | 0 | ninguna | Sin licitacion ni proyecto OIL en Honduras | Politica hondureña de descarbonizacion. Sin PPA ni licitacion OIL adjudicada. STRICT: sin evidencia. |
+| OIL | 2031 | 0.1 | Quitar | 0 | ninguna | Sin licitacion ni proyecto OIL en Honduras | Ningun PPA para nueva generacion OIL. Politica retira termicas fosiles. STRICT: sin evidencia. |
+| OIL | 2032 | 0.1 | Quitar | 0 | ninguna | Sin licitacion ni proyecto OIL en Honduras | Sin adjudicacion ni PPA OIL con COD 2032. STRICT: sin evidencia. |
+| OIL | 2033 | 0.1 | Quitar | 0 | ninguna | Sin licitacion ni proyecto OIL | Sin proyecto OIL confirmado con COD 2033. Meta de 80% renovables a 2032. STRICT: sin evidencia. |
+| SPV | 2024 | 0.05 | Quitar | 0 | operacion | Plantas solares habilitadas 2023-2024 (ya operando) | Capacidad solar habilitada 2023-2024 (~50 MW) ya esta operando a nivel de ResidualCapacity. STRICT: already operating -> Quitar. |
+| SPV | 2025 | 0.05 | Quitar | 0 | plan_solamente | Sin adjudicacion o PPA especifica solar de 50 MW en 2025 | Proyectos solares en anuncio o estudio (expansion Patuca III 50 MW solar) sin contrato firmado ni construccion avanzada. STRICT: plan solamente. |
+| SPV | 2026 | 0.32 | Quitar | 0 | plan_solamente | Licitacion 1500 MW ENEE lanzada jun-2025; NO adjudicada (abril 2026) | Licitacion 1500 MW iniciada 23-jun-2025 con simulaciones nov-2025/ene-2026. Aun NO adjudicada al momento. Sin proyectos con COD 2026 adjudicados. STRI |
+| SPV | 2028 | 0.19 | Quitar | 0 | plan_solamente | Licitacion 1500 MW ENEE no adjudicada aun | Sin adjudicacion de proyectos solares especificos con COD 2028. STRICT: plan solamente. |
+| SPV | 2033 | 0.05 | Quitar | 0 | plan_solamente | PIEG 2024-2033 (plan solamente) | Sin proyecto solar especifico adjudicado para 2033. STRICT: plan solamente. |
+| WON | 2027 | 0.05 | Quitar | 0 | plan_solamente | Sin proyecto eolico adjudicado para COD 2027 | PIEG contempla eolico con almacenamiento pero sin licitacion adjudicada. STRICT: plan solamente. |
+| WON | 2029 | 0.17 | Quitar | 0 | plan_solamente | Licitacion 1500 MW ENEE no adjudicada | 170 MW eolicos sin adjudicacion confirmada. Licitacion 1500 MW aun sin resultado. STRICT: plan solamente. |
+| WON | 2030 | 0.05 | Quitar | 0 | plan_solamente | Sin proyecto eolico adjudicado para COD 2030 | 50 MW eolicos sin contrato firmado ni obras en ejecucion. STRICT: plan solamente. |
+| WON | 2033 | 0.1 | Quitar | 0 | plan_solamente | PIEG 2024-2033 (plan solamente) | 100 MW eolicos sin adjudicacion ni construccion. STRICT: plan solamente. |
+
+### MEX
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2025 | 0.0876 | Quitar | 0 | plan_solamente | PRODESEN 2024-2038 | STRICT: 87.6 MW hidro 2025 sin proyecto especifico en construccion/PPA/adjudicacion. Unico hidro mexicano en construccion es Chicoasen II (240 MW, obr |
+| HYD | 2026 | 0.124 | Quitar | 0 | plan_solamente | PRODESEN 2024-2038 | STRICT: 124 MW hidro 2026 sin proyecto nombrado con obra activa. Chicoasen II (240 MW) tiene COD fin 2026/inicios 2027 y se imputa a 2027. No existe s |
+| HYD | 2027 | 0.312 | Conservar_con_ajuste | 0.24 | construccion | Chicoasen II - CFE / Consorcio Aristos / Proyectos Mexico | STRICT: Chicoasen II (240 MW, 3 turbinas bulbo) en construccion desde noviembre 2023 por Consorcio Aristos, COD previsto fin 2026/inicios 2027. Eviden |
+| NGS | 2025 | 5.154 | Conservar_con_ajuste | 3.743 | pruebas | CFE Plan Fortalecimiento 2025-2030; 5 CC en pruebas de puesta en servicio | STRICT: 5 CC CFE en pruebas de puesta en servicio con COD 2026 aportando 3,742.5 MW: Merida IV (499), Riviera Maya-Valladolid (1,020), Gonzalez Ortega |
+| NGS | 2026 | 1.538 | Quitar | 0 | plan_solamente | CFE Plan de Fortalecimiento | STRICT: Los ~3.7 GW de CC en pruebas ya asignados a 2025/26 bucket. 1.54 GW adicional 2026 sin proyecto especifico en obras - San Luis Rio Colorado (~ |
+| NGS | 2028 | 2.491 | Quitar | 0 | plan_solamente | PRODESEN 2024-2038 | STRICT: 2,491 MW CC 2028 es meta agregada PRODESEN sin proyecto especifico con PPA/construccion/adjudicacion. Mas alla del pipeline actual en pruebas  |
+| NGS | 2029 | 0.934 | Quitar | 0 | plan_solamente | PRODESEN 2024-2038; CFE Plan Fortalecimiento | STRICT: 934 MW CC 2029 sin proyecto especifico con status construccion/PPA/adjudicacion. Plan-only sin compromiso concreto |
+| SPV | 2027 | 1.393 | Conservar_con_ajuste | 0.3 | construccion | CFE Puerto Penasco Secuencia III - pv-magazine | STRICT: Puerto Penasco Secuencia III (300 MW + 103 MW BESS) con procedimiento de contratacion lanzado marzo 2025, COD confirmado julio 2027. Ajustar a |
+| SPV | 2028 | 0.28 | Conservar | 0.28 | construccion | CFE Puerto Penasco Secuencia IV - Strategic Energy Europe | STRICT: Puerto Penasco Secuencia IV (280 MW + BESS) construccion inicia febrero 2026, COD 1T2028. Inversion confirmada MXN 6,790 millones. Coincide ex |
+| WON | 2028 | 2.47 | Quitar | 0 | plan_solamente | PRODESEN 2024-2038 | STRICT: 2,470 MW eolico 2028 es meta agregada PRODESEN (50 GW eolico+solar al 2038) sin subasta CENACE adjudicada ni proyecto eolico nombrado con PPA/ |
+
+### NIC
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| GEO | 2028 | 0.025 | Conservar_con_ajuste | 0.01 | PPA | Polaris - Acuerdo con Ormat para Unidad Binaria 10 MW San Jacinto-Tizate (PPA extendido a 2039) | Polaris firmo acuerdo con Ormat para Unidad Binaria 10 MW tras extension de PPA a 2039. 25 MW es excesivo; ajuste a 10 MW conforme al proyecto concret |
+| GEO | 2029 | 0.06 | Quitar | 0 | plan_solamente | ENEL Nicaragua - anuncio ampliacion San Jacinto-Tizate (sin construccion) | Gobierno anuncio ampliacion geotermica pero sin construccion iniciada ni financial close publico con COD 2029. STRICT: anuncio no califica. |
+| HYD | 2025 | 0.113 | Quitar | 0 | ninguna | Tumarín cancelado; Mojolka solo MOU con China | Sin hidro en construccion ni adjudicada con COD 2025. Tumarin cancelado, Mojolka solo MOU sin financial close. STRICT: sin evidencia. |
+| HYD | 2027 | 0.091 | Quitar | 0 | ninguna | Mojolka sin construccion; Tumarín cancelado | Mojolka (103 MW) en estudios de diseño; sin construccion. STRICT: sin evidencia. |
+| HYD | 2029 | 0.094 | Quitar | 0 | plan_solamente | Sin proyecto hidro con construccion ni financial close | Plan Indicativo sin proyecto hidro ejecutivo con COD 2029. STRICT: plan solamente. |
+| HYD | 2030 | 0.13 | Quitar | 0 | ninguna | Tumarin cancelado; Mojolka sin avance constructivo | 130 MW sin respaldo de proyecto en construccion ni contrato firmado. STRICT: sin evidencia. |
+| SPV | 2027 | 0.03 | Quitar | 0 | plan_solamente | ENATREL/MEM - Plan Indicativo Solar 2024-2025 (plan solamente) | Gobierno anuncio 4 plantas fotovoltaicas pero sin licitacion adjudicada especifica con COD 2027. STRICT: plan solamente. |
+| WON | 2027 | 0.04 | Conservar | 0.04 | PPA | Amayo III - tercera fase Rivas 40 MW aprobada con inversion $100M (MARENA nov-2024) | Tercera fase de Amayo aprobada ambientalmente por MARENA con inversion $100M por 40 MW adicionales. Evidencia publica de aprobacion formal del proyect |
+| WON | 2030 | 0.04 | Quitar | 0 | ninguna | Sin nueva fase eolica confirmada para 2030 | Amayo III cubre la expansion eolica. Sin proyectos eolicos adicionales adjudicados para 2030. STRICT: sin evidencia. |
+
+### PAN
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2025 | 0.0122 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039; concesiones operacion abr-2025 | STRICT: 12 MW mini-hidro 2025 sin proyecto especifico nombrado con obras en curso o adjudicacion publica. Concesiones en operacion ya son residual. Pl |
+| HYD | 2026 | 0.0017 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 1.7 MW mini-hidro 2026 sin proyecto nombrado con obra o PPA. Plan-only |
+| HYD | 2027 | 0.0653 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: La licitacion LPI ETESA 01-25 (adjudicada abr-2024) es hidro+eolica con suministro enero 2029 - no aporta capacidad en 2027. Sin hidroelectric |
+| HYD | 2030 | 0.2285 | Quitar | 0 | plan_solamente | Prensa.com; Mire Panama (cancelacion 2016) | STRICT: Changuinola II / Chan II (223-228 MW) contrato cancelado 2016 (Odebrecht), devuelto a Egesa por mutuo acuerdo 2017. Aunque concesion vigente y |
+| NGS | 2028 | 0.25 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: Gatun 670 MW ya en operacion comercial desde oct-2024 (belongs in ResidualCapacity). No hay segunda CC gas nueva adjudicada o en construccion  |
+| NGS | 2032 | 0.31 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 310 MW NGS 2032 parte de las 5 subastas PIG (2,755 MW 2029-2033) pero subasta termica especifica aun no adjudicada. Plan-only |
+| NGS | 2034 | 0.25 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 250 MW NGS 2034 sin subasta adjudicada ni proyecto nombrado. Hoja de ruta 2050 prioriza renovables. Plan-only |
+| NGS | 2035 | 0.05 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 50 MW NGS 2035 sin proyecto especifico con PPA/construccion/adjudicacion. Plan-only |
+| SPV | 2025 | 0.3962 | Quitar | 0 | plan_solamente | pv-magazine Panama 2024 | STRICT: Panama sumo 143 MW PV en 2024 (residual). 396 MW adicional en 2025 sin identificacion de proyectos solares especificos con PPA firmado, adjudi |
+| SPV | 2026 | 0.2344 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: Subasta solar 2026 con suministro desde julio 2028 aun no lanzada ni adjudicada. 234 MW solar 2026 sin proyecto adjudicado ni en construccion. |
+| SPV | 2027 | 0.0989 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 99 MW solar 2027 sin proyecto especifico con PPA/construccion/adjudicacion. Plan-only |
+| SPV | 2028 | 0.0099 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 10 MW solar 2028 sin proyecto nombrado. Plan-only |
+| SPV | 2029 | 0.0899 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: Subasta solar 2026 aun no adjudicada; 90 MW 2029 sin proyecto especifico. Plan-only |
+| SPV | 2032 | 0.1 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039; Hoja de ruta 2050 | STRICT: 100 MW solar 2032 sin proyecto especifico adjudicado/en construccion. Plan-only |
+| WON | 2025 | 0.06 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 60 MW eolico 2025 sin proyecto nombrado con construccion/PPA. Subasta LPI 01-25 suministra desde enero 2029, no 2025. Plan-only |
+| WON | 2026 | 0.0018 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 1.8 MW eolico 2026 sin proyecto nombrado. Plan-only |
+| WON | 2027 | 0.0173 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 17 MW eolico 2027 sin proyecto especifico adjudicado con COD 2027. La licitacion LPI 01-25 suministra desde enero 2029. Plan-only |
+| WON | 2028 | 0.0429 | Conservar | 0.0429 | subasta_adjudicada | ASEP LPI ETESA 01-25 - adjudicada abril 2024 | STRICT: Licitacion LPI ETESA 01-25 recibio 7 ofertas por hasta 260.57 MW con adjudicacion en abril 2024. Ganadores: Santa Cruz Wind ($70.97/MWh), UEP  |
+| WON | 2030 | 0.0517 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: Subasta LPI 01-25 ya asignada a 2028-2029. 52 MW eolico 2030 sin subasta adicional adjudicada. Plan-only |
+| WON | 2033 | 0.1386 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 139 MW eolico 2033 sin subasta adjudicada ni proyecto especifico. Plan-only |
+| WON | 2034 | 0.1904 | Quitar | 0 | plan_solamente | ASEP PIG 2025-2039 | STRICT: 190 MW eolico 2034 sin subasta especifica adjudicada. Meta de triplicar capacidad es plan agregado, no compromiso especifico. Plan-only |
+
+### PER
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2024 | 0.0187 | Conservar | 0.0187 | operacion | COES - pequenas centrales hidroelectricas en operacion/pruebas 2024 | STRICT: 18.7 MW en 2024 corresponde a PCHs especificas identificadas en COES con status construccion/pruebas. |
+| HYD | 2025 | 0.0299 | Conservar_con_ajuste | 0.2093 | pruebas | MINEM/CHNM - San Gaban III 209.3 MW con 95% avance, operacion comercial mayo/julio 2025 | STRICT: San Gaban III 209.3 MW en pruebas con 95% avance fisico, entra operacion comercial 2025. Evidencia explicita de construccion/pruebas. |
+| HYD | 2027 | 0.206 | Conservar_con_ajuste | 0.392 | construccion | MINEM - Huallaga I 392 MW en construccion (MINEM luz verde) con COD 2027 | STRICT: Huallaga I 392 MW formalmente en construccion con COD programado 2027. Criterio construccion cumplido. Avance 0.40% ene-2025 - riesgo de atras |
+| NGS | 2031 | 1.425 | Quitar | 0 | ninguna | MINEM pipeline 26 proyectos al 2027 (sin CCGT nuevo) | STRICT: 1.425 GW gas natural 2031 sin PPA firmado, sin FID, sin construccion. Cartera MINEM 2027 tiene 0 CCGT nuevo. Sobreoferta existente Kallpa/Feni |
+| SPV | 2024 | 0.115 | Conservar | 0.115 | construccion | MINEM - Clemesi y otros solares con avance cercano 100% en 2024 | STRICT: Clemesi y solares especificos en fase final de construccion 2024. |
+| SPV | 2025 | 0.4 | Quitar | 0 | plan_solamente | MINEM cartera solar 2025 | STRICT: 400 MW solar 2025 derivado de pipeline agregado MINEM. Sin proyectos especificos nombrados con PPA firmado y construccion a ese nivel. Licitac |
+| SPV | 2026 | 0.25 | Quitar | 0 | plan_solamente | MINEM pipeline 11 solares al 2027 | STRICT: 250 MW solar 2026 deriva del pipeline MINEM sin PPA firmado/subasta adjudicada especifica. Reforma Ley 28832 recien en 2025 para incluir RER e |
+| SPV | 2027 | 0.12 | Quitar | 0 | plan_solamente | MINEM pipeline solar 2027 | STRICT: pipeline solo, sin proyectos especificos adjudicados con COD 2027. |
+| SPV | 2028 | 0.09 | Quitar | 0 | plan_solamente | MINEM pipeline RER | STRICT: sin proyecto especifico adjudicado/PPA con COD 2028. |
+| SPV | 2030 | 0.11 | Quitar | 0 | plan_solamente | MINEM Plan Energetico Nacional | STRICT: meta agregada sin proyecto solar especifico adjudicado con COD 2030. |
+| WON | 2024 | 0.177 | Conservar | 0.177 | construccion | MINEM - Wayra Extension (177 MW) en fase final de construccion/pruebas 2024 | STRICT: Wayra Extension y San Juan de Marcona son proyectos especificos con construccion confirmada en 2024. |
+| WON | 2026 | 0.08 | Quitar | 0 | plan_solamente | MINEM pipeline eolica 2027 | STRICT: 80 MW eolico 2026 es pipeline agregado sin parque especifico en construccion/PPA con COD 2026. |
+| WON | 2027 | 0.2 | Quitar | 0 | plan_solamente | MINEM pipeline eolico | STRICT: 200 MW pipeline sin PPA firmado/construccion con COD 2027. |
+| WON | 2028 | 0.18 | Quitar | 0 | plan_solamente | MINEM RER | STRICT: sin parque especifico adjudicado con COD 2028. |
+| WON | 2029 | 0.31 | Quitar | 0 | plan_solamente | MINEM Plan Energetico | STRICT: 310 MW eolico 2029 es plan sin proyectos especificos adjudicados. |
+| WON | 2030 | 0.14 | Quitar | 0 | plan_solamente | MINEM Plan Energetico | STRICT: 140 MW eolico 2030 sin parque especifico adjudicado con COD 2030. |
+
+### PRY
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| HYD | 2026 | 0.21 | Quitar | 0 | ninguna | EBY Yacyretá - Aña Cuá (obras en construccion, 35% avance, primera turbina 2028) | No hay proyecto hidroeléctrico con COD 2026 en Paraguay. Aña Cuá está en construccion (35% avance abril 2026) pero primera turbina entrara en servicio |
+| HYD | 2028 | 0.07 | Conservar_con_ajuste | 0.09 | construccion | EBY Yacyretá - Aña Cuá primera turbina (construccion activa, 35% avance) | Aña Cuá proyecto en construccion activa (450 millones USD, 35% avance abril 2026). Primera turbina Kaplan (~90 MW) entrara operacion julio 2028. Obra  |
+| HYD | 2029 | 0.023 | Conservar_con_ajuste | 0.18 | construccion | EBY Yacyretá - Aña Cuá segunda y tercera turbinas | Segunda turbina Aña Cuá aprox 90 MW entra ~4 meses despues de la primera, y tercera turbina completa los 270 MW al cierre de obras 2028/inicios 2029.  |
+| HYD | 2030 | 0.075 | Quitar | 0 | plan_solamente | ANDE Plan Maestro Generación 2021-2040 - Acaray modernización (plan solamente) | No hay evidencia publica de contrato adjudicado ni obra iniciada para modernizacion de Acaray (58 MW adicionales). Figura solo en Plan Maestro ANDE si |
+| HYD | 2031 | 0.115 | Quitar | 0 | plan_solamente | ANDE Plan Maestro 2021-2040 - 19 pequeñas hidroelectricas (plan solamente) | 115 MW de pequeñas hidros en un solo año sin proyecto especifico identificado. Plan maestro menciona potenciales pero sin adjudicacion ni PPA firmado. |
+| HYD | 2032 | 0.0093 | Quitar | 0 | plan_solamente | ANDE Plan Maestro 2021-2040 - pequeñas hidroelectricas (plan solamente) | 9.3 MW es valor agregado del plan sin proyecto especifico adjudicado ni en construccion. STRICT: plan-solamente se descarta. |
+| HYD | 2033 | 0.072 | Quitar | 0 | plan_solamente | ANDE Plan Maestro 2021-2040 (plan solamente) | Sin proyecto hidro especifico en construccion ni licitacion adjudicada con COD 2033. STRICT: plan-solamente se descarta. |
+| HYD | 2034 | 0.122 | Quitar | 0 | pre_feasibility | ANDE Plan Maestro 2021-2040; Corpus Christi factibilidad | No existe proyecto hidro en construccion ni adjudicado con COD 2034. Corpus Christi binacional sigue en factibilidad sin financial close. STRICT: plan |
+| HYD | 2035 | 0.0226 | Quitar | 0 | plan_solamente | ANDE Plan Maestro 2021-2040 (plan solamente) | Sin proyecto hidro especifico adjudicado para 2035. Plan maestro sin cronograma ejecutivo. STRICT: plan-solamente se descarta. |
+| HYD | 2036 | 0.0056 | Quitar | 0 | plan_solamente | ANDE Plan Maestro 2021-2040 (plan solamente) | Año 2036 sin asignacion especifica de hidro en plan maestro ni proyecto adjudicado. STRICT: plan-solamente se descarta. |
+| SPV | 2031 | 0.475 | Quitar | 0 | plan_solamente | ANDE - Licitación solar Chaco Central 100 MW (contrato firmado) + plan | ANDE firmo contrato para primera planta solar en Chaco (100-140 MW) con COD prevista antes de 2030, no 2031. Para 2031 no hay licitaciones adicionales |
+
+### SLV
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| GEO | 2025 | 0.08 | Quitar | 0 | operacion | LaGeo Berlín III binaria (operacional 2024, residual) | Berlin III binaria ya opera desde 2024 (ResidualCapacity). Chinameca 25 MW comenzo obras 2025 pero COD prevista 2026+ con finalizacion estimada >2027. |
+| GEO | 2026 | 0.03 | Conservar_con_ajuste | 0.025 | financial_close | LaGeo Chinameca 25 MW - construccion iniciada 2025, prestamo BM $150M (financial close) | Banco Mundial aprobo prestamo $150M 28-mar-2025 para central geotermica Chinameca de hasta 25 MW. Obras a cargo de LaGeo iniciadas 2025 (pruebas vapor |
+| GEO | 2030 | 0.03 | Quitar | 0 | plan_solamente | Plan expansion LaGeo (hasta 40 MW Chinameca exploratorio) | Expansion Chinameca hasta 40 MW es trabajo geotermico exploratorio aun; sin financial close para fase adicional ni contrato firmado con COD 2030. STRI |
+| GEO | 2031 | 0.02 | Quitar | 0 | plan_solamente | LaGeo plan expansiones binarias (plan solamente) | Sin contrato ni financial close para unidades binarias con COD 2031. STRICT: plan solamente. |
+| NGS | 2030 | 0.1 | Quitar | 0 | ninguna | Energia del Pacifico 378 MW LNG ya operando (2022) - ResidualCapacity | EDP 378 MW LNG opera desde 2022. Sin proyecto NGS nuevo adjudicado o en construccion con COD 2030. STRICT: sin evidencia nuevo proyecto; existente per |
+| NGS | 2032 | 0.3 | Quitar | 0 | ninguna | Sin proyecto NGS nuevo con construccion/PPA | 300 MW NGS sin licitacion adjudicada ni contrato firmado. STRICT: sin evidencia. |
+| NGS | 2035 | 0.35 | Quitar | 0 | ninguna | Sin proyecto NGS nuevo confirmado | Ningun PPA ni licitacion adjudicada respalda 350 MW NGS en 2035. STRICT: sin evidencia. |
+| OIL | 2030 | 0.3 | Quitar | 0 | ninguna | Politica Energetica Nacional 2020-2050 prioriza renovables | Sin licitacion ni PPA para 300 MW OIL. Politica contradice expansion fosil. STRICT: sin evidencia. |
+| SPV | 2024 | 0.0264 | Quitar | 0 | operacion | Plantas solares 2024 ya operando (residual) | Capacidad solar con COD 2024 ya esta operando y pertenece a ResidualCapacity. STRICT: already operating. |
+| SPV | 2025 | 0.0552 | Quitar | 0 | plan_solamente | Plan Indicativo 2021-2031 (plan solamente) | 55 MW solar sin adjudicacion ni PPA especifico con COD 2025. STRICT: plan solamente. |
+| SPV | 2026 | 0.161 | Quitar | 0 | plan_solamente | Plan Indicativo 2021-2031 (plan solamente) | 161 MW solar sin licitacion adjudicada puntual con COD 2026. STRICT: plan solamente. |
+| SPV | 2035 | 0.2 | Quitar | 0 | ninguna | Fuera de horizonte Plan Indicativo 2021-2031 | 200 MW solar sin proyecto adjudicado. STRICT: sin evidencia. |
+| WON | 2027 | 0.06 | Quitar | 0 | ninguna | Sin proyectos eolicos confirmados en El Salvador | El Salvador tiene 54 MW eolico residual. Sin proyectos adjudicados. STRICT: sin evidencia. |
+| WON | 2028 | 0.1 | Quitar | 0 | ninguna | Sin proyecto eolico adjudicado | 100 MW eolicos sin licitacion adjudicada ni PPA. STRICT: sin evidencia. |
+| WON | 2035 | 0.09 | Quitar | 0 | ninguna | Fuera de horizonte de plan | 90 MW eolicos en 2035 sin respaldo. STRICT: sin evidencia. |
+
+### URY
+
+| Tech | Año | GW actual | Acción | GW sugerido | Tipo evidencia | Fuente | Justificación |
+|------|-----|-----------|--------|-------------|----------------|--------|---------------|
+| SPV | 2025 | 0.08 | Quitar | 0 | operacion | UTE; Presidencia Uruguay | Parque Punta del Tigre (32 MW) ya fue completado y módulo adicional de 25 MW está operativo en 2025 — pertenecen a ResidualCapacity, no son adición nu |
+| SPV | 2026 | 0.035 | Quitar | 0 | plan_solamente | UTE; Energía Estratégica | 35 MW solar en 2026 es extrapolación del plan UTE 100 MW/año sin proyecto específico con construcción o PPA para COD 2026. Cerro Largo (75 MW, única l |
+| SPV | 2027 | 0.155 | Quitar | 0 | plan_solamente | UTE plan expansión; MIEM | 155 MW en 2027 es proyección UTE sin proyecto específico adjudicado/en construcción con COD 2027. Criterio estricto → Quitar. |
+| SPV | 2028 | 0.1 | Conservar_con_ajuste | 0.075 | subasta_adjudicada | pv magazine Latin America; Ámbito; UTE adjudicación consorcio Teyma-Prodiel | UTE adjudicó a fines de 2025 el parque solar Cerro Largo (75 MW, USD 70M) al consorcio Teyma-Prodiel — contrato firmado, COD 2028. Evidencia explícita |
+| SPV | 2029 | 0.06 | Quitar | 0 | plan_solamente | UTE plan expansión | 60 MW en 2029 sin proyecto específico adjudicado/en construcción. Criterio estricto → Quitar. |
+| SPV | 2030 | 0.035 | Quitar | 0 | plan_solamente | Hoja de Ruta Hidrógeno Verde Uruguay; MIEM | 35 MW en 2030 proviene de trayectoria 20 GW 2040 H2V — meta agregada sin proyectos específicos con PPA/construcción. Criterio estricto → Quitar. |
+| SPV | 2032 | 0.055 | Quitar | 0 | plan_solamente | MIEM Segunda Transición Energética 2040 | 55 MW en 2032 es plan agregado. Sin proyecto específico. Criterio estricto → Quitar. |
+| SPV | 2034 | 0.04 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2035 | 0.055 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2036 | 0.1 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2037 | 0.145 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2038 | 0.07 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2039 | 0.025 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2040 | 0.15 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay - 20 GW renovables 2040 | Meta 20 GW renovables 2040 es agregada, sin parques específicos con PPA/construcción. Criterio estricto → Quitar. |
+| SPV | 2041 | 0.015 | Quitar | 0 | plan_solamente | UTE plan expansión a 2047 | Plan agregado post-2040. Criterio estricto → Quitar. |
+| SPV | 2042 | 0.05 | Quitar | 0 | plan_solamente | UTE plan expansión a 2047 | Plan agregado. Criterio estricto → Quitar. |
+| SPV | 2043 | 0.035 | Quitar | 0 | plan_solamente | UTE plan expansión a 2047 | Plan agregado. Criterio estricto → Quitar. |
+| WON | 2030 | 0.105 | Quitar | 0 | plan_solamente | Plan Indicativo de Expansión del Parque de Generación Eléctrica 2024-2043 - MIEM (feb/2025) | MIEM indica 'la eólica desde 2030' pero sin MW específicos ni parques adjudicados/en construcción para 2030. Palomas (70 MW) y Santa Rita (70 MW) ya e |
+| WON | 2031 | 0.105 | Quitar | 0 | plan_solamente | Plan Indicativo MIEM 2024-2043 | Plan sin proyecto específico adjudicado/en construcción. Criterio estricto → Quitar. |
+| WON | 2032 | 0.02 | Quitar | 0 | plan_solamente | UTE - planes eólicos desde 2032 | UTE anunció 'incorporación de eólica a partir de 2032' pero sin proyecto adjudicado. Criterio estricto → Quitar. |
+| WON | 2034 | 0.225 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado 20 GW 2040. Criterio estricto → Quitar. |
+| WON | 2035 | 0.435 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado. Criterio estricto → Quitar. |
+| WON | 2036 | 0.295 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado. Criterio estricto → Quitar. |
+| WON | 2037 | 0.5 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado. Criterio estricto → Quitar. |
+| WON | 2038 | 0.12 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado. Criterio estricto → Quitar. |
+| WON | 2039 | 0.04 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay | Plan H2V agregado. Criterio estricto → Quitar. |
+| WON | 2040 | 0.1 | Quitar | 0 | plan_solamente | Hoja de Ruta H2V Uruguay - 20 GW renovables 2040 | Meta agregada 20 GW 2040 sin proyecto específico. Criterio estricto → Quitar. |
+| WON | 2041 | 0.05 | Quitar | 0 | plan_solamente | UTE plan a 2047 | Plan UTE sin proyecto específico. Criterio estricto → Quitar. |
+| WON | 2042 | 0.09 | Quitar | 0 | plan_solamente | UTE plan a 2047 | Plan UTE sin proyecto específico. Criterio estricto → Quitar. |
+| WON | 2043 | 0.075 | Quitar | 0 | plan_solamente | UTE plan a 2047 | Plan UTE sin proyecto específico. Criterio estricto → Quitar. |
+
+## Fuentes consultadas
+
+- **ARG**: Plan Nuclear Argentino 2025 + Secretaría de Energía (MATER/RenovAr pipelines); no hay plan decenal unificado vigente en 2025 (2025) — https://world-nuclear.org/information-library/country-profiles/countries-a-f/argentina
+  - https://www.lanacion.com.ar/economia/el-gobierno-anuncio-que-reactivan-una-de-las-mayores-obras-hidroelectricas-del-pais-nid05032026/
+  - https://www.lanacion.com.ar/economia/la-construccion-de-las-represas-de-santa-cruz-esta-frenada-desde-diciembre-a-la-espera-del-nid07022024/
+  - https://dialogue.earth/es/energia/382493-represas-en-la-patagonia-tras-15-anos-y-muchas-dudas-las-obras-continuan/
+  - https://www.pv-magazine.com/2026/02/24/argentina-adds-810-mw-of-solar-capacity-in-2025/
+  - https://www.pv-tech.org/verano-energy-starts-construction-on-200mw-solar-project-in-argentina/
+  - https://www.energiaestrategica.com/pcr-avanzara-en-la-construccion-de-casi-230-mw-renovables-en-argentina-y-apuesta-por-el-crecimiento-internacional/
+  - https://buenosairesherald.com/business/construction-of-first-argentine-made-nuclear-reactor-halted-amid-layoffs
+  - https://www.iri.edu.ar/index.php/2025/09/15/politicas-presupuestarias-y-el-plan-nuclear-argentino-2025/
+  - https://www.shale24.com/renovables/la-generacion-eolica-subio-79-arranque-2026-ya-opera-71-parques-activos-sistema-n944
+  - note: Wikipedia references removed per user request; classifications rely only on primary sources listed above
+- **BOL**: Plan Eléctrico Referencial del Estado Plurinacional de Bolivia 2035 (Octubre 2025) — https://www.mhe.gob.bo/wp-content/uploads/2025/10/PLAN-ELECTRICO-REFERENCIAL-2035-FINAL.pdf
+  - https://www.ende.bo/noticia/noticia/743
+  - https://www.mhe.gob.bo/2024/08/30/el-megaproyecto-hidroelectrico-ivirizu-transformara-el-futuro-energetico-de-bolivia/
+  - https://www.ende.bo/NewProyectos/resena/proyecto-hidroelectrico-miguillas
+  - https://www.ende.bo/noticia/noticia/826
+  - https://www.egsa.bo/planta/parque-eolico-san-julian/
+  - https://www.egsa.bo/planta/parque-eolico-warnes/
+  - https://www.energiaestrategica.com/bolivia-impulsa-nuevas-inversiones-en-energias-renovables-para-alinearse-a-la-agenda-2030/
+  - https://cbe.com.bo/noticia/la-energia-avanza-con-11-proyectos-de-852-6-mw-y-us-2-071-mm
+  - https://www.iea.org/policies/5825-bolivia-electric-plan-2020-2025-plan-del-sector-electrico-del-estado-plurinacional-de-bolivia-2025
+- **BRA**: PDE 2034 - Plano Decenal de Expansão de Energia 2034 (2025) — https://www.epe.gov.br/pt/publicacoes-dados-abertos/publicacoes/plano-decenal-de-expansao-de-energia-pde
+  - https://www.epe.gov.br/pt/publicacoes-dados-abertos/publicacoes/plano-decenal-de-expansao-de-energia-pde
+  - https://www.absolar.org.br/mercado/infografico/
+  - https://www.gov.br/mme/pt-br/assuntos/noticias/mme-destaca-avancos-do-setor-eletrico-rumo-a-sustentabilidade-e-eficiencia-ate-2034
+  - https://www.epe.gov.br/pt/imprensa/noticias/mme-e-epe-publicam-segundo-caderno-do-plano-decenal-de-expansao-de-energia-2034
+  - https://www.cnnbrasil.com.br/economia/investimentos/governo-projeta-mais-r-20-bi-para-terminar-angra-3-e-comecar-operacao-ate-2029/
+  - https://www.eletronuclear.gov.br/Nossas-Atividades/Paginas/Angra-3.aspx
+  - https://www.gem.wiki/GNA_II_power_station
+  - https://www.woodmac.com/press-releases/2024-press-releases/brazil-power-market-to-install-115-gw-of-new-capacity-by-2034/
+  - https://www.gnpw.com.br/en/energy/why-is-biomass-still-underestimated-in-brazil/
+  - https://www.ihu.unisinos.br/categorias/626271-lula-e-as-hidreletricas-na-amazonia-3-as-barragens-planejadas
+  - note: Wikipedia references removed per user request; replaced with primary sources cited by those Wikipedia pages (EPE PDE 2034, ABSOLAR, MME official releases, Eletronuclear)
+- **BRB**: Barbados National Energy Policy (BNEP) 2019-2030 + Barbados Energy Transition and Investment Plan (SEforALL, 2025) (2019-2030; ETIP updated 2025) — https://energy.gov.bb/publications/barbados-national-energy-policy-bnep/
+  - https://www.seforall.org/system/files/2025-03/EnergyTransitionandInvestmentPlan-Barbados.pdf
+  - https://www.pvknowhow.com/news/barbados-solar-projects-200-mw-battery-storage-tender-for-success/
+  - https://www.pvknowhow.com/news/barbados-solar-energy-10mw-plant-launch/
+  - https://www.blpc.com.bb/index.php/company/how-we-serve-you/how-we-generate-electricity
+  - https://www.greenclimate.fund/project/fp224 (Renewstable Barbados 50 MWp)
+- **CHL**: PELP 2023-2027 - Planificación Energética de Largo Plazo, Ministerio de Energía de Chile (2023) — https://energia.gob.cl/pelp
+  - https://www.cne.cl/wp-content/uploads/2025/01/Informe-Final-PET2025.pdf
+  - https://catastro.coordinador.cl/public_site
+  - https://www.uchile.cl/noticias/131737/energia-geotermica-en-chile-podria-alcanzar-600-mw-operativos-al-2030
+  - https://www.piensageotermia.com/planta-geotermica-cerro-pabellon-inicia-construccion-de-expansion-de-33-mw-adicionales/
+  - https://www.df.cl/empresas/energia/gigante-danesa-se-apresta-duplicar-presencia-en-chile-con-proyectos-eolicos
+  - https://www.energiaestrategica.com/renovables-en-expansion-chile-posee-mas-de-7-gw-de-proyectos-en-pruebas-y-distintas-fases-de-construccion/
+  - https://energia.gob.cl/sites/default/files/documentos/reporte_de_proyectos_-_enero_2024.pdf
+  - note: Wikipedia references removed per user request; classifications rely only on primary sources listed above
+- **COL**: Plan de Expansión de Referencia Generación-Transmisión 2024-2038 / Plan Indicativo 2023-2037 (2024-2025) — https://www.minenergia.gov.co/documents/14810/informeGestion-UPME-2025.pdf
+  - https://www1.upme.gov.co/siel/Plan_expansin_generacion_transmision/Plan_de_Expansion_Generacion_2023-2037_a_comentarios.pdf
+  - https://www1.upme.gov.co/siel/Seguimiento_proyectos_generacion/Informe_avance_proyectos_generacion_Junio_2025.pdf
+  - https://www.valoraanalitik.com/subasta-de-cargo-por-confiabilidad-en-colombia-cumplio-metas-y-permitira-tener-energia-de-respaldo/
+  - https://www.eltiempo.com/colombia/otras-ciudades/aes-colombia-iniciara-en-2026-la-construccion-de-sus-parques-eolicos-en-la-guajira-el-mayor-complejo-de-este-tipo-en-el-pais-3510051
+  - https://www.bmcbec.com.co/publicaciones/posts/noticias/noticias/la-guajira-tiene-16-proyectos-de-energia-eolico-con
+  - https://www.ecopetrol.com.co/wps/portal/Home/es/noticias/detalle/ecopetrol-aprueba-inversion-en-el-parque-eolico-windpeshi
+  - https://www.energiaestrategica.com/balance-de-gestion-upme-aprobo-mas-de-8-gw-y-lidera-98-obras-para-transformar-el-sistema-electrico/
+  - https://www1.upme.gov.co/DemandaEnergetica/INTEGRACION_ENERGIAS_RENOVANLES_WEB.pdf
+- **CRI**: Plan de Expansion de la Generacion Electrica (PEG) 2024-2040 - ICE (2024-12 (Informe Ejecutivo)) — https://www.grupoice.com/wps/wcm/connect/20b300e4-c4df-4994-b1b1-372726fa4f3b/Informe+Ejecutivo+PEG+2024.pdf?MOD=AJPERES&CVID=phLSQV0
+  - https://www.piensageotermia.com/proyecto-geotermico-borinquen-en-costa-rica-supera-el-40-de-avance/
+  - https://cambiopolitico.com/proyecto-geotermico-borinquen-i-supera-40-de-avance-constructivo/213817/
+  - https://www.nacion.com/el-pais/servicios/ice-posterga-por-tercera-vez-arranque-de-planta/BWWHGKMGXRB65CTVBD54I7L4KE/story/
+  - https://www.pv-magazine-latam.com/2024/04/23/adjudican-en-costa-rica-cinco-proyectos-fotovoltaicos-que-suman-86-mw/
+  - https://reve.aeeolica.org/2024/09/09/ice-firma-9-contratos-con-empresa-privada-para-producir-energia-eolica-y-fotovoltaica-por-166-megavatios-en-costa-rica
+  - https://www.presidencia.go.cr/noticias/entraran-en-operacion-entre-2025-y-2026-ice-promueve-412-megavatios-de-proyectos-solares
+  - https://www.nacion.com/el-pais/infraestructura/ice-cancela-megaproyecto-hidroelectrico-diquis/3CBYVBM3P5HIHHRC6EJBW3SORQ/story/
+- **DOM**: Plan Energetico Nacional 2022-2036 - CNE / MEM (2022 (borrador) actualizado 2024-2025) — https://www.energiaestrategica.com/wp-content/uploads/2021/12/Borrador-Plan-Energetico-Nacional-2022-2036-CNE.pdf
+  - https://www.energiaestrategica.com/licitacion-con-baterias-en-republica-dominicana-asi-quedarian-los-proyectos-adjudicados-precios-y-posible-ampliacion-a-605-mw/
+  - https://www.manzanillogp.com/
+  - https://presidencia.gob.do/noticias/manzanillo-gas-power-asegura-financiamiento-y-sumara-840-mw-al-sistema-electrico-nacional
+  - https://cne.gob.do/parque-eolico-matafongo/
+  - https://elperiodicodelaenergia.com/la-espanola-solida-energias-renovables-ultima-la-puesta-en-marcha-del-parque-eolico-matafongo-en-republica-dominicana/
+  - https://www.presidencia.gob.do/noticias/rd-alcanza-245-de-renovables-y-proyecta-mas-de-7400-mw-con-inversion-clave-al-2030
+- **ECU**: Plan Maestro de Electricidad (PME) 2023-2032 (Agosto 2024) — https://www.ambienteyenergia.gob.ec/plan-maestro-de-electricidad/
+  - https://www.celec.gob.ec/wp-content/uploads/2023/02/Plan-Maestro-de-Electricidad.pdf
+  - https://www.celec.gob.ec/gensur/noticias/ecuador-actualiza-su-plan-maestro-de-electricidad-para-impulsar-inversiones-en-energias-renovables-no-convencionales-por-cerca-de-usd-2-200-millones/
+  - https://www.energiaestrategica.com/plan-maestro-de-electricidad-que-necesita-ecuador-para-superar-las-15-gw-al-2032/
+  - https://www.primicias.ec/economia/gobierno-hidroelectricas-cardenillo-santiago-alianza-publico-privada-89907/
+  - https://www.rumbominero.com/peru/noticias/energia/ecuador-proyectos-hidroelectricos-inversion/
+  - https://www.pv-magazine-latam.com/2022/09/19/el-gobierno-ecuatoriano-asegura-que-el-proyecto-el-aromo-de-200-mw-entra-en-fase-de-concrecion/
+  - https://reve.aeeolica.org/2025/01/17/el-proyecto-de-energia-eolica-villonaco-iii-en-ecuador-estara-listo-en-2027/
+  - https://www.celec.gob.ec/hidronacion/sala-de-prensa/se-inicia-proceso-para-contratar-estructurador-internacional-para-el-proyecto-hidroelectrico-cardenillo/
+  - https://proyectos.energiayminas.gob.ec/descargaDocumento.php?nombre=presentacionProyectoCardenillo.pdf&path=cardenillo
+- **GTM**: Plan de Expansión Indicativo del Sistema de Generación 2024-2054 (MEM/CNEE) (2024) — https://mem.gob.gt/wp-content/uploads/2024/01/Plan-de-Expansion-Indicativo-del-Sistema-de-Generacion-2024-2054.pdf
+  - https://www.pv-magazine-latam.com/2025/04/24/guatemala-lanza-peg-05-2025-su-mayor-licitacion-de-energia/
+  - https://mem.gob.gt/incentivos-fiscales-fortalecen-la-licitacion-peg-5-en-guatemala/
+  - https://www.energiaestrategica.com/licitacion-historica-en-guatemala-1242-mw-de-solar-con-almacenamiento-dominan-peg-5/
+  - https://republica.com/economia/renovables-se-imponen-en-peg-5-1-016-mw-adjudicados-de-1-400-mw-202632611520
+  - https://www.prensalibre.com/economia/empresas-adjudicadas-en-la-licitacion-peg4-invertiran-us400-millones-en-la-instalacion-de-plantas-generadoras/
+  - https://mem.gob.gt/gas-natural-para-la-produccion-de-energia-electrica/
+  - https://www.cnee.gob.gt/PlanesExpansion/2020-2050/PlanExpansionGeneracion2020-2050.pdf
+- **HND**: Plan Indicativo de Expansión de la Generación 2024-2033 (PIEG, ENEE/CND) (2023) — https://cnd.enee.hn/wp-content/uploads/2023/08/PIEG-2024-2033-Borrador.pdf
+  - https://www.pv-magazine-latam.com/2025/06/02/aprueban-en-honduras-los-pliegos-de-condiciones-para-la-licitacion-internacional-de-1-500-mw-de-potencia/
+  - https://www.pv-magazine-latam.com/2025/05/13/avanza-en-honduras-una-licitacion-por-1-500-mw-de-los-que-975-mw-seran-de-energia-renovable-con-almacenamiento/
+  - https://www.energiaestrategica.com/honduras-adjudica-un-proyecto-bess-al-consorcio-windey-equinsa/
+  - https://www.energiaestrategica.com/la-enee-impulsa-proyectos-estrategicos-para-la-sostenibilidad-de-honduras/
+  - https://www.laprensa.hn/economia/honduras-hidroelectrica-patuca-lejos-generacion-maxima-NG20261286
+  - https://www.energias-renovables.com/geotermica/inauguran-platanares-la-primera-planta-geotermica-del-20180507
+  - https://www.energiaestrategica.com/una-por-una-las-plantas-renovables-habilitadas-para-operar-en-honduras-del-2023-al-2025/
+- **MEX**: PRODESEN 2024-2038 + CFE Plan de Fortalecimiento y Expansion 2025-2030 (2024-05-31) — https://www.gob.mx/sener/articulos/programa-de-desarrollo-del-sistema-electrico-nacional-2024-2038
+  - https://imco.org.mx/prodesen-2024-2038-el-sistema-electrico-mexicano/
+  - https://www.proyectosmexico.gob.mx/proyecto_inversion/plan-de-fortalecimiento-y-expansion-del-sistema-electrico-nacional-generacion/
+  - https://portalred365.com.mx/2025/12/cfe-impulsa-modernizacion-y-nuevas-centrales-para-garantizar-el-abasto-de-energia-en-2026/
+  - https://www.pv-magazine-mexico.com/2026/01/05/aseguran-que-la-secuencia-iii-de-la-central-solar-puerto-penasco-de-300-mw-entrara-en-operaciones-en-julio-de-2027/
+  - https://strategicenergy.eu/mexico-to-add-over-1-5-gw-of-clean-power-and-storage-as-it-expands-latin-americas-largest-solar-plant/
+  - https://technoproject.com.mx/proyecto-hidroelectrico-chicoasen-ii-fase-ii/
+  - https://www.ejecentral.com.mx/nuestro-eje/emilia-calleja-directora-de-cfe-modernizacion-de-hidroelectricas-en-chiapas-en-la-angostura-y-chicoasen-ii
+- **NIC**: Plan de Expansión de la Generación Eléctrica de Nicaragua 2019-2033 (MEM) (2019) — https://www.mem.gob.ni/wp-content/uploads/2019/05/Plan-de-Expansion-de-la-Generacion-Electrica-de-2019-2033.pdf
+  - https://www.enatrel.gob.ni/plan-indicativo-nacional-apuesta-por-la-generacion-solar/
+  - https://enel.gob.ni/ampliaran-planta-geotermica-san-jacinto-tizate-en-telica-leon/
+  - https://polarisrei.com/portfolio/san-jacinto/
+  - https://www.marena.gob.ni/2024/11/27/parque-eolico-amayo-un-modelo-de-energia-limpia-y-sostenible-en-nicaragua/
+  - https://www.laprensani.com/2022/02/16/economia/2952173-que-se-sabe-de-mojolka-la-hidroelectrica-que-china-promete-financiar-en-nicaragua-y-que-puede-correr-la-misma-suerte-de-tumarin
+  - https://www.piensageotermia.com/la-planta-de-energia-geotermica-san-jacinto-tizate-en-nicaragua/
+- **PAN**: Plan Indicativo de Generacion 2025-2039 (Tomo II) - ASEP / ETESA (2025-09 (consulta publica 009-2025)) — https://asep.gob.pa/wp-content/uploads/electricidad/consultas_publicas/2025/cp_009-2025/tomo_II/tomo_II-plan_Indicativo_generacion_2025-2039.pdf
+  - https://www.energiaestrategica.com/panama-recibe-siete-ofertas-en-su-licitacion-renovable-asi-se-reparten-los-260-mw-en-juego/
+  - https://www.energiaestrategica.com/panama-realizara-cinco-subastas-electricas-por-mas-de-2700-mw-de-capacidad-hasta-2028/
+  - https://www.energiaestrategica.com/con-nueva-hoja-de-ruta-al-2050-panama-abrira-licitaciones-renovables-desde-2026/
+  - https://www.prensa.com/economia/egesa-confirma-que-la-concesion-de-la-hidroelectrica-chan-ii-sigue-vigente-gobierno-la-incluye-en-su-plan-de-inversion/
+  - https://revistasumma.com/generadora-gatun-inicia-oficialmente-su-operacion-comercial-en-panama/
+  - https://www.pv-magazine-latam.com/2025/03/21/durante-2024-panama-sumo-14339-mw-fotovoltaicos-y-ya-alcanza-casi-700-mw-de-capacidad-instalada/
+- **PER**: Plan Energético Nacional 2014-2025 (vigente) + MINEM pipeline 26 proyectos al 2027 (2014, actualizado por anuncios MINEM 2024-2025) — https://www.minem.gob.pe/minem/archivos/file/institucional/publicaciones/InformePlanEnerg%C3%ADa2025-%20281114.pdf
+  - https://www.tvperu.gob.pe/noticias/economia/minem-anuncia-ingreso-en-operacion-de-6-centrales-hidroelectricas-entre-2025-y-2027
+  - https://www.infobae.com/peru/2025/04/01/el-poderio-de-los-rios-peruanos-nos-dara-tres-nuevas-hidroelectricas-solo-en-2025-pero-se-vienen-otras-tres-mas-hasta-2027/
+  - https://pym-electric.com/peru-impulsara-26-proyectos-de-generacion-electrica-hasta-2027/
+  - https://energiminas.com/2025/01/06/hydro-global-elevara-inversion-en-hidroelectrica-san-gaban-iii-a-us-499-5-millones/
+  - https://apps.proinversion.gob.pe/LP/sangaban/
+  - https://sectorminero.com.pe/minem-cierra-2024-con-historica-inversion-en-electrificacion-rural-y-proyecciones-ambiciosas-para-2025/
+  - https://www.coes.org.pe/portal/browser/download?url=Planificaci%C3%B3n/Nuevos+Proyectos/Resumen+Ejecutivo/EOs/2024/4.+Resumen+Ejecutivo.pdf
+- **PRY**: Plan Maestro de Generación ANDE 2021-2040 (2021) — https://www.ande.gov.py/documentos/plan_maestro/PLAN%20MAESTRO%20DE%20GENERACION%20%202021-2040.pdf
+  - https://www.mejorenergia.com.ar/noticias/2025/11/18/4836-yacyreta-retoma-las-obras-de-ana-cua-y-la-primera-turbina-comenzara-a-funcionar-en-2028
+  - https://www.abc.com.py/economia/2025/08/05/ana-cua-reactivan-obras-con-plazo-hasta-el-2029/
+  - https://www.ande.gov.py/interna.php?id=12771
+  - https://www.energiaestrategica.com/uno-por-uno-los-proyectos-solares-hidro-y-bancos-de-baterias-que-planea-licitar-paraguay/
+  - https://contrataciones.gov.py/licitaciones/convocatoria/414077-contratacion-ande-bid-18-servicio-consultoria-individual-ande-bid-contratacion-consu-1.html
+  - note: Wikipedia references removed per user request; classifications rely only on primary sources listed above
+- **SLV**: Plan Indicativo de la Expansión de la Generación Eléctrica 2021-2031 (DGEHM/CNE) (2021) — https://estadisticas.dgehm.gob.sv/wp-content/uploads/2021/06/Plan-indicativo-de-la-generaci%C3%B3n-de-la-expansi%C3%B3n-2021-2031.pdf
+  - https://www.energiaestrategica.com/el-salvador-revela-su-plan-de-expansion-geotermica/
+  - http://www.lageo.com.sv/
+  - https://idbinvest.org/en/projects/energia-del-pacifico-lng-thermo-power-project
+  - https://lngprime.com/americas/el-salvador-lng-to-power-project-starts-commercial-ops/64491/
+  - https://www.piensageotermia.com/el-salvador-inaugura-planta-geotermica-binaria-de-berlin/
+  - http://energiasrenovables.cne.gob.sv/index.php/institucion/
+  - http://www.proesa.gob.sv/novedades/noticias/item/1145-el-salvador-inicia-proceso-de-licitaci%C3%B3n-para-170-mw-de-energ%C3%ADa-renovable-no-convencional
+- **URY**: UTE Plan de Expansión + Hoja de Ruta Hidrógeno Verde (MIEM) - Segunda Transición Energética (2022-2040) — https://www.gub.uy/ministerio-industria-energia-mineria/politicas-y-gestion/segunda-transicion-energetica-movilidad-electrica
+  - https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/uruguay-proyecta-su-expansion-electrica-para-proximas-dos-decadas
+  - https://www.ute.com.uy/institucional/infraestructura/contratos-generadores-eolicos
+  - https://www.gub.uy/ministerio-industria-energia-mineria/politicas-y-gestion/programas/energia-eolica-uruguay
+  - https://www.energiaestrategica.com/uruguay-lanzo-su-hoja-de-ruta-de-hidrogeno-verde-y-puso-el-objetivo-de-20-gw-renovables-al-2040/
+  - https://www.gub.uy/presidencia/comunicacion/noticias/ute-invertira-100-millones-dolares-parque-solar-fotovoltaico
+  - https://www.ute.com.uy/noticias/emision-de-obligaciones-negociables-parque-fotovoltaico-punta-del-tigre
+  - https://www.energiaestrategica.com/ute-de-uruguay-confirma-licitaciones-renovables-para-2024-y-2025/
+  - https://www.uruguayxxi.gub.uy/es/centro-informacion/articulo/energias-renovables/
+  - https://h2lac.org/paises/uruguay/
+  - https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/uruguay-lanza-hoja-ruta-del-hidrogeno-verde-sector-potencial-productivo-us
+  - note: Wikipedia reference removed per user request; replaced with primary source MIEM Plan Indicativo 2024-2043 which is the actual policy source behind the Wikipedia claims
