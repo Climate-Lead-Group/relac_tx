@@ -356,13 +356,13 @@ def _save_with_backup(wb, path: Path, ts: str) -> Path:
     return backup
 
 
-def process_scenario(scen: str, apply_changes: bool, csvs: dict[str, pd.DataFrame]) -> None:
-    scen_dir = OUT_DIR / f"A1_Outputs_{scen}"
+def process_scenario(label: str, scen_dir: Path, apply_changes: bool, csvs: dict[str, pd.DataFrame]) -> None:
     param_path = scen_dir / "A-O_Parametrization.xlsx"
     mby_path = scen_dir / "A-O_AR_Model_Base_Year.xlsx"
     proj_path = scen_dir / "A-O_AR_Projections.xlsx"
 
-    print(f"\n========== Scenario: {scen} ==========")
+    print(f"\n========== Scenario: {label} ==========")
+    print(f"  dir: {scen_dir}")
     if not scen_dir.exists():
         print(f"  [SKIP] no existe {scen_dir}")
         return
@@ -444,7 +444,9 @@ def main() -> None:
     g.add_argument("--apply", action="store_true", help="escribe cambios (crea backup)")
     g.add_argument("--dry-run", action="store_true", help="preview sin escribir (default)")
     parser.add_argument("--scenarios", nargs="+", default=SCENARIOS_DEFAULT,
-                        help=f"escenarios a procesar (default: {SCENARIOS_DEFAULT})")
+                        help=f"escenarios short-code, esperan A1_Outputs/A1_Outputs_<X>/ (default: {SCENARIOS_DEFAULT})")
+    parser.add_argument("--scen-paths", nargs="+", default=None,
+                        help="paths explícitos a carpetas de escenario; si se usa, reemplaza a --scenarios")
     args = parser.parse_args()
 
     apply_changes = args.apply and not args.dry_run
@@ -475,8 +477,13 @@ def main() -> None:
     remap_pwrbck_output_fuel(remap_ctx)
     csvs["OutputActivityRatio"] = remap_ctx["OutputActivityRatio"]
 
-    for scen in args.scenarios:
-        process_scenario(scen, apply_changes, csvs)
+    if args.scen_paths:
+        targets = [(Path(p).resolve().name, Path(p).resolve()) for p in args.scen_paths]
+    else:
+        targets = [(scen, OUT_DIR / f"A1_Outputs_{scen}") for scen in args.scenarios]
+
+    for label, scen_dir in targets:
+        process_scenario(label, scen_dir, apply_changes, csvs)
 
     if not apply_changes:
         print("\n[DRY-RUN] no se guardaron cambios. Usar --apply para escribir.")
