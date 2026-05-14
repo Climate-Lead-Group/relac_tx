@@ -49,6 +49,11 @@ OUT_DIR = HERE / "A1_Outputs"
 SCENARIOS_DEFAULT = ["BAU", "INV", "OPT"]
 PREFIX = "PWRBCK"
 
+# Override del VariableCost para PWRBCK. El OG trae 999999 (sentinel); sobrescribimos
+# por un valor razonable para que las BCK puedan despacharse a un costo finito.
+# Ajustable vía CLI con --pwrbck-varcost <valor>.
+PWRBCK_VARCOST_DEFAULT = 1750.0
+
 # Parameter IDs (mismos que A1_Pre_processing_OG_csvs.py)
 SECONDARY_PARAM_IDS = {
     "CapitalCost": 1,
@@ -447,6 +452,8 @@ def main() -> None:
                         help=f"escenarios short-code, esperan A1_Outputs/A1_Outputs_<X>/ (default: {SCENARIOS_DEFAULT})")
     parser.add_argument("--scen-paths", nargs="+", default=None,
                         help="paths explícitos a carpetas de escenario; si se usa, reemplaza a --scenarios")
+    parser.add_argument("--pwrbck-varcost", type=float, default=PWRBCK_VARCOST_DEFAULT,
+                        help=f"override VariableCost para PWRBCK (default: {PWRBCK_VARCOST_DEFAULT})")
     args = parser.parse_args()
 
     apply_changes = args.apply and not args.dry_run
@@ -466,6 +473,12 @@ def main() -> None:
     for name, df in csvs.items():
         techs = df["TECHNOLOGY"].nunique() if not df.empty else 0
         print(f"  {name:24s} rows={len(df):5d}  techs={techs}")
+
+    # Override del VariableCost para PWRBCK (el OG trae 999999 como sentinel).
+    if not csvs["VariableCost"].empty:
+        csvs["VariableCost"]["VALUE"] = float(args.pwrbck_varcost)
+        print(f"\n[Info] VariableCost PWRBCK sobrescrito a {args.pwrbck_varcost} "
+              f"({len(csvs['VariableCost'])} filas).")
 
     # Aplica remap opcional PWRBCK OutputActivityRatio FUEL ELC*01 -> ELC*02
     # (no-op si pwrbck_output_to_elc02 está en false en Config_region_consolidation.yaml).
