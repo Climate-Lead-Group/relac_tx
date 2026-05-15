@@ -24,6 +24,30 @@ with open('Config_MOMF_T1_A.yaml', 'r') as file:
     # Load content file
     params = yaml.safe_load(file)
 
+# === Pre-solver validation (V1: per-year, V2: cumulative, V3: activity-vs-capacity) ===
+if params.get('pre_solver_validation', True):
+    try:
+        from B1b_Pre_solver_validation import run as _pre_solver_validate
+        _scenario = params['xtra_scen']['Main_Scenario']
+        _xlsx_path = os.path.join(
+            params['A1_outputs'],
+            params['A1_outputs'] + '_' + _scenario + params['Print_Paramet']
+        )
+        _interactive = params.get('pre_solver_validation_interactive', True)
+        _any_fix, _abort = _pre_solver_validate(
+            _scenario, _xlsx_path, interactive=_interactive,
+            base_year=int(params.get('base_year', 0)) or None,
+        )
+        if _abort:
+            print(f"[VALIDATE] User aborted scenario {_scenario}; exiting.")
+            sys.exit(1)
+        if _any_fix:
+            print(f"[VALIDATE] Fixes applied; B1 continues with corrected Excel.")
+    except Exception as _e:
+        print(f"[WARN] Pre-solver validation failed: {_e}. Continuing.")
+        import traceback; traceback.print_exc()
+# === end pre-solver validation ===
+
 baseyear = params['base_year']
 endyear = params['final_year']
 global time_range_vector
