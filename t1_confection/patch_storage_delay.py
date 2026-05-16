@@ -12,10 +12,13 @@ again so the optimizer can add storage.
 What it writes:
   1. A sibling datafile with:
      - StorageBuildAllowed = 0 for targeted storages in blocked years.
-     - PWRLDS*/PWRSDS* TotalAnnualMaxCapacity and
-       TotalAnnualMaxCapacityInvestment set to 0 in blocked years.
-     - Those same PWR storage caps set to the configured open value
+     - PWRLDS*/PWRSDS* TotalAnnualMaxCapacityInvestment set to 0 in
+       blocked years (blocks new builds) and to the configured open value
        (default -1, i.e. unconstrained) in later years.
+     - TotalAnnualMaxCapacity (total stock cap) is intentionally NOT
+       overridden: setting it to 0 in blocked years would conflict with
+       any pre-existing ResidualCapacity > 0 on the same (r,t,y) tuple,
+       breaking OSeMOSYS's Residual <= MaxCapacity sanity check.
      - Blocking-year minimum capacity/investment rows for those storage
        technologies dropped to avoid min-vs-max conflicts.
   2. A sibling model file with one new parameter and one new constraint:
@@ -36,8 +39,12 @@ STORAGE_ALLOWED_PARAM = "StorageBuildAllowed"
 STORAGE_DELAY_CONSTRAINT = "SD1_StorageBuildDelay"
 
 LINK_PARAMS = ("TechnologyToStorage", "TechnologyFromStorage")
+# Only patch the Investment cap. Patching TotalAnnualMaxCapacity to 0 in blocked
+# years conflicts with any pre-existing ResidualCapacity > 0 (OSeMOSYS's
+# Residual <= TotalAnnualMaxCapacity sanity check fails before the LP is built).
+# Blocking Investment alone is sufficient: with new builds = 0 in blocked years,
+# AccumulatedNewCapacity stays at 0 and total capacity stays at residual.
 TECH_CAP_PARAMS = (
-    "TotalAnnualMaxCapacity",
     "TotalAnnualMaxCapacityInvestment",
 )
 TECH_MIN_PARAMS = (
