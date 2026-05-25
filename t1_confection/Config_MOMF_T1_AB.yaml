@@ -34,7 +34,7 @@ iteration_time: 20000
 cbc_random_seed: 12345        # Random seed for reproducibility
 
 # For CPLEX use
-cplex_threads: 12
+cplex_threads: 4
 cplex_random_seed: 12345      # Random seed for reproducibility
 
 # For Gurobi use
@@ -48,9 +48,9 @@ del_files: False
 only_main_scenario: False
 
 # Paralle scenarios
-parallel: False
+parallel: True
 # Number of scenario per run
-max_x_per_iter: 4
+max_x_per_iter: 3
 
 # Write A2 otoole outputs
 A2_otoole_outputs: True
@@ -81,7 +81,7 @@ annualize_capital: True
 # produced by patch_storage_delay.py, and combined inputs/outputs are written
 # with `storage_delay_prefix_final_files` so baseline RELAC_TX_* artifacts are
 # not overwritten.
-storage_delay_active: False
+storage_delay_active: True
 storage_delay_first_n_years: 5
 storage_delay_storage_prefixes:
   - SDS
@@ -96,7 +96,7 @@ storage_delay_root_datafile: "RELAC_TX_data_storage_delay.txt"
 ########################################################################################
 # === Storage stripping diagnostic ===
 # Master switch. False (or absent) = pipeline runs unchanged (no strip).
-strip_storage_active: False
+strip_storage_active: True
 
 # --- Tier 3: zero storage (baseline) ---
 strip_storage_mode: "all"
@@ -117,7 +117,7 @@ strip_storage_suffix: "NoStorage"
 # === PWRBCK cap-opening diagnostic ===
 # Opens TotalAnnualMaxCapacity and TotalAnnualMaxCapacityInvestment for PWRBCK*
 # backstop techs. Runs after strip_storage and before the careful XLSX repair.
-open_pwrbck_active: False
+open_pwrbck_active: True
 open_pwrbck_value: 9999
 open_pwrbck_pattern: "PWRBCK"
 open_pwrbck_suffix: "OpenBCK"
@@ -133,7 +133,7 @@ reserve_margin_repair_active: False
 # This calls patch_reserve_margin_repair_careful_xlsx.py.
 # It produces e.g.:
 #   Pre_processed_BAU_0_NoStorage_OpenBCK_RMCarefulXLSX.txt
-reserve_margin_xlsx_active: False
+reserve_margin_xlsx_active: True
 reserve_margin_xlsx_suffix: "RMCarefulXLSX"
 reserve_margin_xlsx_workbook: "firm_capacity_fallbacks_by_cr.xlsx"
 reserve_margin_xlsx_sheet: "fallbacks"
@@ -157,6 +157,12 @@ reserve_margin_xlsx_sentinel_values:
   - 0
   - 9999
 
+# Global ReserveMargin value applied to every (REGION, YEAR) tuple.
+# When set, the careful XLSX patcher rewrites the ReserveMargin param block
+# with explicit entries instead of relying on the GMPL default (1.0).
+# Set to null/unset to leave the existing block untouched.
+reserve_margin_xlsx_global_value: 0.15
+
 # Optional stricter final-style alternatives:
 # Use ONE of these after the diagnostic case solves.
 #
@@ -165,3 +171,48 @@ reserve_margin_xlsx_sentinel_values:
 #
 # Alternative B: explicitly set PWRBCK reserve credit to zero.
 # reserve_margin_xlsx_backstop_credit: 0
+
+########################################################################################
+# === Activity Upper Limit (cap on TotalTechnologyAnnualActivityUpperLimit) ===
+# Reads rows from "Secondary Techs" of A-O_Parametrization.xlsx where
+# Parameter == activity_upper_limit_parameter_label. Cell values are fractions
+# in [0,1] of the per-country electricity demand (SpecifiedAnnualDemand) for
+# that year. The patcher converts fraction -> absolute activity cap and writes
+# them into the TotalTechnologyAnnualActivityUpperLimit block of the .txt.
+#
+# Per-scenario: activity_upper_limit_scenarios lists scenario names where the
+# patch applies; data for each scenario lives in that scenario's own xlsx.
+activity_upper_limit_active: True
+activity_upper_limit_scenarios: ["BAU"]
+activity_upper_limit_parameter_label: "TotalTechnologyAnnualActivityUpperLimit_fraction"
+activity_upper_limit_demand_fuel_prefixes: ["ELC"]
+activity_upper_limit_tech_prefixes: ["PWR"]
+activity_upper_limit_exclude_prefixes: ["PWRSDS", "PWRLDS", "PWRBCK", "PWRTRN"]
+activity_upper_limit_suffix: "ActUpLim"
+# V4 sum-of-fractions coverage check tolerance (per region/fuel/year).
+# If sum(fractions across capped techs) < 1.0 - tolerance, B1b raises a V4
+# warning (no auto-fix, just an early heads-up).
+activity_upper_limit_coverage_tolerance: 0.15
+
+########################################################################################
+# === Sync patched CSVs back into otoole input mirror ===
+# After the patcher chain runs, extract parameter blocks from the final patched
+# .txt and overwrite the matching CSVs in a sibling mirror folder
+# (default: A2_Outputs_Params_otoole_patched/). generate_combined_input_file()
+# then reads from this mirror so the patched values appear in
+# RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv (and the legacy
+# RELAC_TX_Combined_Inputs_Outputs.csv when storage_delay is off).
+#
+# The original A2_Outputs_Params_otoole/<scen>/ CSVs are never modified, so
+# the patcher chain remains correctly retriggered if the user changes the
+# fallback workbook or other inputs between runs.
+sync_patched_csvs_active: True
+sync_patched_csvs_folder: 'A2_Outputs_Params_otoole_patched'
+sync_patched_csvs_params:
+  - ReserveMargin
+  - ReserveMarginTagTechnology
+  - TotalAnnualMaxCapacity
+  - TotalAnnualMaxCapacityInvestment
+  - TotalAnnualMinCapacity
+  - TotalAnnualMinCapacityInvestment
+  - TotalTechnologyAnnualActivityUpperLimit
