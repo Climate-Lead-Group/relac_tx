@@ -1,0 +1,132 @@
+# Lid rule override for relac_tx.
+#
+# 1) Switched from default 'proportional' to 'uniform' because proportional
+# mode produced infeasible LPs in any year where pool_delta(cr, y) = 0
+# (residual capacity flat or declining), where the proportional lid collapses
+# to 0 and forbids new investment. Uniform mode uses base_pct(y) * mult(cr, y)
+# * pool(cr, y), which always yields positive headroom whenever there is any
+# residual capacity in cr.
+#
+# 2) Enabled zero_is_placeholder_in_lid_rows because the relac_tx upstream
+# pipeline (A1_Pre_processing_OG_csvs.py) marks the whole MaxInv row of a
+# PWR tech as "needs lid" by emitting 9999 in some years and leaving spurious
+# 0s in early base-year cells. Those 0s do NOT represent intentional caps —
+# they are missing-data artifacts. With this flag on, the lid overwrites them
+# too (only in rows that already contain at least one 9999). Rows without any
+# 9999 (e.g., PWRNGS* in countries where Natural Gas expansion is policy-
+# prohibited — every year is 0 explicitly, no 9999 anywhere) are preserved.
+# Required to resolve CPLEX infeasibility on PWRBIODOMXX 2023-2025 in BAU.
+#
+# 3) Global schedule override (2026-05-22):
+# The script's default schedule (5% / 10% / 20%) was too loose for relac_tx
+# country pool sizes. First override (5% / 3% / 5%) tightened 2030+ but the
+# renewable build-out in 2035 was still unrealistic per domain review.
+# Applying an additional -25% across the whole schedule (the values written
+# to xlsx by the lid become 75% of the previous override).
+#
+#   2023-2029  =  3.75%  (was 5%,  -25%)
+#   2030-2039  =  2.25%  (was 3%,  -25%)   <- horizon where 2035 build-out lives
+#   2040-2050  =  3.75%  (was 5%,  -25%)
+#
+# 4) Per-prefix override for wind, geothermal, and solar PV (2026-05-22):
+# Even with the global schedule tightened, BAU output still showed wind
+# (PWRWON*/PWRWOF*) and geothermal (PWRGEO*) growing from a small base in
+# 2023 to dominating renewable production by 2050.
+# The fix is selective: leave non-renewables and hydro/biomass on the global
+# schedule, but apply a much tighter schedule to WON/WOF/GEO. The override
+# bites every year (including 2023-2029) so base-year capacity doesn't
+# expand under the existing 3.75% cap either. GEO is tighter than WON/WOF
+# because its capacity-factor is ~2.6x higher (0.80 vs 0.30), so the same
+# pct on capacity yields 2.6x more annual PJ — pct on capacity must be
+# correspondingly smaller for an equivalent PJ-level constraint.
+#
+# After the first BAU re-run with WON/WOF/GEO override and --force-overwrite,
+# solar PV (PWRSPV*) absorbed most of the GEO/WON gap (+165% in 2030,
+# capacity +22-39%) — so SPV needs an override too. Same pct as WON/WOF
+# because CF is similar (~0.20-0.30).
+#
+#   prefix WON  =  1.0% / 0.5% / 1.0%   (was 3.75% / 2.25% / 3.75% on global)
+#   prefix WOF  =  1.0% / 0.5% / 1.0%
+#   prefix GEO  =  0.5% / 0.3% / 0.5%
+#   prefix SPV  =  1.0% / 0.5% / 1.0%   (added 2026-05-22 after SPV absorbed
+#                                        the GEO gap in BAU iteration 1)
+#
+# 5) Per-prefix override for wave, biomass, hydro (2026-05-22, iter 2):
+# After WON/WOF/GEO/SPV override + --force-overwrite, BAU still showed:
+# wave (PWRWAV*) ballooning from 0 PJ in 2050 to 972 PJ; biomass (PWRBIO*)
+# +84% in 2050; hydro (PWRHYD*) +96% in 2050. The system was substituting
+# inside the renewable basket. To prevent this, override the remaining
+# renewables too.
+#
+#   prefix WAV  =  0.3% / 0.2% / 0.3%   (high CF ~45%, similar to GEO)
+#   prefix BIO  =  1.0% / 0.5% / 1.0%   (moderate CF ~70%)
+#   prefix HYD  =  0.5% / 0.3% / 0.5%   (NOTE: HYD producibility jump
+#                                        came from increased utilization,
+#                                        NOT new investment. NewCapacity
+#                                        HYD ≈ 0.06 GW/yr both V0 and V2.
+#                                        Override is included for
+#                                        completeness; to actually limit
+#                                        HYD generation, use
+#                                        TotalTechnologyAnnualActivityUpperLimit
+#                                        which is outside the LID script.)
+#
+# 6) Absolute lid for unfleeted gen techs (2026-05-25):
+# The pool-based lid only fires for techs that have residual capacity or
+# required builds — wave (PWRWAV*) has zero residual everywhere on Earth, and
+# geothermal in countries without a fleet (ARG/BOL/BRA/BRB/COL/DOM/ECU/HTI/
+# PAN/PER/PRY/URY) is in the same situation. Without a per-prefix absolute
+# cap, MaxCapInv stays empty for those techs and the optimizer can build
+# unlimited GW (e.g. MEX wave hit 26.5 GW in 2025 of a tech with ~0 GW
+# commercial deployment worldwide).
+#
+#   WAV  = 0     # non-commercial; ban new investment in BAU
+#   GEO  = 0.2   # GW/year for unfleeted countries — starting calibration
+#                # point; tune up if a country has documented potential and
+#                # the cap binds, tune down if the optimizer is still
+#                # over-deploying.
+#
+# Scaled by demand mult when ramp_from_demand is on (default), so the cap
+# at the reference year (2024) equals the configured value and grows linearly
+# with each cr's demand.
+
+rule_mode: uniform
+zero_is_placeholder_in_lid_rows: true
+
+percentage_by_year:
+  "2023-2029": 0.0375
+  "2030-2039": 0.0225
+  "2040-2050": 0.0375
+
+percentage_by_year_by_prefix:
+  WON:
+    "2023-2029": 0.010
+    "2030-2039": 0.005
+    "2040-2050": 0.010
+  WOF:
+    "2023-2029": 0.010
+    "2030-2039": 0.005
+    "2040-2050": 0.010
+  GEO:
+    "2023-2029": 0.005
+    "2030-2039": 0.003
+    "2040-2050": 0.005
+  SPV:
+    "2023-2029": 0.010
+    "2030-2039": 0.005
+    "2040-2050": 0.010
+  WAV:
+    "2023-2029": 0.003
+    "2030-2039": 0.002
+    "2040-2050": 0.003
+  BIO:
+    "2023-2029": 0.010
+    "2030-2039": 0.005
+    "2040-2050": 0.010
+  HYD:
+    "2023-2029": 0.005
+    "2030-2039": 0.003
+    "2040-2050": 0.005
+
+absolute_by_prefix:
+  WAV: 0
+  GEO: 0.2
