@@ -1063,21 +1063,29 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
             # restoring the xlsx between runs. Zeros in rows without any
             # 9999 (e.g., intentional bans like PWRNGS* in policy-prohibited
             # countries) are still preserved either way.
-            is_placeholder = (
-                old is None
-                or (isinstance(old, (int, float))
-                    and not pd.isna(old)
-                    and float(old) == float(PLACEHOLDER_VALUE))
-                or (ZERO_IS_PLACEHOLDER_IN_LID_ROWS
-                    and row_has_placeholder_9999
-                    and isinstance(old, (int, float))
-                    and not pd.isna(old)
-                    and float(old) == 0.0)
-                or (FORCE_OVERWRITE
-                    and isinstance(old, (int, float))
-                    and not pd.isna(old)
-                    and float(old) > 0.0)
-            )
+            # Speculative techs: the absolute lid from LID_ABSOLUTE_BY_PREFIX is
+            # authoritative regardless of what's in the cell. Source data often
+            # has a coincidental 0 (not None, not 9999) for unfleeted techs;
+            # without this override that 0 would be treated as a manual value and
+            # the configured cap (e.g., GEO=0.2) would never be written.
+            if is_speculative:
+                is_placeholder = True
+            else:
+                is_placeholder = (
+                    old is None
+                    or (isinstance(old, (int, float))
+                        and not pd.isna(old)
+                        and float(old) == float(PLACEHOLDER_VALUE))
+                    or (ZERO_IS_PLACEHOLDER_IN_LID_ROWS
+                        and row_has_placeholder_9999
+                        and isinstance(old, (int, float))
+                        and not pd.isna(old)
+                        and float(old) == 0.0)
+                    or (FORCE_OVERWRITE
+                        and isinstance(old, (int, float))
+                        and not pd.isna(old)
+                        and float(old) > 0.0)
+                )
             if is_placeholder:
                 proposed = lid
                 # Distinguish overwrites of prior positive values (force flag)
@@ -1122,13 +1130,13 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
                     {"tech": tech, "year": year, "value": old}
                 )
 
-        # Flip Projection.Mode to "User defined" when the row was modified AND the
-        # current mode is empty-equivalent: the OSTRAM "EMPTY" sentinel, a truly
-        # blank cell (openpyxl returns None), an empty string, or whitespace-only.
-        # We deliberately preserve legitimate projection modes like "Yearly percent
-        # change" or "Interpolate to final value" — overriding those silently
-        # corrupts the projection logic downstream.
-        if row_was_modified and proj_mode_col is not None:
+        # Flip Projection.Mode to "User defined" for any row in process_set whose
+        # mode is empty-equivalent (None, "", "EMPTY", whitespace). Runs even when
+        # row_was_modified=False — re-runs where cells happen to already equal the
+        # lid (e.g., WAV=0 over source-data 0) would otherwise leave mode="EMPTY"
+        # and the model would ignore the cells. Legitimate projection modes
+        # (Yearly percent change, Interpolate to final value, ...) are preserved.
+        if proj_mode_col is not None:
             mode_cell = ws.cell(row=row_idx, column=proj_mode_col)
             cur = mode_cell.value
             cur_norm = cur.strip() if isinstance(cur, str) else cur
