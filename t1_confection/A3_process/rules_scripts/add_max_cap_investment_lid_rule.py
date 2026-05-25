@@ -1122,15 +1122,19 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
                     {"tech": tech, "year": year, "value": old}
                 )
 
-        # Any row we modified must end with Projection.Mode = "User defined",
-        # otherwise A2/B1 ignore the cell values we just wrote. Flip unconditionally
-        # — covers both the OSTRAM "EMPTY" sentinel and truly blank (None) cells,
-        # which openpyxl returns as None. Skipped only when already User defined.
+        # Flip Projection.Mode to "User defined" when the row was modified AND the
+        # current mode is empty-equivalent: the OSTRAM "EMPTY" sentinel, a truly
+        # blank cell (openpyxl returns None), an empty string, or whitespace-only.
+        # We deliberately preserve legitimate projection modes like "Yearly percent
+        # change" or "Interpolate to final value" — overriding those silently
+        # corrupts the projection logic downstream.
         if row_was_modified and proj_mode_col is not None:
             mode_cell = ws.cell(row=row_idx, column=proj_mode_col)
-            if mode_cell.value != PROJ_MODE_USER:
+            cur = mode_cell.value
+            cur_norm = cur.strip() if isinstance(cur, str) else cur
+            if cur_norm is None or cur_norm == "" or cur_norm == PROJ_MODE_EMPTY:
                 log["projection_mode_flips"].append({
-                    "tech": tech, "old_mode": mode_cell.value,
+                    "tech": tech, "old_mode": cur,
                 })
                 mode_cell.value = PROJ_MODE_USER
 
