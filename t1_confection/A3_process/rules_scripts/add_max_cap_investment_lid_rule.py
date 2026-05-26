@@ -340,6 +340,16 @@ LID_ABSOLUTE_BY_PREFIX: dict = {
     "WAV": 0.0,
 }
 
+# --- Per-tech flat overrides --------------------------------------------------
+# Map of EXACT tech name -> constant MaxCapInv value (GW/year). When a tech
+# appears here, the lid script writes the given value in EVERY year, bypassing
+# both the pool-based lid formula and the preserved_manual rule. Use to enforce
+# a "flat schedule" on specific tech+country combinations whose D3-derived
+# step+spike pattern is not desired. The standard untie rule still applies — if
+# MinCapInv exceeds the flat value in any year, that cell is bumped to
+# MinCapInv * UNTIE_MULTIPLIER (preserves LP feasibility).
+LID_FLAT_OVERRIDES_BY_TECH: dict = {}
+
 
 # ---------------------------------------------------------------------------
 # Backup
@@ -480,6 +490,15 @@ def load_config(yaml_path: Path) -> dict:
             absolute_map[prefix_norm] = float(value)
         out["absolute_by_prefix"] = absolute_map
 
+    if "flat_overrides_by_tech" in cfg:
+        flat_map: dict = {}
+        for tech, value in (cfg["flat_overrides_by_tech"] or {}).items():
+            tech_norm = str(tech).strip().upper()
+            if not tech_norm:
+                continue
+            flat_map[tech_norm] = float(value)
+        out["flat_overrides_by_tech"] = flat_map
+
     if "security_factor" in cfg:
         out["security_factor"] = float(cfg["security_factor"])
 
@@ -506,6 +525,7 @@ def apply_config(cfg: dict) -> None:
     """
     global LID_RULE_MODE, LID_PERCENTAGE_DEFAULT, LID_PERCENTAGE_BY_YEAR
     global LID_PERCENTAGE_BY_YEAR_BY_PREFIX, LID_ABSOLUTE_BY_PREFIX
+    global LID_FLAT_OVERRIDES_BY_TECH
     global LID_SECURITY_FACTOR, LID_RAMP_FROM_DEMAND
     global ZERO_IS_PLACEHOLDER_IN_LID_ROWS, FORCE_OVERWRITE
     if "rule_mode" in cfg:
@@ -518,6 +538,8 @@ def apply_config(cfg: dict) -> None:
         LID_PERCENTAGE_BY_YEAR_BY_PREFIX = cfg["percentage_by_year_by_prefix"]
     if "absolute_by_prefix" in cfg:
         LID_ABSOLUTE_BY_PREFIX = cfg["absolute_by_prefix"]
+    if "flat_overrides_by_tech" in cfg:
+        LID_FLAT_OVERRIDES_BY_TECH = cfg["flat_overrides_by_tech"]
     if "security_factor" in cfg:
         LID_SECURITY_FACTOR = cfg["security_factor"]
     if "ramp_from_demand" in cfg:
@@ -996,6 +1018,9 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
         "absolute_by_prefix": {
             p: float(v) for p, v in LID_ABSOLUTE_BY_PREFIX.items()
         },
+        "flat_overrides_by_tech": {
+            t: float(v) for t, v in LID_FLAT_OVERRIDES_BY_TECH.items()
+        },
         "speculative_techs": sorted(speculative_techs),
     }
 
@@ -1028,11 +1053,45 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
 
         row_was_modified = False
 
+        is_flat_override = tech in LID_FLAT_OVERRIDES_BY_TECH
+
         for year, col in year_cols.items():
             cell = ws.cell(row=row_idx, column=col)
             old = cell.value
             pool = pool_map.get((cr, year), 0.0)
             min_inv = mininv_map.get((tech, year), 0.0)
+
+            # Flat override short-circuit: write a constant value across all
+            # years, bypassing the pool-based formula and the preserved_manual
+            # rule. The untie rule below still applies. Used to enforce a
+            # CTO-mandated flat MaxCapInv schedule for specific tech+country
+            # combinations (configured via flat_overrides_by_tech in YAML).
+            if is_flat_override:
+                lid = LID_FLAT_OVERRIDES_BY_TECH[tech]
+                proposed = lid
+                reason = "flat_override"
+                if min_inv > 0 and proposed <= min_inv:
+                    proposed = min_inv * UNTIE_MULTIPLIER
+                    reason = "untie_min_inv"
+                if values_differ(old, proposed):
+                    cell.value = proposed
+                    row_was_modified = True
+                    log["changes"].append({
+                        "tech": tech,
+                        "country_region": cr,
+                        "year": year,
+                        "old": old,
+                        "new": proposed,
+                        "reason": reason,
+                        "pool": pool,
+                        "min_inv": min_inv,
+                        "lid": lid,
+                    })
+                else:
+                    log["preserved"].append(
+                        {"tech": tech, "year": year, "value": old}
+                    )
+                continue
 
             # Compute lid per the active mode (or absolute, if speculative).
             if is_speculative:
@@ -1271,6 +1330,9 @@ def run(input_dir, sheets: list = None,
     }
     log["lid_absolute_by_prefix"] = {
         p: float(v) for p, v in LID_ABSOLUTE_BY_PREFIX.items()
+    }
+    log["lid_flat_overrides_by_tech"] = {
+        t: float(v) for t, v in LID_FLAT_OVERRIDES_BY_TECH.items()
     }
     log["lid_ramp_from_demand"] = LID_RAMP_FROM_DEMAND
     log["lid_rule_mode"] = LID_RULE_MODE

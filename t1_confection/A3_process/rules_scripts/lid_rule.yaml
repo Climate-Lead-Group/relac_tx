@@ -130,3 +130,25 @@ percentage_by_year_by_prefix:
 absolute_by_prefix:
   WAV: 0
   GEO: 0.2
+
+# 7) Per-tech flat overrides (2026-05-25, CTO request):
+# Forces a constant MaxCapacityInvestment (GW/year) across the full horizon for
+# specific PWR tech codes. Overrides BOTH the pool-based lid formula and the
+# preserved_manual rule (i.e., overwrites whatever D3 or any prior loader
+# wrote, including the 2029 spike).
+#
+# Use when the step+spike pattern coming from D3_load_lac_max_capacity_caps.py
+# + a stale Min*1.01 untie event is not desired and a flat schedule is
+# preferred. Standard untie rule still applies: in any year where
+# MinCapInv > flat value, the cell is bumped to MinCapInv * 1.01.
+#
+# Add tech codes as needed (one entry per tech-country combination):
+#
+#   flat_overrides_by_tech:
+#     PWRWONBRAXX: 3.5   # Onshore wind, Brazil — flat 3.5 GW/yr 2023-2050
+#     PWRSPVBRAXX: 5.5   # Solar PV,    Brazil — flat 5.5 GW/yr 2023-2050
+#
+# Set to {} or omit the block entirely to disable.
+flat_overrides_by_tech:
+  PWRWONBRAXX: 3.5
+  PWRSPVBRAXX: 5.5
