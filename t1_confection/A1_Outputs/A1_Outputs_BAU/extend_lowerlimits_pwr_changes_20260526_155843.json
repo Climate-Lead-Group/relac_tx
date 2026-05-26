@@ -1,0 +1,15 @@
+{
+  "input_dir": "C:\\Users\\kt0031\\Desktop\\relac_tx\\t1_confection\\A1_Outputs\\A1_Outputs_BAU",
+  "paramfile": "C:\\Users\\kt0031\\Desktop\\relac_tx\\t1_confection\\A1_Outputs\\A1_Outputs_BAU\\A-O_Parametrization.xlsx",
+  "sheet": "Secondary Techs",
+  "parameter": "TotalTechnologyAnnualActivityLowerLimit",
+  "tech_prefix": "PWR",
+  "base_year": 2024,
+  "end_year": 2050,
+  "force_overwrite": false,
+  "rows_matched": 380,
+  "rows_touched": 0,
+  "rows_skipped_no_base": 255,
+  "total_cell_writes": 0,
+  "changes": []
+}
