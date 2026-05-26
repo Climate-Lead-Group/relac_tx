@@ -19,6 +19,8 @@ from patch_reserve_margin_repair_careful import (
     CapFallback,
     build_tag_targets,
     capacity_floors,
+    extract_simple_set,
+    find_param_block,
     fmt_number,
     make_fallback_lookup,
     parse_assignment_list,
@@ -29,6 +31,33 @@ from patch_reserve_margin_repair_careful import (
     stock_flow_warnings,
     techs_with_any_min_investment,
 )
+
+
+def patch_reserve_margin_value(
+    lines: list[str],
+    value: float,
+) -> tuple[list[str], int]:
+    """Replace the ReserveMargin block with explicit (REGION, YEAR) entries at `value`.
+
+    Returns (patched_lines, n_entries_written). If the REGION set or YEAR list
+    cannot be resolved, the lines are returned unchanged with n=0.
+    """
+    try:
+        start, end = find_param_block(lines, "ReserveMargin")
+    except ValueError:
+        return lines, 0
+
+    regions = extract_simple_set(lines, "REGION")
+    years = select_years(lines)
+    if not regions or not years:
+        return lines, 0
+
+    formatted = fmt_number(value)
+    header_line = lines[start]
+    newline = "\r\n" if header_line.endswith("\r\n") else "\n"
+    new_rows = [f"{r} {y} {formatted}{newline}" for r in regions for y in years]
+    patched = lines[: start + 1] + new_rows + lines[end:]
+    return patched, len(new_rows)
 
 
 def normalize_header(value: object) -> str:
@@ -138,6 +167,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backstop-prefixes", nargs="+", default=["PWRBCK"])
     parser.add_argument("--ccs-prefixes", nargs="+", default=["PWRCCS"])
 
+    parser.add_argument(
+        "--reserve-margin-value",
+        type=float,
+        default=None,
+        help=(
+            "If set, populate the ReserveMargin param block with this value for "
+            "every (REGION, YEAR) tuple. Without this flag, the existing block "
+            "is left untouched."
+        ),
+    )
+
     parser.add_argument("--target-prefixes", nargs="+", default=["PWRPET", "PWROIL", "PWRNGS"])
     parser.add_argument(
         "--sentinel-values",
@@ -192,6 +232,13 @@ def main() -> int:
     fallback_lookup = make_fallback_lookup(fallbacks)
 
     patched, tag_updates, tag_inserts = patch_reserve_tags(lines, tag_targets)
+
+    reserve_margin_inserts = 0
+    if args.reserve_margin_value is not None:
+        patched, reserve_margin_inserts = patch_reserve_margin_value(
+            patched, args.reserve_margin_value
+        )
+
     stock_floors, flow_floors = capacity_floors(patched, args.target_prefixes)
     min_investment_techs = techs_with_any_min_investment(patched, args.target_prefixes)
     patched, stock_changed, stock_skipped, stock_warnings = patch_capacity_param(
@@ -236,6 +283,11 @@ def main() -> int:
         print(f"CCS reserve tag: {tag_counts.get('ccs_techs', 0)} techs at {fmt_number(ccs_credit)}")
     print(f"ReserveMarginTagTechnology rows updated: {tag_updates}")
     print(f"ReserveMarginTagTechnology rows inserted: {tag_inserts}")
+    if args.reserve_margin_value is not None:
+        print(
+            f"ReserveMargin entries written: {reserve_margin_inserts} "
+            f"at value {fmt_number(args.reserve_margin_value)}"
+        )
     print(f"{STOCK_PARAM} sentinel rows changed: {stock_changed}")
     print(f"{STOCK_PARAM} sentinel rows skipped: {stock_skipped}")
     print(f"{FLOW_PARAM} sentinel rows changed: {flow_changed}")

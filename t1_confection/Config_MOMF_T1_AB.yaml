@@ -157,6 +157,12 @@ reserve_margin_xlsx_sentinel_values:
   - 0
   - 9999
 
+# Global ReserveMargin value applied to every (REGION, YEAR) tuple.
+# When set, the careful XLSX patcher rewrites the ReserveMargin param block
+# with explicit entries instead of relying on the GMPL default (1.0).
+# Set to null/unset to leave the existing block untouched.
+reserve_margin_xlsx_global_value: 0.15
+
 # Optional stricter final-style alternatives:
 # Use ONE of these after the diagnostic case solves.
 #
@@ -165,3 +171,46 @@ reserve_margin_xlsx_sentinel_values:
 #
 # Alternative B: explicitly set PWRBCK reserve credit to zero.
 # reserve_margin_xlsx_backstop_credit: 0
+
+########################################################################################
+# === Activity Upper Limit (cap on TotalTechnologyAnnualActivityUpperLimit) ===
+# Reads rows from "Secondary Techs" of A-O_Parametrization.xlsx where
+# Parameter == activity_upper_limit_parameter_label. Cell values are fractions
+# in [0,1] of the per-country electricity demand (SpecifiedAnnualDemand) for
+# that year. The patcher converts fraction -> absolute activity cap and writes
+# them into the TotalTechnologyAnnualActivityUpperLimit block of the .txt.
+#
+# Per-scenario: activity_upper_limit_scenarios lists scenario names where the
+# patch applies; data for each scenario lives in that scenario's own xlsx.
+activity_upper_limit_active: False
+activity_upper_limit_scenarios: ["BAU"]
+activity_upper_limit_parameter_label: "TotalTechnologyAnnualActivityUpperLimit_fraction"
+activity_upper_limit_demand_fuel_prefixes: ["ELC"]
+activity_upper_limit_tech_prefixes: ["PWR"]
+activity_upper_limit_exclude_prefixes: ["PWRSDS", "PWRLDS", "PWRBCK", "PWRTRN"]
+activity_upper_limit_suffix: "ActUpLim"
+# V4 sum-of-fractions coverage check tolerance (per region/fuel/year).
+# If sum(fractions across capped techs) < 1.0 - tolerance, B1b raises a V4
+# warning (no auto-fix, just an early heads-up).
+activity_upper_limit_coverage_tolerance: 0.15
+
+########################################################################################
+# === Sync patched CSVs back into the original A2 otoole input folder ===
+# After the patcher chain runs, extract parameter blocks from the final patched
+# .txt and OVERWRITE IN PLACE the matching CSVs inside
+# A2_Outputs_Params_otoole/<scen>/. generate_combined_input_file() then reads
+# from this folder so the patched values appear in
+# RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv (and the legacy
+# RELAC_TX_Combined_Inputs_Outputs.csv when storage_delay is off).
+#
+# Note: this writes into the original A2 folder in place, so re-running the
+# pipeline regenerates the CSVs from A1 before the patcher chain re-applies.
+sync_patched_csvs_active: True
+sync_patched_csvs_params:
+  - ReserveMargin
+  - ReserveMarginTagTechnology
+  - TotalAnnualMaxCapacity
+  - TotalAnnualMaxCapacityInvestment
+  - TotalAnnualMinCapacity
+  - TotalAnnualMinCapacityInvestment
+  - TotalTechnologyAnnualActivityUpperLimit

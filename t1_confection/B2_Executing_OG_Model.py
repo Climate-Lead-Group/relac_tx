@@ -548,6 +548,10 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
     if not params.get('reserve_margin_xlsx_patch_ccs', True):
         command.append('--skip-ccs-credit')
 
+    rm_value = params.get('reserve_margin_xlsx_global_value')
+    if rm_value is not None:
+        command += ['--reserve-margin-value', str(rm_value)]
+
     print(f"Repairing reserve margin data from XLSX for '{scenario_name}_0' (suffix={suffix}):")
     print(' '.join(command))
     result = subprocess.run(command, capture_output=True, text=True)
@@ -558,6 +562,177 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
         if result.stderr:
             print(result.stderr)
     print('#------------------------------------------------------------------------------#')
+
+def run_activity_upper_limit_patcher(params, scenario_name):
+    """
+    Cap TotalTechnologyAnnualActivityUpperLimit using fractions from the
+    scenario's A-O_Parametrization.xlsx. Imported and called directly (no
+    subprocess); see patch_activity_upper_limit.apply.
+
+    YAML keys consumed:
+        activity_upper_limit_active: bool
+        activity_upper_limit_scenarios: list[str]  -- scenarios to apply to
+        activity_upper_limit_parameter_label: str
+        activity_upper_limit_demand_fuel_prefixes: list[str]
+        activity_upper_limit_tech_prefixes: list[str]
+        activity_upper_limit_exclude_prefixes: list[str]
+        activity_upper_limit_suffix: str
+    """
+    if not params.get('activity_upper_limit_active', False):
+        return
+    scenarios = params.get('activity_upper_limit_scenarios', [])
+    if scenarios and scenario_name not in scenarios:
+        return
+
+    suffix = params.get('activity_upper_limit_suffix', 'ActUpLim')
+    here = os.path.dirname(os.path.abspath(__file__))
+
+    base = f"{params['preprocess_data_name']}{scenario_name}_0"
+    chain_parts = []
+    if params.get('storage_delay_active', False):
+        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
+    if params.get('strip_storage_active', False):
+        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
+    if params.get('open_pwrbck_active', False):
+        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
+    if params.get('reserve_margin_repair_active', False):
+        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
+    if params.get('reserve_margin_xlsx_active', False):
+        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
+
+    in_base = f"{base}_{'_'.join(chain_parts)}" if chain_parts else base
+    out_base = f"{in_base}_{suffix}"
+    scenario_exec = os.path.join(params['executables'], scenario_name + '_0')
+    in_file = os.path.join(scenario_exec, f"{in_base}.txt")
+    out_file = os.path.join(scenario_exec, f"{out_base}.txt")
+
+    xlsx_path = os.path.join(
+        here, 'A1_Outputs', f'A1_Outputs_{scenario_name}', 'A-O_Parametrization.xlsx'
+    )
+    a2_root = os.path.join(here, params.get('A2_output_otoole', 'A2_Outputs_Params_otoole'), scenario_name)
+    demand_csv = os.path.join(a2_root, 'SpecifiedAnnualDemand.csv')
+    oar_csv = os.path.join(a2_root, 'OutputActivityRatio.csv')
+
+    missing = [p for p in (in_file, xlsx_path, demand_csv, oar_csv) if not os.path.exists(p)]
+    if missing:
+        print(f"[ERROR] activity_upper_limit patcher missing inputs for '{scenario_name}':")
+        for path in missing:
+            print(f"   - {path}")
+        print('#------------------------------------------------------------------------------#')
+        return
+
+    sys.path.insert(0, here)
+    import patch_activity_upper_limit  # noqa: E402
+
+    print(f"Activity upper-limit patcher for '{scenario_name}_0' (suffix={suffix}):")
+    print(f"  input : {os.path.basename(in_file)}")
+    print(f"  output: {os.path.basename(out_file)}")
+    print(f"  xlsx  : {xlsx_path}")
+    try:
+        summary = patch_activity_upper_limit.apply(
+            Path(in_file), Path(out_file),
+            Path(xlsx_path), Path(demand_csv), Path(oar_csv),
+            params,
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[ERROR] activity_upper_limit patcher failed for '{scenario_name}': {exc}")
+        print('#------------------------------------------------------------------------------#')
+        return
+
+    # The solver path downstream is built without the ActUpLim suffix, so it
+    # reads in_file. Mirror the capped output back onto in_file to ensure the
+    # caps reach the LP.
+    shutil.copy2(out_file, in_file)
+
+    print(
+        f"  techs_capped={summary['techs_capped']}  "
+        f"rows_written={summary['rows_written']}  "
+        f"rows_replaced={summary['rows_replaced']}  "
+        f"rows_skipped_no_demand={summary['rows_skipped_no_demand']}"
+    )
+    for warning in summary.get('warnings', [])[:10]:
+        print(f"  [WARN] {warning}")
+    remaining = len(summary.get('warnings', [])) - 10
+    if remaining > 0:
+        print(f"  ... and {remaining} more warning(s)")
+    print('#------------------------------------------------------------------------------#')
+
+
+def run_sync_patched_csvs(params, scenario_name, base_output_path):
+    """
+    Overlay parameter values from the final patched .txt datafile onto the
+    original A2 otoole input CSV folder, in place. The listed param CSVs are
+    overwritten; non-listed CSVs are untouched.
+
+    YAML keys consumed:
+        sync_patched_csvs_active: bool  -- master switch (default False)
+        sync_patched_csvs_params: list  -- parameter names to extract from the
+            patched .txt and write back into matching CSVs. Default covers the
+            params touched by the storage_delay / open_pwrbck / reserve-margin
+            patchers.
+    """
+    if not params.get('sync_patched_csvs_active', False):
+        return
+
+    chain_parts = []
+    if params.get('storage_delay_active', False):
+        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
+    if params.get('strip_storage_active', False):
+        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
+    if params.get('open_pwrbck_active', False):
+        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
+    if params.get('reserve_margin_repair_active', False):
+        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
+    if params.get('reserve_margin_xlsx_active', False):
+        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
+    if params.get('activity_upper_limit_active', False) and (
+        not params.get('activity_upper_limit_scenarios')
+        or scenario_name in params.get('activity_upper_limit_scenarios', [])
+    ):
+        chain_parts.append(params.get('activity_upper_limit_suffix', 'ActUpLim'))
+
+    if not chain_parts:
+        # No patcher in the chain produced a sibling .txt; nothing to sync.
+        return
+
+    base = f"{params['preprocess_data_name']}{scenario_name}_0"
+    txt_name = f"{base}_{'_'.join(chain_parts)}.txt"
+    txt_path = os.path.join(params['executables'], scenario_name + '_0', txt_name)
+    csv_folder = os.path.join(base_output_path, scenario_name)
+
+    sync_params = params.get('sync_patched_csvs_params', [
+        'ReserveMargin',
+        'ReserveMarginTagTechnology',
+        'TotalAnnualMaxCapacity',
+        'TotalAnnualMaxCapacityInvestment',
+        'TotalAnnualMinCapacity',
+        'TotalAnnualMinCapacityInvestment',
+    ])
+
+    script_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'sync_patched_csvs_from_txt.py',
+    )
+
+    command = [
+        sys.executable,
+        script_path,
+        '--txt', txt_path,
+        '--csv-folder', csv_folder,
+        '--params', *list(sync_params),
+    ]
+
+    print(f"Syncing patched CSVs for '{scenario_name}_0' from {txt_name} into {csv_folder}:")
+    print(' '.join(command))
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"[ERROR] sync_patched_csvs failed for '{scenario_name}':\n{result.stderr}")
+        return
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr)
+    print('#------------------------------------------------------------------------------#')
+
 
 def run_preprocessing_script(params, scenario_name):
     """
@@ -1260,11 +1435,17 @@ if __name__ == "__main__":
                 run_open_pwrbck_patcher(params, scenario_name)
                 run_reserve_margin_repair_patcher(params, scenario_name)
                 run_reserve_margin_xlsx_patcher(params, scenario_name)
+                run_activity_upper_limit_patcher(params, scenario_name)
             else:
                 print(f"❌ Skipping preprocessing for '{scenario_name}' because otoole conversion failed.")
                 print('#------------------------------------------------------------------------------#')
                 continue
 
+
+        # When patchers + sync are active, overwrite the affected param CSVs
+        # in the original A2 folder so generate_combined_input_file reflects
+        # the patched values the solver actually consumed.
+        run_sync_patched_csvs(params, scenario_name, base_output_path)
 
         input_folder = os.path.join(HERE, base_output_path, scenario_name)
         output_folder = os.path.join(HERE, params['executables'], scenario_name + '_0')
