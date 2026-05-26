@@ -3,13 +3,17 @@
 Orchestrator for the A3 modification workflow in relac_tx, multi-scenario aware.
 
 For each scenario folder under `A1_Outputs/A1_Outputs_<scenario>/`, this
-orchestrator runs two steps in order against the scenario's
+orchestrator runs three steps in order against the scenario's
 `A-O_Parametrization.xlsx`:
 
   1. `add_max_cap_investment_lid_rule.py` — fills MaxCapInv placeholders with
      calibrated lid values (uniform mode with relac_tx-specific
      zero_is_placeholder_in_lid_rows fix; see lid_rule.yaml).
-  2. `B1b_Pre_solver_validation.py --auto-fix-all` — reconciles any residual
+  2. `extend_lowerlimits_pwr.py` — extends the 2024 value of
+     TotalTechnologyAnnualActivityLowerLimit for PWR techs flat through 2050
+     in sheet "Secondary Techs", so the calibration floor does not expire and
+     the optimizer cannot dump thermal generation in 2025+.
+  3. `B1b_Pre_solver_validation.py --auto-fix-all` — reconciles any residual
      inconsistencies the lid leaves behind, in particular V3 cases where the
      calibrated ActivityLowerLimit exceeds the capacity that the lid permits
      (e.g. PWRPETHNDXX 2023). B1b lowers the floor to `max_activity * 0.99`
@@ -46,6 +50,7 @@ A1_OUTPUTS_DIR = T1_CONFECTION / "A1_Outputs"
 SCENARIO_PREFIX = "A1_Outputs_"
 
 DEFAULT_RULES_SCRIPT = "add_max_cap_investment_lid_rule.py"
+EXTEND_LL_SCRIPT = "extend_lowerlimits_pwr.py"
 B1B_VALIDATOR = T1_CONFECTION / "B1b_Pre_solver_validation.py"
 
 PYTHON = sys.executable
@@ -156,6 +161,15 @@ def run_for_scenario(scenario: str, rules_script: str,
     if force_overwrite:
         cmd.append("--force-overwrite")
     run_subproc(cmd, label=f"{rules_script} ({scenario})")
+
+    extend_ll_path = RULES_SCRIPTS_DIR / EXTEND_LL_SCRIPT
+    if not extend_ll_path.is_file():
+        sys.exit(f"ERROR: {EXTEND_LL_SCRIPT} not found at {extend_ll_path}")
+    print(f"  extend_ll     : {EXTEND_LL_SCRIPT}")
+    ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir]
+    if force_overwrite:
+        ext_cmd.append("--force-overwrite")
+    run_subproc(ext_cmd, label=f"{EXTEND_LL_SCRIPT} ({scenario})")
 
     if skip_validation:
         print("  [SKIP] B1b validation step skipped (--skip-validation)")
