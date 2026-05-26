@@ -49,6 +49,25 @@ t1_confection/A1_Outputs/secondary_techs_update_log_*.txt
 *Backup*
 *BACKUP*
 
+# All files containing "_audit" in their name
+*_audit*
+*_Audit*
+*_AUDIT*
+
+# PowerPoint files
+*.pptx
+
+# All files or folders containing "temp", "copia", or "copy" in their name
+*temp*
+*Temp*
+*TEMP*
+*copia*
+*Copia*
+*COPIA*
+*copy*
+*Copy*
+*COPY*
+
 # guides
 RELAC_TX_Guia_instalacion_ejecucion.pdf
 
