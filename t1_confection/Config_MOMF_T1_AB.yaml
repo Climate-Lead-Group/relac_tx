@@ -81,7 +81,7 @@ annualize_capital: True
 # produced by patch_storage_delay.py, and combined inputs/outputs are written
 # with `storage_delay_prefix_final_files` so baseline RELAC_TX_* artifacts are
 # not overwritten.
-storage_delay_active: False
+storage_delay_active: True
 storage_delay_first_n_years: 5
 storage_delay_storage_prefixes:
   - SDS
@@ -96,7 +96,7 @@ storage_delay_root_datafile: "RELAC_TX_data_storage_delay.txt"
 ########################################################################################
 # === Storage stripping diagnostic ===
 # Master switch. False (or absent) = pipeline runs unchanged (no strip).
-strip_storage_active: False
+strip_storage_active: True
 
 # --- Tier 3: zero storage (baseline) ---
 strip_storage_mode: "all"
@@ -117,7 +117,7 @@ strip_storage_suffix: "NoStorage"
 # === PWRBCK cap-opening diagnostic ===
 # Opens TotalAnnualMaxCapacity and TotalAnnualMaxCapacityInvestment for PWRBCK*
 # backstop techs. Runs after strip_storage and before the careful XLSX repair.
-open_pwrbck_active: False
+open_pwrbck_active: True
 open_pwrbck_value: 9999
 open_pwrbck_pattern: "PWRBCK"
 open_pwrbck_suffix: "OpenBCK"
@@ -133,7 +133,7 @@ reserve_margin_repair_active: False
 # This calls patch_reserve_margin_repair_careful_xlsx.py.
 # It produces e.g.:
 #   Pre_processed_BAU_0_NoStorage_OpenBCK_RMCarefulXLSX.txt
-reserve_margin_xlsx_active: False
+reserve_margin_xlsx_active: True
 reserve_margin_xlsx_suffix: "RMCarefulXLSX"
 reserve_margin_xlsx_workbook: "firm_capacity_fallbacks_by_cr.xlsx"
 reserve_margin_xlsx_sheet: "fallbacks"
