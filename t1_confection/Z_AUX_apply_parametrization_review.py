@@ -5,9 +5,10 @@ Reads the review files produced by the audit pipeline and applies
 their Conservar_con_ajuste / Quitar actions onto the target sheets of
 A-O_Parametrization.xlsx for each scenario.
 
-Scenarios processed:
-    BAU: Review_PWR -> 'Secondary Techs', Review_Tx -> 'Demand Techs'
-    INV: Review_PWR -> 'Secondary Techs' only (no Tx review for INV)
+Scenarios processed (BAU, INV):
+    Review_PWR -> 'Secondary Techs'
+    Review_Tx  -> 'Demand Techs'
+    Missing review files are skipped with a warning.
 
 Mapping:
     A-O_Parametrization_Review_PWR.xlsx  ->  'Secondary Techs'
@@ -68,8 +69,8 @@ APPLIED_ACTIONS = {"Conservar_con_ajuste", "Quitar"}
 OUTPUTS_DIR = Path(__file__).parent / "A1_Outputs"
 
 # Each scenario lists the (review_filename, target_sheet) pairs to apply.
-# INV intentionally has only the PWR review (Secondary Techs); there is no
-# Tx review for INV, and Demand Techs must NOT be touched in that scenario.
+# Both PWR and Tx reviews are applied in any scenario where the file is
+# present; missing review files are skipped with a warning (see load step).
 SCENARIOS = [
     {
         "name": "BAU",
@@ -84,6 +85,7 @@ SCENARIOS = [
         "dir": OUTPUTS_DIR / "A1_Outputs_INV",
         "sources": [
             ("A-O_Parametrization_Review_PWR.xlsx", "Secondary Techs"),
+            ("A-O_Parametrization_Review_Tx.xlsx",  "Demand Techs"),
         ],
     },
 ]
@@ -186,7 +188,7 @@ def process_scenario(scenario, apply_changes):
 
     # 2. Open Parametrization once; build per-sheet index. Only the sheets
     # listed in scenario['sources'] are indexed, so the consistency sweep
-    # below CANNOT touch other sheets (e.g. 'Demand Techs' for INV).
+    # below only touches the sheets for which a review file was found.
     print(f"\n[OPEN] {param_xlsx}")
     wb = openpyxl.load_workbook(param_xlsx)
     oplife_map = load_operational_life(wb)
