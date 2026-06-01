@@ -7,7 +7,7 @@ This page walks you through running RELAC TX for the first time.
 From an **Anaconda Prompt** (or any terminal with conda available):
 
 ```bash
-cd RELAC TX
+cd relac_tx
 python run.py
 ```
 
@@ -23,8 +23,8 @@ The `run.py` launcher automatically:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--env-name` | `osemosys_env` | Conda environment name |
-| `--env-file` | `environment.yml` | Path to the Conda environment file |
+| `--env-name` | Read from YAML (`OG-MOMF-env`) | Conda environment name |
+| `--env-file` | `environment.yaml` | Path to the Conda environment file |
 | `--dvc-file` | `dvc.yaml` | Path to the DVC pipeline file |
 | `--date` | Today (`YYYY-MM-DD`) | Date stamp for output files |
 
@@ -60,24 +60,24 @@ After a successful run, results are generated in `t1_confection/`:
 
 | File | Description |
 |------|-------------|
-| `RELAC TX_Inputs.csv` | Compiled model inputs (all scenarios) |
-| `RELAC TX_Outputs.csv` | Optimization results (all scenarios) |
-| `RELAC TX_Combined_Inputs_Outputs.csv` | Merged inputs and outputs |
-| `RELAC TX_Inputs_YYYY-MM-DD.csv` | Date-stamped copy of inputs |
-| `RELAC TX_Outputs_YYYY-MM-DD.csv` | Date-stamped copy of outputs |
-| `RELAC TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv` | Date-stamped combined file |
+| `RELAC_TX_Inputs.csv` | Compiled model inputs (all scenarios) |
+| `RELAC_TX_Outputs.csv` | Optimization results (all scenarios) |
+| `RELAC_TX_Combined_Inputs_Outputs.csv` | Merged inputs and outputs |
+| `RELAC_TX_Inputs_YYYY-MM-DD.csv` | Date-stamped copy of inputs |
+| `RELAC_TX_Outputs_YYYY-MM-DD.csv` | Date-stamped copy of outputs |
+| `RELAC_TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv` | Date-stamped combined file |
 
 Date-stamped files preserve a complete execution history so you can compare runs over time.
 
 ## 4. Directory Structure Overview
 
 ```
-RELAC TX/
+relac_tx/
 ├── run.py                          # Main launcher
 ├── dvc.yaml                        # DVC pipeline definition
 ├── environment.yaml                # Conda environment spec
 ├── concatenate_files/              # Post-processing scripts
-│   └── concatenate_relac_tx.py
+│   └── concatenate_relac.py
 └── t1_confection/                  # Core model directory
     ├── Config_MOMF_T1_A.yaml       # Compiler configuration
     ├── Config_MOMF_T1_AB.yaml      # Execution configuration

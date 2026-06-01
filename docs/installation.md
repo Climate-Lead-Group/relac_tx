@@ -16,8 +16,8 @@ This guide covers the full setup process for running RELAC TX on a Windows machi
 ## Clone the Repository
 
 ```bash
-git clone https://github.com/Climate-Lead-Group/RELAC TX.git
-cd RELAC TX
+git clone https://github.com/clg-admin/relac_tx.git
+cd relac_tx
 ```
 
 ## Conda Environment

@@ -1,6 +1,6 @@
 # Secondary Technologies Editor
 
-The Secondary Technologies Editor provides a user-friendly Excel interface for modifying technology parameters across scenarios, with support for automatic RELAC TX source data integration.
+The Secondary Technologies Editor provides a user-friendly Excel interface for modifying technology parameters across scenarios, with support for automatic OLADE data integration.
 
 ## Overview
 
@@ -27,7 +27,7 @@ The script generates `Secondary_Techs_Editor.xlsx` with these sheets:
 |-------|---------|
 | **Instructions** | User guide with editing instructions |
 | **Documentation** | Full technical documentation on calculations |
-| **RELAC TX_Config** | Toggle switches for automatic RELAC TX data integration |
+| **OLADE_Config** | Toggle switches for automatic OLADE data integration |
 | **Demand_Growth** | Demand growth rate configuration per country |
 | **Scenarios_Demand_Growth** | Scenario-specific demand growth rates |
 | **Renewability_Targets** | Renewable percentage targets per year/country |
@@ -60,17 +60,17 @@ In the **Editor** sheet (and similarly in the **Interconnections** sheet for tra
 4. **Select a Parameter**: Choose which parameter to modify (e.g., CapitalCost, ResidualCapacity).
 5. **Enter values**: Fill in the year columns (2021--2050) with your desired values.
 
-### RELAC TX Configuration (RELAC TX_Config Sheet)
+### OLADE Configuration (OLADE_Config Sheet)
 
-The **RELAC TX_Config** sheet provides toggle switches for automatic data population:
+The **OLADE_Config** sheet provides toggle switches for automatic data population:
 
 | Parameter | Values | Description |
 |-----------|--------|-------------|
-| `ResidualCapacitiesFromRELAC TX` | YES / NO | Auto-populate ResidualCapacity from installed capacity data |
+| `ResidualCapacitiesFromOLADE` | YES / NO | Auto-populate ResidualCapacity from installed capacity data |
 | `PetroleumSplitMode` | `OIL_only` / `Split_PET_OIL` | How to handle petroleum capacity allocation |
-| `DemandFromRELAC TX` | YES / NO | Auto-populate electricity demand from generation data |
-| `ActivityLowerLimitFromRELAC TX` | YES / NO | Auto-populate TotalTechnologyAnnualActivityLowerLimit |
-| `ActivityUpperLimitFromRELAC TX` | NO / YES_ALL / EXISTING_ONLY | Auto-populate TotalTechnologyAnnualActivityUpperLimit |
+| `DemandFromOLADE` | YES / NO | Auto-populate electricity demand from generation data |
+| `ActivityLowerLimitFromOLADE` | YES / NO | Auto-populate TotalTechnologyAnnualActivityLowerLimit |
+| `ActivityUpperLimitFromOLADE` | NO / YES_ALL / EXISTING_ONLY | Auto-populate TotalTechnologyAnnualActivityUpperLimit |
 | `TradeBalanceDemandAdjustment` | YES / NO | Adjust demand based on trade balance data |
 | `InterconnectionsControl` | ON / OFF | Enable/disable interconnection technologies |
 
@@ -83,9 +83,9 @@ The **RELAC TX_Config** sheet provides toggle switches for automatic data popula
 
 ### Demand Configuration (Demand_Growth Sheet)
 
-When `DemandFromRELAC TX` is YES, configure growth rates per country:
+When `DemandFromOLADE` is YES, configure growth rates per country:
 
-- Uses RELAC TX generation data as the base.
+- Uses OLADE generation data as the base.
 - Applies linear growth: `Demand(year) = Demand(2023) * (1 + rate * (year - 2023))`.
 - Growth rates are specified per country in the **Demand_Growth** sheet.
 - Scenario-specific overrides are available in **Scenarios_Demand_Growth**.
@@ -100,7 +100,7 @@ When `DemandFromRELAC TX` is YES, configure growth rates per country:
 
 ### Renewability Targets (Renewability_Targets Sheet)
 
-When Activity Limits from RELAC TX are enabled:
+When Activity Limits from OLADE are enabled:
 
 - Define target renewable percentages per year and country.
 - The system interpolates between specified target years.
@@ -126,11 +126,11 @@ python t1_confection/D2_update_secondary_techs.py
 ### What It Does
 
 1. Reads the filled `Secondary_Techs_Editor.xlsx`.
-2. Reads RELAC TX configuration toggles.
+2. Reads OLADE configuration toggles.
 3. For each scenario:
    - Creates a **backup** of the parametrization file.
    - Applies manual edits from the Editor sheet.
-   - If RELAC TX integration is enabled:
+   - If OLADE integration is enabled:
      - Reads capacity data (MW to GW conversion).
      - Reads generation data (GWh to PJ conversion).
      - Applies petroleum split logic.
@@ -162,7 +162,7 @@ python t1_confection/D2_update_secondary_techs.py
 | `D1_generate_editor_template.py` | Generates the Excel template |
 | `D2_update_secondary_techs.py` | Applies changes to scenario files |
 | `Secondary_Techs_Editor.xlsx` | The editor template (generated) |
-| `RELAC TX - Installed Capacity by Source - Annual.xlsx` | Installed capacity source data |
-| `RELAC TX - Electric Generation by Source - Annual.xlsx` | Electricity generation source data |
+| `OLADE - Capacidad instalada por fuente - Anual.xlsx` | OLADE installed capacity source data |
+| `OLADE - Generación eléctrica por fuente - Anual.xlsx` | OLADE electricity generation source data |
 | `Shares_PET_OIL_Split.xlsx` | Petroleum/oil split proportions per scenario |
 | `Shares_Power_Generation_Technologies.xlsx` | Power generation technology shares |

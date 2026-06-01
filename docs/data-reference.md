@@ -16,17 +16,17 @@ Technology names in RELAC TX follow a structured format that encodes the technol
 |-----------|--------|-------------|----------|
 | Prefix | 3 chars | Technology category | PWR, MIN, RNW, ELC, TRN |
 | Source | 3 chars | Energy source | BIO, COA, SPV, WON, HYD |
-| Country | 3 chars | ISO-3 country code | BGD, IND, LKA |
-| Region | 2 chars | Sub-region | XX (default), EA, NE, NO |
+| Country | 3 chars | ISO-3 country code | ARG, BRA, CHL |
+| Region | 2 chars | Sub-region | XX (default); Brazil sub-regions e.g. CN, NE, SE |
 
 **Examples:**
 
 | Code | Meaning |
 |------|---------|
-| `PWRBIOBGDXX` | Power + Biomass + Bangladesh + Default region |
-| `MINCOAINDEA` | Mining + Coal + India-East |
-| `RNWSPVLKAXX` | Renewable + Solar PV + Sri Lanka + Default region |
-| `TRNRPOARGBOLXX` | Transmission Repowered + Argentina-Bolivia + Default region |
+| `PWRBIOARGXX` | Power + Biomass + Argentina + Default region |
+| `MINCOAARG` | Mining + Coal + Argentina (MIN technologies carry no region suffix) |
+| `RNWSPVCHLXX` | Renewable + Solar PV + Chile + Default region |
+| `TRNARGXXBOLXX` | Interconnection between Argentina (XX) and Bolivia (XX) |
 
 ### Technology Prefixes
 
@@ -41,22 +41,23 @@ Technology names in RELAC TX follow a structured format that encodes the technol
 
 ### Fuel Codes
 
-Fuel names follow a similar pattern:
+Fuel names follow two patterns:
 
 ```
-{SOURCE}{COUNTRY}{REGION}
+{SOURCE}{COUNTRY}{REGION}     # source fuels (renewables use region XX; mined/fossil fuels have no region)
+ELC{COUNTRY}{REGION}{NN}      # electricity fuels (2-digit suffix NN encodes the electricity stage)
 ```
 
 **Examples:**
 
 | Code | Meaning |
 |------|---------|
-| `BIOBGDXX` | Biomass fuel, Bangladesh |
-| `COAINDEA` | Coal fuel, India-East |
-| `ELC00BGDXX` | Renewable electricity, Bangladesh |
-| `ELC01BGDXX` | Non-renewable electricity, Bangladesh |
-| `ELC02BGDXX` | Transmission output electricity, Bangladesh |
-| `ELC03BGDXX` | Dispatch-ready electricity for interconnection, Bangladesh |
+| `BIOARGXX` | Biomass fuel, Argentina |
+| `COAARG` | Coal fuel, Argentina (mined fuels have no region suffix) |
+| `ELCARGXX00` | Renewable electricity, Argentina |
+| `ELCARGXX01` | Non-renewable electricity, Argentina |
+| `ELCARGXX02` | Transmission output electricity, Argentina |
+| `ELCARGXX03` | Dispatch-ready electricity for interconnection, Argentina |
 
 ### Emission Codes
 
@@ -64,18 +65,18 @@ Fuel names follow a similar pattern:
 CO2{COUNTRY}
 ```
 
-Example: `CO2BGD` = CO2 emissions for Bangladesh.
+Example: `CO2ARG` = CO2 emissions for Argentina.
 
 ### Storage Codes
 
 ```
-{TYPE}{COUNTRY}{REGION}
+{TYPE}{COUNTRY}{REGION}{NN}
 ```
 
 | Code | Meaning |
 |------|---------|
-| `LDSBGDXX` | Long Duration Storage, Bangladesh |
-| `SDSBGDXX` | Short Duration Storage, Bangladesh |
+| `LDSARGXX01` | Long Duration Storage, Argentina |
+| `SDSARGXX01` | Short Duration Storage, Argentina |
 
 ---
 
@@ -87,9 +88,9 @@ SET files define the elements of each OSeMOSYS set. They have a single column:
 
 ```csv
 VALUE
-MINCOABGD
-MINCOABTN
-MINCOAINDEA
+MINCOAARG
+MINCOABOL
+MINCOABRA
 ```
 
 SET files in `OG_csvs_inputs/`:
@@ -116,8 +117,8 @@ Parameter files contain data values indexed by OSeMOSYS dimensions. The column s
 
 ```csv
 REGION,TECHNOLOGY,YEAR,VALUE
-GLOBAL,PWRBCKBGDXX,2023,999999.0
-GLOBAL,PWRBIOBGDXX,2023,1500.0
+GLOBAL,PWRBCKARGXX,2023,999999.0
+GLOBAL,PWRBIOARGXX,2023,1500.0
 ```
 
 Used by: `CapitalCost`, `FixedCost`, `VariableCost`, `ResidualCapacity`, `TotalAnnualMaxCapacity`, `TotalAnnualMaxCapacityInvestment`, `AvailabilityFactor`, and others.
@@ -126,7 +127,7 @@ Used by: `CapitalCost`, `FixedCost`, `VariableCost`, `ResidualCapacity`, `TotalA
 
 ```csv
 REGION,TECHNOLOGY,FUEL,MODE_OF_OPERATION,YEAR,VALUE
-GLOBAL,PWRBIOBGDXX,BIOBGDXX,1,2023,3.67
+GLOBAL,PWRBIOARGXX,BIOARGXX,1,2023,3.67
 ```
 
 Used by: `InputActivityRatio`, `OutputActivityRatio`, `EmissionActivityRatio`.

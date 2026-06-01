@@ -15,14 +15,14 @@ A centralized module (not run directly) that provides cached access to `Config_c
 | `get_countries()` | `list[str]` | Sorted list of active country codes |
 | `get_country_names()` | `dict[str, str]` | `{iso3: english_name}` |
 | `get_iso_country_map()` | `dict[str, str]` | `{iso3: english_name}` including special entries |
-| `get_relac_tx_country_mapping()` | `dict[str, str]` | `{relac_tx_name: iso3}` |
-| `get_relac_tx_country_mapping_normalized()` | `dict[str, str]` | Accent-stripped version of the above |
+| `get_olade_country_mapping()` | `dict[str, str]` | `{olade_name: iso3}` |
+| `get_olade_country_mapping_normalized()` | `dict[str, str]` | Accent-stripped version of the above |
 | `get_first_year()` | `int` | Model start year (default: 2023) |
 | `get_pwr_cleanup_mode()` | `str \| bool` | `"drop"`, `"merge"`, or `False` |
 | `get_code_to_energy()` | `dict[str, str]` | `{tech_code: description}` |
 | `get_renewable_fuels()` | `set[str]` | Set of renewable fuel codes |
-| `get_add_missing_countries_from_relac_tx()` | `bool` | Whether to fill from RELAC TX source data |
-| `get_relac_tx_tech_mapping()` | `dict[str, str]` | RELAC TX tech name to model code mapping |
+| `get_add_missing_countries_from_olade()` | `bool` | Whether to fill from OLADE source data |
+| `get_olade_tech_mapping()` | `dict[str, str]` | OLADE tech name to model code mapping |
 | `get_shares_tech_mapping()` | `dict[str, str]` | Shares file name to model code mapping |
 | `get_raw_config()` | `dict` | The full raw YAML dictionary |
 
@@ -31,7 +31,7 @@ A centralized module (not run directly) that provides cached access to `Config_c
 ```python
 from Z_AUX_config_loader import get_countries, get_first_year
 
-countries = get_countries()  # ['BGD', 'BTN', 'INDEA', ...]
+countries = get_countries()  # ['ARG', 'BOL', 'BRA', ...]
 year = get_first_year()      # 2023
 ```
 
@@ -51,7 +51,7 @@ python t1_confection/Z_AUX_fix_excel_profiles.py
 
 ### What It Does
 
-1. Iterates over all scenario directories (`A1_Outputs_BAU`, `A1_Outputs_NDC`, etc.).
+1. Iterates over all scenario directories (`A1_Outputs_BAU`, `A1_Outputs_INV`, `A1_Outputs_OPT`).
 2. Opens each `A-O_Demand.xlsx` file.
 3. For each profile sheet, normalizes values so that each fuel/technology column sums to exactly 1.0 per year.
 4. Creates a **timestamped backup** before modifying any file.

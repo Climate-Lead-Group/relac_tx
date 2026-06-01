@@ -16,13 +16,17 @@ RELAC TX processes energy system data through a multi-stage pipeline. This page 
 │   ↓                                                                  │
 │  (Optional) A3: Migrate Old Inputs                                   │
 │   ↓                                                                  │
+│  (Optional) A3_process: LID rule → extend lowerlimits → B1b         │
+│   ↓                                                                  │
 │  (Optional) D1 → Manual Editing → D2: Secondary Techs Editing       │
+│   ↓                                                                  │
+│  (Optional) B1b: Pre-solver validation (auto-fix)                   │
 ├──────────────────────────────────────────────────────────────────────┤
 │                        MODEL EXECUTION                               │
 │                                                                      │
 │  B1: Compile Excel → OSeMOSYS CSVs                                  │
 │   ↓                                                                  │
-│  B2: Execute Solver → Results                                        │
+│  B2: Patcher chain → Execute Solver → Results                        │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -75,7 +79,7 @@ python t1_confection/A0_generate_tech_country_matrix.py
 | WON | Onshore Wind |
 
 :::{note}
-Structural prefixes (`ELC`, `MIN`, `PWR`, `RNW`, `TRN`) are **not** included in the matrix. They combine with the codes above to form full technology names (e.g., `PWRBIOBGDXX`, `MINCOABGDXX`).
+Structural prefixes (`ELC`, `MIN`, `PWR`, `RNW`, `TRN`) are **not** included in the matrix. They combine with the codes above to form full technology names (e.g., `PWRBIOARGXX`, `MINCOAARG`).
 :::
 
 ### After Generation
@@ -228,6 +232,80 @@ If the `Old_Inputs/` folder does not exist, the script will exit with an error.
 
 ---
 
+## Stage A3_process: Parametrization Modification Workflow (Optional)
+
+**Script:** [`A3_process.py`](../t1_confection/A3_process.py)
+
+An orchestrator that applies a set of post-A1/A2 calibration rules to each scenario's `A-O_Parametrization.xlsx`. For every scenario folder under `A1_Outputs/A1_Outputs_<scenario>/` it runs three steps in order:
+
+1. **LID rule** ([`A3_process/rules_scripts/add_max_cap_investment_lid_rule.py`](../t1_confection/A3_process/rules_scripts/add_max_cap_investment_lid_rule.py)) — fills `TotalAnnualMaxCapacityInvestment` placeholders with calibrated "lid" values, configured in [`lid_rule.yaml`](../t1_confection/A3_process/rules_scripts/lid_rule.yaml).
+2. **Extend lower limits** ([`A3_process/rules_scripts/extend_lowerlimits_pwr.py`](../t1_confection/A3_process/rules_scripts/extend_lowerlimits_pwr.py)) — extends the 2024 value of `TotalTechnologyAnnualActivityLowerLimit` for PWR techs flat through 2050 in the **Secondary Techs** sheet, so the calibration floor does not expire and the optimizer cannot dump thermal generation in 2025+.
+3. **Pre-solver validation** — runs `B1b_Pre_solver_validation.py --auto-fix-all` to reconcile any residual inconsistencies (see below).
+
+### Usage
+
+```bash
+python t1_confection/A3_process.py                  # all discovered scenarios
+python t1_confection/A3_process.py --scenario BAU   # one scenario
+python t1_confection/A3_process.py --scenario BAU,INV
+python t1_confection/A3_process.py --list           # list discovered scenarios
+python t1_confection/A3_process.py --skip-validation # skip the B1b auto-fix step
+```
+
+### Command-Line Options
+
+| Flag | Description |
+|------|-------------|
+| `--scenario` | Comma-separated scenario name(s); default = all discovered |
+| `--rules-script` | Override the rules script path |
+| `--list` | Show discovered scenarios and exit |
+| `--skip-validation` | Skip the final B1b auto-fix step |
+
+:::{note}
+The LID script writes a JSON change log (`lid_rule_changes_<timestamp>.json`) inside each scenario directory but does **not** make a folder-level backup — recovery is via git. B1b makes its own timestamped backup of the xlsx before writing.
+:::
+
+---
+
+## Pre-Solver Validation (B1b)
+
+**Script:** [`B1b_Pre_solver_validation.py`](../t1_confection/B1b_Pre_solver_validation.py)
+
+Detects infeasibility-prone data in `A-O_Parametrization.xlsx` **before** `B1_Compiler` reads the workbook (and before B2 emits the `.txt` for the solver). For each issue it shows the auto-fix formula and, by default, asks before writing. It can run standalone or as the final step of `A3_process.py`.
+
+### Validations
+
+| ID | Check | Auto-fix |
+|----|-------|----------|
+| **V1** | Per-year: `TotalAnnualMinCapacityInvestment(y) >= TotalAnnualMaxCapacityInvestment(y)` | `Max_inv(y) = Min_inv(y) × 1.01` |
+| **V2** | Cumulative: `TotalAnnualMaxCapacity(y) <= ResidualCapacity(y) + Σ Min_inv` over the operational-life window | `Max_tot(y) = (Residual + ΣMin) × 1.01` |
+| **V3** | Activity: `TotalTechnologyAnnualActivityLowerLimit(y) > max_activity(y)` (where `max_activity = max_capacity × AvailabilityFactor × CapacityToActivityUnit × Σ(CF·YearSplit)`) | `ActivityLowerLimit(y) = max_activity(y) × 0.99` |
+| **V4** | Coverage: summed activity-upper-limit fractions per region/fuel/year below `1 − activity_upper_limit_coverage_tolerance` | Warning only (no auto-fix) |
+
+### Usage
+
+```bash
+python t1_confection/B1b_Pre_solver_validation.py --scenario BAU                 # interactive
+python t1_confection/B1b_Pre_solver_validation.py --scenario BAU --auto-fix-all  # apply all fixes
+python t1_confection/B1b_Pre_solver_validation.py --scenario BAU --report-only   # report, no changes
+```
+
+### Command-Line Options
+
+| Flag | Description |
+|------|-------------|
+| `--scenario` | Scenario name (e.g. `BAU`); used to derive the default xlsx path |
+| `--xlsx` | Override the xlsx path directly |
+| `--non-interactive` | Do not prompt; fail on issues |
+| `--auto-fix-all` | Apply every fix without prompting |
+| `--report-only` | Write the report only; do not modify the xlsx |
+
+:::{note}
+`--non-interactive`, `--auto-fix-all`, and `--report-only` are mutually exclusive. B1b creates a timestamped backup of the workbook before applying any fix.
+:::
+
+---
+
 ## Stage B1: Compile to OSeMOSYS Format
 
 **Script:** `t1_confection/B1_Compiler.py` (invoked via `B1_Run_Compiler.py`)
@@ -283,9 +361,15 @@ python -u t1_confection/B2_Executing_OG_Model.py
 
 1. **CSV to datafile conversion** via otoole.
 2. **Preprocessing** -- runs the OSeMOSYS preprocessor.
-3. **Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi).
-4. **Result extraction** -- converts solver output back to CSV.
-5. **Post-processing** -- capital annualization, scenario concatenation.
+3. **Patcher chain** -- rewrites parameter blocks directly in the GMPL `.txt` to apply the reserve-margin and storage features plus feasibility safeguards (DaysInDayType, storage-delay, PWRBCK caps, reserve margin, activity upper limits). See {doc}`solver-patchers` for the full chain.
+4. **Sync patched CSVs** -- overwrites the affected otoole CSVs in place so the combined input/output files reflect the patched values the solver consumed.
+5. **Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi).
+6. **Result extraction** -- converts solver output back to CSV.
+7. **Post-processing** -- capital annualization, scenario concatenation.
+
+:::{note}
+When `storage_delay_active: True` (the shipped default), the run is redirected to a parallel set of artifacts prefixed `RELAC_TX_StorageDelay_` so the baseline `RELAC_TX_*` files are not overwritten. See {doc}`solver-patchers` for details.
+:::
 
 ### Solver Configuration
 
@@ -312,9 +396,9 @@ max_x_per_iter: 4  # Max scenarios per batch
 |----------------|---------|
 | `A2_Outputs_Params_otoole/{scenario}/` | otoole-format CSVs (one per parameter) |
 | `Executables/` | Compiled solver data files |
-| `RELAC TX_Inputs.csv` | Combined inputs (all scenarios) |
-| `RELAC TX_Outputs.csv` | Combined outputs (all scenarios) |
-| `RELAC TX_Combined_Inputs_Outputs.csv` | Merged inputs and outputs |
+| `RELAC_TX_Inputs.csv` | Combined inputs (all scenarios) |
+| `RELAC_TX_Outputs.csv` | Combined outputs (all scenarios) |
+| `RELAC_TX_Combined_Inputs_Outputs.csv` | Merged inputs and outputs |
 
 ### Reproducibility
 

@@ -38,10 +38,10 @@ Verifies that a country has complete and consistent data in the OSeMOSYS input C
 python t1_confection/Z_validate_country_data.py
 
 # Validate a specific country
-python t1_confection/Z_validate_country_data.py --country BGD
+python t1_confection/Z_validate_country_data.py --country ARG
 
 # Generate detailed report
-python t1_confection/Z_validate_country_data.py --country BGD --report
+python t1_confection/Z_validate_country_data.py --country ARG --report
 
 # Quiet mode (summary only)
 python t1_confection/Z_validate_country_data.py --quiet
@@ -93,10 +93,10 @@ Creates a complete set of CSV files with the minimum structure needed to add a n
 python t1_confection/Z_generate_country_template.py
 
 # Override via command line
-python t1_confection/Z_generate_country_template.py --new MDV --ref LKA --region XX
+python t1_confection/Z_generate_country_template.py --new BLZ --ref GTM --region XX
 
 # With interconnections to specific neighbors
-python t1_confection/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY
+python t1_confection/Z_generate_country_template.py --new BLZ --ref GTM -i GTM MEX
 ```
 
 ### Command-Line Options
@@ -115,10 +115,12 @@ Alternatively, configure in `Config_country_codes.yaml`:
 
 ```yaml
 template_generation:
-  new_country: MDV
-  reference_country: LKA
-  region: XX
-  interconnections: []    # Empty = no interconnections
+  - new_country: BLZ
+    reference_country: GTM
+    region: XX
+    centerpoint_lat: 17.19
+    centerpoint_lon: -88.49
+    interconnections: []    # Empty = no interconnections
 ```
 
 ### What It Generates
@@ -142,17 +144,21 @@ The generator handles various interconnection scenarios:
 
 ### TRN Code Structure
 
-Transmission technology codes follow this pattern:
+Cross-border **interconnection** technologies encode both endpoints (each with its own region):
 
 ```
-TRN{TYPE}{COUNTRY1}{COUNTRY2}{REGION}
+TRN{COUNTRY1}{REGION1}{COUNTRY2}{REGION2}
 ```
 
-For example: `TRNRPOARGBOLXX` = Repowered transmission between Argentina and Bolivia, region XX.
+For example: `TRNARGXXBOLXX` = interconnection between Argentina (region XX) and Bolivia (region XX).
+
+:::{note}
+Per-country transmission and dispatch technologies use a single-country form `{TYPE}{COUNTRY}{REGION}` instead — e.g. `RNWTRNARGXX`, `PWRTRNARGXX`, `RNWRPOARGXX`, `RNWNLIARGXX`, `TRNRPOARGXX`, `TRNNLIARGXX`, `DSPTRNARGXX`. These are added by Stage A2, not by the template generator.
+:::
 
 The generator correctly handles:
 - Position-aware country code replacement.
-- Alphabetical ordering of country pairs in codes.
+- Alphabetical ordering of country pairs in interconnection codes.
 - Fuel and mode-of-operation code transformations.
 
 ### Integration Workflow
@@ -164,14 +170,14 @@ After generating the template:
 python t1_confection/Z_generate_country_template.py
 
 # 2. Review and customize the generated CSVs
-# Edit files in templates/MDV/ as needed
+# Edit files in templates/BLZ/ as needed
 
 # 3. Merge into the main dataset
-cd templates/MDV/
+cd templates/BLZ/
 python merge_into_inputs.py
 
 # 4. Validate the new country's data
-python t1_confection/Z_validate_country_data.py --country MDV --report
+python t1_confection/Z_validate_country_data.py --country BLZ --report
 ```
 
 ---
@@ -188,8 +194,8 @@ Edit `Config_region_consolidation.yaml`:
 enabled: true
 
 countries:
-  IND:
-    regions: ["EA", "NE", "NO", "SO", "WE"]
+  BRA:
+    regions: ["CN", "NW", "NE", "CW", "SO", "SE", "WE"]
     unified_region: "XX"
 ```
 

@@ -18,16 +18,16 @@ Master registry of countries. Each entry is keyed by a 3-letter ISO code and con
 
 ```yaml
 country_data:
-  BGD:
-    english_name: "Bangladesh"
-    relac_tx_name: "Bangladesh"
-  IND:
-    english_name: "India"
-    relac_tx_name: "India"
+  ARG:
+    english_name: "Argentina"
+    olade_name: "Argentina"
+  BRA:
+    english_name: "Brazil"
+    olade_name: "Brasil"
 ```
 
 - `english_name`: Display name used in reports and documentation.
-- `relac_tx_name`: Name used for matching against RELAC TX source data Excel files.
+- `olade_name`: Name used for matching against OLADE source data files (note Spanish spellings, e.g. `"Brasil"`).
 
 ### `special_entries`
 
@@ -44,19 +44,28 @@ Ordered list of active country/region codes for the current model run:
 
 ```yaml
 countries:
-  - BGD
-  - BTN
-  - INDEA
-  - INDNE
-  - INDNO
-  - INDSO
-  - INDWE
-  - NPL
-  - LKA
-  - MDV
+  - "BRB"
+  - "BOL"
+  - "CHL"
+  - "COL"
+  - "CRI"
+  - "ECU"
+  - "SLV"
+  - "GTM"
+  - "HTI"
+  - "HND"
+  - "NIC"
+  - "PAN"
+  - "PRY"
+  - "PER"
+  - "DOM"
+  - "URY"
+  - "BRA"
+  - "MEX"
+  - "ARG"
 ```
 
-Countries with sub-regions (like India split into 5 regions) use extended codes (e.g., `INDEA` for India-East).
+Countries modeled with sub-regions use extended codes (e.g., `BRACN` for Brazil-Center). In the current model, sub-regions are consolidated into the default region `XX` (see `Config_region_consolidation.yaml`), so countries appear with their 3-letter code.
 
 ### `first_year`
 
@@ -80,30 +89,31 @@ pwr_cleanup_mode: "merge"
 | `"merge"` | Sum PWR00 values into PWR01, drop PWR00, rename PWR01 to PWR |
 | `false` | Skip PWR cleanup entirely |
 
-### `add_missing_countries_from_relac_tx`
+### `add_missing_countries_from_olade`
 
-Whether the preprocessing step should fill missing country data from RELAC TX source files:
+Whether the preprocessing step should fill missing country data from OLADE source files:
 
 ```yaml
-add_missing_countries_from_relac_tx: false
+add_missing_countries_from_olade: false
 ```
 
-### `relac_tx_tech_mapping`
+### `olade_tech_mapping`
 
-Maps technology names from the RELAC TX source Excel files to 3-character model codes:
+Maps technology names from the OLADE source Excel files to 3-character model codes:
 
 ```yaml
-relac_tx_tech_mapping:
-  "Nuclear": URN
-  "Carbon mineral": COA
-  "Eolica": WON
-  "Solar": SPV
-  "Hidroelectrica": HYD
+olade_tech_mapping:
+  Nuclear: URN
+  "Gas natural": NGS
+  "Carbón mineral": COA
+  Hidro: HYD
+  Geotermia: GEO
+  "Eólica": WON
   # ... etc.
 ```
 
 :::{note}
-BIO (Biomass) is a special case: it is the sum of Biogas + Solid biomass + Liquid biofuels from the source data.
+Keys are the OLADE source names, in Spanish (note accents). BIO (Biomass) is a special case: it is the sum of Biogas + Solid biomass + Liquid biofuels from the source data.
 :::
 
 ### `code_to_energy`
@@ -116,7 +126,7 @@ code_to_energy:
   BIO: "Biomass"
   SPV: "Solar Photovoltaic"
   WON: "Onshore Wind"
-  # ... (24 entries total)
+  # ... (28 entries total)
 ```
 
 ### `renewable_fuels`
@@ -141,43 +151,41 @@ Maps technology names from the Shares Excel file to model codes:
 
 ```yaml
 shares_tech_mapping:
-  "Biomasa": BIO
-  "Diesel": PET
-  "Hidroelectrica": HYD
-  # ... (11 entries)
+  Biomasa: BIO
+  "Diésel": PET
+  "Hidroeléctrica": HYD
+  "Búnker": OIL
+  # ... (12 entries)
 ```
 
 ### `implausible_combinations`
 
-Technology-country pairs where a technology is physically infeasible. These are marked as NO (red) in the Tech-Country Matrix:
+Technology-country pairs where a technology is physically infeasible. These are marked as NO (red) in the Tech-Country Matrix. Each entry maps a technology code to the list of country codes where it is implausible (inline list format). A combo is implausible when all four capacity parameters (`ResidualCapacity`, `CapitalCost`, `TotalAnnualMaxCapacity`, `TotalAnnualMaxCapacityInvestment`) are zero/absent for every year.
 
 ```yaml
 implausible_combinations:
-  CSP:
-    - BGD
-    - BTN
-    - NPL
-    - LKA
-    - MDV
-  WAV:
-    - BGD
-    - BTN
-    - IND
-    - NPL
-    - LKA
-    - MDV
+  # GAS - no PWRGAS technology in model; gas generation modeled via CCG/OCG -> NGS
+  GAS: [ARG, BOL, BRA, BRB, CHL, COL, CRI, DOM, ECU, GTM, HND, HTI, MEX, NIC, PAN, PER, PRY, SLV, URY]
 ```
+
+:::{note}
+This section was regenerated for the active Latin-American country set. In the current `OG_csvs_inputs/` data no `PWR{source}` technology carries an explicit zero hard-cap (capacity limits are either populated or absent, i.e. unbounded), so the only data-supported exclusion is `GAS` (there is no `PWRGAS` technology). Any further geographic/domain exclusions (e.g. wave or offshore wind for landlocked countries) must be curated manually.
+:::
 
 ### `template_generation`
 
 Configuration for the country template generator (`Z_generate_country_template.py`):
 
+`template_generation` is a **list** of entries; each entry generates one new country. Leave the fields blank to disable generation:
+
 ```yaml
 template_generation:
-  new_country: MDV
-  reference_country: LKA
-  region: XX
-  interconnections: []
+  - new_country: BLZ
+    reference_country: GTM
+    region: XX
+    centerpoint_lat: 17.19
+    centerpoint_lon: -88.49
+    interconnections: [GTM, MEX]
 ```
 
 | Key | Description |
@@ -185,7 +193,8 @@ template_generation:
 | `new_country` | 3-letter code for the country to create |
 | `reference_country` | Existing country to clone data from |
 | `region` | Region suffix (default: `XX`) |
-| `interconnections` | List of neighbor country codes for TRN links. Empty = no interconnections |
+| `centerpoint_lat` / `centerpoint_lon` | Latitude/longitude of the country centerpoint (used for map placement) |
+| `interconnections` | List of neighbor country codes for TRN links. Empty list = no interconnections; omit the key to copy the reference country's topology |
 
 ### Transmission Technology Parameters
 
@@ -256,7 +265,7 @@ xtra_scen:
   DailyTimeBracket: ['1', '2', '3']
   Timeslice: Some
   Timeslices: [S1D1, S1D2, S1D3, S2D1, S2D2, S2D3, S3D1, S3D2, S3D3, S4D1, S4D2, S4D3]
-  Storage: [LDSBGDXX, SDSBGDXX, ...]
+  Storage: [LDSARGXX01, SDSARGXX01, ...]
 ```
 
 The model uses 12 timeslices (4 seasons x 3 daily brackets), a single region (`GLOBAL`), and 2 modes of operation.
@@ -343,8 +352,24 @@ annualize_capital: True
 | Key | Value | Description |
 |-----|-------|-------------|
 | `base_scenario` | `"BAU"` | Name of the base/reference scenario |
-| `prefix_final_files` | `"RELAC TX_"` | Prefix for final output file names |
+| `prefix_final_files` | `"RELAC_TX_"` | Prefix for final output file names |
 | `osemosys_model` | `"osemosys_fast_preprocessed.txt"` | OSeMOSYS model file (GMPL) |
+
+### Solver Patcher Chain
+
+`Config_MOMF_T1_AB.yaml` also contains the settings for the **Stage B2 patcher chain** — the reserve-margin and storage features applied to the GMPL `.txt` before the solver runs. Each patcher has an `*_active` master switch; the shipped configuration enables several of them.
+
+| Master switch | Shipped default | Patcher |
+|---------------|-----------------|---------|
+| `storage_delay_active` | `True` | Block storage builds for the first N years (redirects to `RELAC_TX_StorageDelay_*` outputs) |
+| `strip_storage_active` | `True` | Disable storage + feeding PWR techs (diagnostic; forced off when storage-delay is on) |
+| `open_pwrbck_active` | `True` | Reopen PWRBCK* backstop capacity caps |
+| `reserve_margin_repair_active` | `False` | Legacy blunt reserve-margin repair |
+| `reserve_margin_xlsx_active` | `True` | Careful reserve-margin repair from `firm_capacity_fallbacks_by_cr.xlsx` |
+| `activity_upper_limit_active` | `False` | Cap `TotalTechnologyAnnualActivityUpperLimit` from demand fractions |
+| `sync_patched_csvs_active` | `True` | Sync patched values back into the otoole CSVs |
+
+See {doc}`solver-patchers` for the full chain, execution order, and every per-patcher parameter.
 
 ---
 

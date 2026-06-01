@@ -54,7 +54,7 @@ Los archivos con fecha mantienen un histórico completo de ejecuciones.
 
 ## Configuración
 
-El archivo principal de configuración es `t1_confection/MOMF_T1_AB.yaml`, donde puedes ajustar:
+El archivo principal de configuración es `t1_confection/Config_MOMF_T1_AB.yaml`, donde puedes ajustar:
 - Solver a utilizar (`solver: 'cplex'`)
 - Número de threads para solvers comerciales
 - Seeds para reproducibilidad
@@ -134,7 +134,7 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
    - **OLADE_Config**: Configuración de integración automática con datos OLADE
 
 2. **Edición Manual** (Hoja "Instructions"):
-   - Seleccionar: Escenario (BAU, NDC, NDC+ELC, NDC_NoRPO, o ALL)
+   - Seleccionar: Escenario (BAU, INV, OPT, o ALL)
    - Seleccionar: País, Tecnología (Tech.Name) y Parámetro
    - Ingresar los valores para los años deseados (2021-2050)
    - La columna "Tech" se completa automáticamente con VLOOKUP

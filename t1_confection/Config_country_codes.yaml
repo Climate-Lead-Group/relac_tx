@@ -269,41 +269,20 @@ template_generation:
     centerpoint_lon:
     interconnections:
 
-# Implausible technology-country combinations based on OG_csvs_inputs data
-# (ResidualCapacity, CapitalCost, TotalAnnualMaxCapacityInvestment, TotalAnnualMaxCapacity)
-# A combo is implausible when all four parameters are zero for every year
-# Format: technology_code -> list of country codes where it is implausible
+# Implausible technology-country combinations, derived from OG_csvs_inputs data
+# (ResidualCapacity, CapitalCost, TotalAnnualMaxCapacityInvestment, TotalAnnualMaxCapacity).
+# A combo is implausible when all four capacity parameters are zero/absent for every year.
+# Format: technology_code -> list of country codes where it is implausible.
+#
+# Regenerated 2026-06-01 for the active Latin-American country set. In this dataset no
+# PWR{source} technology carries an explicit zero hard-cap; capacity limits are either
+# populated (>0) or absent (= unbounded in OSeMOSYS). The only data-supported exclusion is
+# GAS: there is no PWRGAS technology at all (gas generation is modeled via CCG/OCG -> NGS),
+# so GAS is implausible for every country. Any further (geographic/domain) exclusions must
+# be curated manually.
 implausible_combinations:
-  # BIO (Biomass) - No biomass resources or grid-connected capacity
-  BIO: [BTN, MDV]
-  # CCS (Carbon Capture Storage with Coal) - No coal infrastructure to retrofit
-  CCS: [BTN, NPL, LKA, MDV]
-  # COA (Coal) - No coal plants, no coal resources, no plans
-  COA: [BTN, NPL, MDV]
-  # COG (Cogeneration) - No industrial base for cogeneration
-  COG: [BTN, NPL, MDV]
-  # CSP (Concentrated Solar Power) - Unsuitable climate/terrain or insufficient land area
-  CSP: [BGD, BTN, NPL, LKA, MDV]
-  # GAS (Natural Gas) - No PWRGAS technology in model; gas generation modeled via CCG/OCG → NGS
-  GAS: [BGD, BTN, IND, NPL, LKA, MDV]
-  # GEO (Geothermal) - No geothermal resources in any modeled country
-  GEO: [BGD, BTN, IND, NPL, LKA, MDV]
-  # HYD (Hydroelectric) - Flat coral atolls, no rivers or elevation
-  HYD: [MDV]
-  # NGS (Natural Gas unified) - No CCG/OCG/NGS power data
-  NGS: [BGD, BTN, NPL, MDV]
-  # OIL (Oil/Fuel Oil) - No oil-fired grid power plants
-  OIL: [BTN, NPL, MDV]
-  # URN (Nuclear) - No nuclear program or plans
-  URN: [BTN, NPL, LKA, MDV]
-  # WAS (Waste-to-Energy) - No waste-to-energy plants or plans
-  WAS: [BTN, MDV]
-  # WAV (Wave Energy) - No capacity or plans; BTN and NPL are landlocked
-  WAV: [BGD, BTN, IND, NPL, LKA, MDV]
-  # WOF (Offshore Wind) - BTN/NPL landlocked; MDV scale economically unviable
-  WOF: [BTN, NPL, MDV]
-  # WON (Onshore Wind) - No country lacks onshore wind data except MDV
-  WON: [MDV]                                                                          
+  # GAS (Natural Gas) - No PWRGAS technology in model; gas generation modeled via CCG/OCG -> NGS
+  GAS: [ARG, BOL, BRA, BRB, CHL, COL, CRI, DOM, ECU, GTM, HND, HTI, MEX, NIC, PAN, PER, PRY, SLV, URY]
 
 # Technology parameters
 # Renewable transmission technologies

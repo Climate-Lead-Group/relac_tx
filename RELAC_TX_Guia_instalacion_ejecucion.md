@@ -120,7 +120,7 @@
 
 Si deseas cambiar el solver por defecto:
 
-1. Editar el archivo: `relac_tx\t1_confection\MOMF_T1_AB.yaml`
+1. Editar el archivo: `relac_tx\t1_confection\Config_MOMF_T1_AB.yaml`
 2. Buscar la clave `solver` y cambiarla a uno de estos valores:
    - `glpk`
    - `cbc`
@@ -132,7 +132,7 @@ Si deseas cambiar el solver por defecto:
 
 Si usas CPLEX, es importante configurar el número de threads:
 
-1. En el mismo archivo `MOMF_T1_AB.yaml`, buscar la variable `cplex_threads`
+1. En el mismo archivo `Config_MOMF_T1_AB.yaml`, buscar la variable `cplex_threads`
 2. Ajustar el valor según tu máquina:
    - **Si solo ejecutas el modelo:** Dejar al menos 2 threads libres
    - **Si realizas otras tareas simultáneamente:** Dejar más threads libres
@@ -147,12 +147,12 @@ Si usas CPLEX, es importante configurar el número de threads:
 
 Si usas Gurobi, es importante configurar el número de threads:
 
-1. En el mismo archivo `MOMF_T1_AB.yaml`, buscar la variable `gurobi_threads`
+1. En el mismo archivo `Config_MOMF_T1_AB.yaml`, buscar la variable `gurobi_threads`
 2. Ajustar el valor según tu máquina siguiendo las mismas recomendaciones que para CPLEX
 
 ### 3.3 Configuración Avanzada (opcional)
 
-El archivo `MOMF_T1_AB.yaml` contiene parámetros adicionales que puedes ajustar:
+El archivo `Config_MOMF_T1_AB.yaml` contiene parámetros adicionales que puedes ajustar:
 
 #### Seeds para Reproducibilidad
 Para garantizar resultados determinísticos y reproducibles:
@@ -163,7 +163,7 @@ Para garantizar resultados determinísticos y reproducibles:
 **Nota:** Estos parámetros aseguran que ejecutar el modelo múltiples veces con los mismos datos de entrada produzca resultados idénticos.
 
 #### Anualización de Capital
-- `annualize_capital`: Activa/desactiva la anualización de inversiones de capital (por defecto: False)
+- `annualize_capital`: Activa/desactiva la anualización de inversiones de capital (por defecto: True)
 
 Cuando está activado (`True`), el modelo calcula los costos anualizados de las inversiones de capital usando el método del Factor de Recuperación de Capital (CRF).
 
@@ -246,7 +246,7 @@ Después de la ejecución, confirma:
 
 ### Problema: "Cambiar solver no surte efecto"
 **Solución:**
-1. Confirmar que editaste y guardaste `MOMF_T1_AB.yaml`
+1. Confirmar que editaste y guardaste `Config_MOMF_T1_AB.yaml`
 2. Verificar que el solver alternativo está instalado
 3. Volver a ejecutar `python run.py`
 
