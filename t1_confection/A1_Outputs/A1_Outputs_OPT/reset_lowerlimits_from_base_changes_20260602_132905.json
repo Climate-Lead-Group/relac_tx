@@ -1,0 +1,219 @@
+{
+  "input_dir": "A1_Outputs\\A1_Outputs_OPT",
+  "base_dir": "C:\\Users\\ClimateLeadGroup\\Desktop\\CLG_repositories\\relac_tx\\t1_confection\\NO BORRAR A1_Outputs - Escenario Base\\Base",
+  "paramfile": "A1_Outputs\\A1_Outputs_OPT\\A-O_Parametrization.xlsx",
+  "base_paramfile": "C:\\Users\\ClimateLeadGroup\\Desktop\\CLG_repositories\\relac_tx\\t1_confection\\NO BORRAR A1_Outputs - Escenario Base\\Base\\A-O_Parametrization.xlsx",
+  "backup": "A1_Outputs\\A1_Outputs_OPT\\A-O_Parametrization.backup_pre_reset_ll_20260602_132905.xlsx",
+  "sheet": "Secondary Techs",
+  "parameter": "TotalTechnologyAnnualActivityLowerLimit",
+  "tech_prefix": "PWR",
+  "base_year": 2023,
+  "end_year": 2050,
+  "rows_matched": 380,
+  "rows_touched": 12,
+  "rows_missing_in_base": [],
+  "total_cell_writes": 21,
+  "changes": [
+    {
+      "row": 1261,
+      "tech": "PWRPETHNDXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 9.164375813608759,
+          "new": 14.4841
+        },
+        {
+          "year": 2024,
+          "prev": 12.21769727183756,
+          "new": 14.9495
+        }
+      ]
+    },
+    {
+      "row": 1415,
+      "tech": "PWRWONPANXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 2.199996256935998,
+          "new": 3.2104
+        },
+        {
+          "year": 2024,
+          "prev": 2.442725657350831,
+          "new": 3.4521
+        }
+      ]
+    },
+    {
+      "row": 1492,
+      "tech": "PWRWONSLVXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 0.5405499864911459,
+          "new": 0.6006
+        },
+        {
+          "year": 2024,
+          "prev": 0.5405499864911459,
+          "new": 0.5881
+        }
+      ]
+    },
+    {
+      "row": 1701,
+      "tech": "PWRSPVDOMXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 3.338960468048178,
+          "new": 3.9896
+        },
+        {
+          "year": 2024,
+          "prev": 3.59876563613534,
+          "new": 4.1712
+        }
+      ]
+    },
+    {
+      "row": 2284,
+      "tech": "PWRWONARGXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 42.08400984046653,
+          "new": 52.1111
+        },
+        {
+          "year": 2024,
+          "prev": 46.72092472665079,
+          "new": 55.0918
+        }
+      ]
+    },
+    {
+      "row": 3021,
+      "tech": "PWRWONURYXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 15.07157117982974,
+          "new": 17.1543
+        },
+        {
+          "year": 2024,
+          "prev": 15.63529323931258,
+          "new": 21.8203
+        }
+      ]
+    },
+    {
+      "row": 3109,
+      "tech": "PWRSPVURYXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 1.675410751032281,
+          "new": 1.7714
+        },
+        {
+          "year": 2024,
+          "prev": 1.950840876728365,
+          "new": 2.2532
+        }
+      ]
+    },
+    {
+      "row": 3439,
+      "tech": "PWRSPVARGXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 9.819836165257106,
+          "new": 11.7333
+        }
+      ]
+    },
+    {
+      "row": 3802,
+      "tech": "PWRSPVPANXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 2.335112688362765,
+          "new": 3.121
+        },
+        {
+          "year": 2024,
+          "prev": 2.501252959029892,
+          "new": 3.356
+        }
+      ]
+    },
+    {
+      "row": 4143,
+      "tech": "PWRSPVCOLXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 2.833765360310223,
+          "new": 4.3351
+        },
+        {
+          "year": 2024,
+          "prev": 3.623531974761419,
+          "new": 4.4655
+        }
+      ]
+    },
+    {
+      "row": 4319,
+      "tech": "PWRWONECUXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2023,
+          "prev": 0.4950084236645021,
+          "new": 0.7509
+        }
+      ]
+    },
+    {
+      "row": 4649,
+      "tech": "PWRBIOURYXX",
+      "proj_mode_prev": null,
+      "proj_mode_new": null,
+      "cells": [
+        {
+          "year": 2024,
+          "prev": 13.23116511769991,
+          "new": 14.1198
+        }
+      ]
+    }
+  ]
+}
