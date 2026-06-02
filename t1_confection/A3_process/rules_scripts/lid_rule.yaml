@@ -153,24 +153,42 @@ flat_overrides_by_tech:
   PWRWONBRAXX: 3.5
   PWRSPVBRAXX: 5.5
 
-# 8) LowerLimit scenario allowlist (2026-06-01):
+# 8) LowerLimit scenario scope (2026-06-01, per-type filter added 2026-06-02):
 # Controls which scenarios receive the TotalTechnologyAnnualActivityLowerLimit
-# adjustments in the A3 orchestrator. This gates TWO steps run by
-# A3_process.py:
-#   - extend_lowerlimits_pwr.py  (extends the 2024 PWR floor flat to 2050)
-#   - B1b V3                     (lowers the floor to max_activity*0.99 where
-#                                 the calibrated ActivityLowerLimit exceeds the
-#                                 capacity the lid permits)
+# floor extension (extend_lowerlimits_pwr.py, which extends the 2024 PWR floor
+# flat to 2050) in the A3 orchestrator, and — per scenario — for WHICH PWR
+# technology types the floor is imposed.
 #
-# Semantics are OPT-IN: a scenario gets LowerLimit adjustments ONLY if its name
-# appears in this list. A scenario NOT listed (or this whole key omitted/empty)
-# is left untouched on LowerLimit — extend_lowerlimits_pwr.py is skipped and
-# B1b runs with --skip-v3 (so its MaxCapInv fixes V1/V2 still apply, but V3
-# does not). This does NOT affect the MaxCapacityInvestment lid (steps 1 / V1 /
-# V2), which always run for every scenario.
+# Semantics are OPT-IN: a scenario gets the floor extension ONLY if its name
+# appears as a key in `lowerlimit_scenarios`. A scenario NOT listed (or this
+# whole key omitted/empty) is left untouched — extend_lowerlimits_pwr.py is
+# skipped for it.
 #
-# The names here are the scenario suffixes used under A1_Outputs/
-# (A1_Outputs_<scenario>), e.g. BAU, INV, OPT.
+# B1b V3 (which only *relaxes* an infeasible floor to max_activity*0.99, never
+# imposes one) runs ALWAYS for every scenario as a feasibility safeguard and is
+# NOT gated here. This block also does NOT affect the MaxCapacityInvestment lid
+# (steps 1 / V1 / V2), which always run for every scenario.
+#
+# Per-scenario value (alcance):
+#   all        -> extend the floor for ALL PWR techs (the 18 types).
+#   <group>    -> extend only techs whose type (chars 4-6 of the code,
+#                 TECHNOLOGY[3:6]) is in the named group below.
+#   [T1, T2]   -> extend only the listed 3-char type codes (inline list).
+#
+# OPT uses `renewable` so the floor is imposed on renewable generation only;
+# non-renewable PWR techs in OPT keep the relaxed (sparse, base-year-only)
+# floor produced by reset_lowerlimits_from_base.py. BAU/INV impose the floor on
+# all 18 PWR types.
+#
+# The scenario keys are the suffixes used under A1_Outputs/
+# (A1_Outputs_<scenario>), e.g. BAU, INV, OPT. A plain YAML list (old format)
+# is still accepted and treated as `all` for each listed scenario.
+
+# Tech-type groups (chars 4-6 of the PWR code, TECHNOLOGY[3:6]).
+lowerlimit_tech_groups:
+  renewable: [BIO, GEO, CSP, SPV, HYD, WAS, WAV, WON, WOF]
+
 lowerlimit_scenarios:
-  - BAU
-  - INV
+  BAU: all
+  INV: all
+  OPT: renewable

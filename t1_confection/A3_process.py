@@ -25,9 +25,13 @@ LowerLimit gating
 Two operations touch the LowerLimit, and they are gated differently:
 
   * Step 2 (extend_lowerlimits_pwr.py) *imposes* the calibration floor and is
-    OPT-IN per scenario via the `lowerlimit_scenarios` list in lid_rule.yaml.
-    For a scenario NOT in that list, step 2 is skipped. If the key is
-    absent/empty, NO scenario gets the floor extended.
+    OPT-IN per scenario via the `lowerlimit_scenarios` map in lid_rule.yaml.
+    Each scenario's value also sets the SCOPE of types the floor is imposed on:
+    `all` (every PWR tech) or a named group / explicit list of type codes
+    (chars 4-6 of the tech code), passed to the extend script as
+    --include-types. For a scenario NOT in the map, step 2 is skipped. If the
+    key is absent/empty, NO scenario gets the floor extended. (OPT uses the
+    `renewable` group so non-renewable PWR techs keep their relaxed floor.)
   * B1b's V3 fix only *relaxes* an existing floor when it would otherwise make
     the LP infeasible (it never raises it). It is a feasibility safeguard, so
     it runs ALWAYS, regardless of the allowlist — A3 never passes `--skip-v3`.
@@ -74,31 +78,86 @@ LID_RULE_YAML = RULES_SCRIPTS_DIR / "lid_rule.yaml"
 PYTHON = sys.executable
 
 
-def load_lowerlimit_scenarios() -> list[str]:
-    """Read the `lowerlimit_scenarios` opt-in allowlist from lid_rule.yaml.
+def load_lowerlimit_scenarios() -> dict[str, set[str] | None]:
+    """Read the per-scenario LowerLimit scope map from lid_rule.yaml.
 
-    Returns the list of scenario names that should receive LowerLimit
-    adjustments (step 2 + B1b V3). Returns [] when the file is missing, the
-    key is absent/empty, or PyYAML is unavailable — i.e. opt-in default is
-    "no scenario gets LowerLimit adjustments".
+    Returns a dict {scenario: include_types}, where include_types is either
+    None (= extend the floor for ALL PWR techs) or a set of 3-char type codes
+    (= extend only techs whose type, chars 4-6 of the code, is in the set).
+    A scenario NOT present in the dict does not get the floor extended (opt-in).
+
+    Resolution of each `lowerlimit_scenarios` value:
+      - "all" (case-insensitive)      -> None
+      - a name in lowerlimit_tech_groups -> set(that group's types)
+      - a YAML list of codes          -> set(those codes)
+
+    Backward-compat: a plain YAML list (old format) is read as each scenario
+    mapping to None ("all").
+
+    Returns {} when the file is missing, the key is absent/empty, or PyYAML is
+    unavailable — i.e. opt-in default is "no scenario gets LowerLimit extend".
     """
     if not LID_RULE_YAML.is_file():
-        return []
+        return {}
     try:
         import yaml  # type: ignore
     except ImportError:
         print(f"  [WARN] PyYAML not installed; cannot read lowerlimit_scenarios "
-              f"from {LID_RULE_YAML.name}. Treating allowlist as empty.")
-        return []
+              f"from {LID_RULE_YAML.name}. Treating scope map as empty.")
+        return {}
     with open(LID_RULE_YAML, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
-    raw = cfg.get("lowerlimit_scenarios") or []
-    if not isinstance(raw, list):
+
+    groups_raw = cfg.get("lowerlimit_tech_groups") or {}
+    if not isinstance(groups_raw, dict):
+        sys.exit(
+            f"ERROR: lowerlimit_tech_groups in {LID_RULE_YAML.name} must be a "
+            f"mapping, got {type(groups_raw).__name__}."
+        )
+    groups = {
+        str(name).strip(): {str(t).strip().upper() for t in (types or []) if str(t).strip()}
+        for name, types in groups_raw.items()
+    }
+
+    raw = cfg.get("lowerlimit_scenarios")
+    if not raw:
+        return {}
+
+    # Old format: a plain list of scenario names -> all map to None ("all").
+    if isinstance(raw, list):
+        return {str(s).strip(): None for s in raw if str(s).strip()}
+
+    if not isinstance(raw, dict):
         sys.exit(
             f"ERROR: lowerlimit_scenarios in {LID_RULE_YAML.name} must be a "
-            f"list, got {type(raw).__name__}."
+            f"list or mapping, got {type(raw).__name__}."
         )
-    return [str(s).strip() for s in raw if str(s).strip()]
+
+    scope: dict[str, set[str] | None] = {}
+    for scen, val in raw.items():
+        name = str(scen).strip()
+        if not name:
+            continue
+        if isinstance(val, str):
+            if val.strip().lower() == "all":
+                scope[name] = None
+            elif val.strip() in groups:
+                scope[name] = set(groups[val.strip()])
+            else:
+                sys.exit(
+                    f"ERROR: lowerlimit_scenarios[{name}] = '{val}' in "
+                    f"{LID_RULE_YAML.name} is neither 'all' nor a known group "
+                    f"in lowerlimit_tech_groups ({sorted(groups)})."
+                )
+        elif isinstance(val, list):
+            scope[name] = {str(t).strip().upper() for t in val if str(t).strip()}
+        else:
+            sys.exit(
+                f"ERROR: lowerlimit_scenarios[{name}] in {LID_RULE_YAML.name} "
+                f"must be 'all', a group name, or a list; got "
+                f"{type(val).__name__}."
+            )
+    return scope
 
 
 def banner(msg: str) -> None:
@@ -184,7 +243,8 @@ def run_subproc(cmd: list, label: str) -> None:
 def run_for_scenario(scenario: str, rules_script: str,
                      skip_validation: bool,
                      force_overwrite: bool = False,
-                     apply_lowerlimit: bool = False) -> None:
+                     apply_lowerlimit: bool = False,
+                     include_types: set[str] | None = None) -> None:
     input_dir = A1_OUTPUTS_DIR / f"{SCENARIO_PREFIX}{scenario}"
     if not input_dir.is_dir():
         sys.exit(f"ERROR: scenario folder not found: {input_dir}")
@@ -208,18 +268,22 @@ def run_for_scenario(scenario: str, rules_script: str,
         cmd.append("--force-overwrite")
     run_subproc(cmd, label=f"{rules_script} ({scenario})")
 
+    scope_desc = "ALL PWR" if include_types is None else f"types {sorted(include_types)}"
     print(f"  lowerlimit    : extend={'ENABLED' if apply_lowerlimit else 'SKIPPED'} "
-          f"(per lowerlimit_scenarios in {LID_RULE_YAML.name}); "
+          f"(per lowerlimit_scenarios in {LID_RULE_YAML.name}"
+          f"{', scope=' + scope_desc if apply_lowerlimit else ''}); "
           f"B1b V3 feasibility relaxation always ON")
 
     if apply_lowerlimit:
         extend_ll_path = RULES_SCRIPTS_DIR / EXTEND_LL_SCRIPT
         if not extend_ll_path.is_file():
             sys.exit(f"ERROR: {EXTEND_LL_SCRIPT} not found at {extend_ll_path}")
-        print(f"  extend_ll     : {EXTEND_LL_SCRIPT}")
+        print(f"  extend_ll     : {EXTEND_LL_SCRIPT} (scope={scope_desc})")
         ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir]
         if force_overwrite:
             ext_cmd.append("--force-overwrite")
+        if include_types is not None:
+            ext_cmd += ["--include-types", ",".join(sorted(include_types))]
         run_subproc(ext_cmd, label=f"{EXTEND_LL_SCRIPT} ({scenario})")
     else:
         print(f"  [SKIP] {EXTEND_LL_SCRIPT} skipped "
@@ -273,7 +337,10 @@ def main() -> int:
     else:
         scenarios = discovered
 
-    ll_allowlist = load_lowerlimit_scenarios()
+    ll_scope = load_lowerlimit_scenarios()
+    ll_summary = {
+        s: ("all" if t is None else sorted(t)) for s, t in ll_scope.items()
+    }
 
     t_start = time.time()
     banner("A3 workflow — relac_tx")
@@ -281,13 +348,14 @@ def main() -> int:
     print(f"  rules_script         : {args.rules_script}")
     print(f"  skip-validation      : {args.skip_validation}")
     print(f"  force-overwrite      : {args.force_overwrite}")
-    print(f"  lowerlimit_scenarios : {ll_allowlist or '(none — opt-in)'}")
+    print(f"  lowerlimit_scenarios : {ll_summary or '(none — opt-in)'}")
 
     for scen in scenarios:
         run_for_scenario(
             scen, args.rules_script, args.skip_validation,
             force_overwrite=args.force_overwrite,
-            apply_lowerlimit=(scen in ll_allowlist),
+            apply_lowerlimit=(scen in ll_scope),
+            include_types=ll_scope.get(scen),
         )
 
     elapsed = time.time() - t_start

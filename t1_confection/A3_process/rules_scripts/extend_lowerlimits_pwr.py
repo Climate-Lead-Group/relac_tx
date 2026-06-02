@@ -24,6 +24,12 @@ the 2024 value; non-zero pre-existing values are preserved. With
 --force-overwrite, every 2025..2050 cell of qualifying rows is set to the 2024
 value regardless of prior content.
 
+--include-types restricts the extension to PWR techs whose type code (chars 4-6
+of the code, TECHNOLOGY[3:6], e.g. "HYD" in PWRHYDBRAXX) is in the given
+comma-separated list. Without it, every PWR row qualifies (original behavior).
+Used by A3_process.py to impose the floor on a subset of types per scenario
+(e.g. renewables only for OPT, see lowerlimit_scenarios in lid_rule.yaml).
+
 Side effects:
 - Modifies A-O_Parametrization.xlsx in place.
 - Writes extend_lowerlimits_pwr_changes_<ts>.json next to the xlsx with a
@@ -74,7 +80,8 @@ def _is_empty(val) -> bool:
     return False
 
 
-def run(input_dir: Path, force_overwrite: bool) -> dict:
+def run(input_dir: Path, force_overwrite: bool,
+        include_types: set[str] | None = None) -> dict:
     paramfile = input_dir / PARAM_FILENAME
     if not paramfile.is_file():
         sys.exit(f"ERROR: {PARAM_FILENAME} not found in {input_dir}")
@@ -89,6 +96,7 @@ def run(input_dir: Path, force_overwrite: bool) -> dict:
     changes: list[dict] = []
     rows_touched = 0
     rows_skipped_no_base = 0
+    rows_skipped_type = 0
     rows_matched = 0
 
     for row in range(2, ws.max_row + 1):
@@ -99,6 +107,10 @@ def run(input_dir: Path, force_overwrite: bool) -> dict:
         if parameter != TARGET_PARAMETER:
             continue
         rows_matched += 1
+
+        if include_types is not None and tech[3:6] not in include_types:
+            rows_skipped_type += 1
+            continue
 
         base_val = ws.cell(row=row, column=base_col).value
         if _is_empty(base_val):
@@ -140,9 +152,11 @@ def run(input_dir: Path, force_overwrite: bool) -> dict:
         "base_year": BASE_YEAR,
         "end_year": END_YEAR,
         "force_overwrite": force_overwrite,
+        "include_types": sorted(include_types) if include_types is not None else None,
         "rows_matched": rows_matched,
         "rows_touched": rows_touched,
         "rows_skipped_no_base": rows_skipped_no_base,
+        "rows_skipped_type": rows_skipped_type,
         "total_cell_writes": sum(len(c["cells"]) for c in changes),
         "changes": changes,
     }
@@ -161,7 +175,9 @@ def print_summary(log: dict) -> None:
     print(f"  parameter            : {log['parameter']}")
     print(f"  base_year -> end     : {log['base_year']} -> {log['end_year']}")
     print(f"  force_overwrite      : {log['force_overwrite']}")
+    print(f"  include_types        : {log['include_types'] or 'ALL'}")
     print(f"  rows_matched         : {log['rows_matched']}")
+    print(f"  rows_skipped_type    : {log['rows_skipped_type']}")
     print(f"  rows_skipped_no_base : {log['rows_skipped_no_base']}")
     print(f"  rows_touched         : {log['rows_touched']}")
     print(f"  total_cell_writes    : {log['total_cell_writes']}")
@@ -187,9 +203,25 @@ def main() -> int:
             "Default preserves any pre-existing positive values."
         ),
     )
+    parser.add_argument(
+        "--include-types",
+        default=None,
+        help=(
+            "Comma-separated PWR type codes (chars 4-6 of the tech code, "
+            "e.g. 'BIO,GEO,SPV'). When given, only PWR techs whose type is in "
+            "this list get the floor extended; others are left untouched. "
+            "Default: all PWR techs."
+        ),
+    )
     args = parser.parse_args()
 
-    log = run(args.input_dir, args.force_overwrite)
+    include_types = None
+    if args.include_types:
+        include_types = {
+            t.strip().upper() for t in args.include_types.split(",") if t.strip()
+        }
+
+    log = run(args.input_dir, args.force_overwrite, include_types=include_types)
     print_summary(log)
     return 0
 
