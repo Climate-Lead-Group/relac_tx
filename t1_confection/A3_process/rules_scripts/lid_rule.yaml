@@ -152,3 +152,25 @@ absolute_by_prefix:
 flat_overrides_by_tech:
   PWRWONBRAXX: 3.5
   PWRSPVBRAXX: 5.5
+
+# 8) LowerLimit scenario allowlist (2026-06-01):
+# Controls which scenarios receive the TotalTechnologyAnnualActivityLowerLimit
+# adjustments in the A3 orchestrator. This gates TWO steps run by
+# A3_process.py:
+#   - extend_lowerlimits_pwr.py  (extends the 2024 PWR floor flat to 2050)
+#   - B1b V3                     (lowers the floor to max_activity*0.99 where
+#                                 the calibrated ActivityLowerLimit exceeds the
+#                                 capacity the lid permits)
+#
+# Semantics are OPT-IN: a scenario gets LowerLimit adjustments ONLY if its name
+# appears in this list. A scenario NOT listed (or this whole key omitted/empty)
+# is left untouched on LowerLimit — extend_lowerlimits_pwr.py is skipped and
+# B1b runs with --skip-v3 (so its MaxCapInv fixes V1/V2 still apply, but V3
+# does not). This does NOT affect the MaxCapacityInvestment lid (steps 1 / V1 /
+# V2), which always run for every scenario.
+#
+# The names here are the scenario suffixes used under A1_Outputs/
+# (A1_Outputs_<scenario>), e.g. BAU, INV, OPT.
+lowerlimit_scenarios:
+  - BAU
+  - INV

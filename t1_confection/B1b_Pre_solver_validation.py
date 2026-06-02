@@ -278,8 +278,14 @@ def _to_records(max_adjusts, max_total_adjusts, act_issues, cov_issues=()):
 # Main entry point
 # -------------------------------------------------------------------
 def run(scenario, xlsx_path=None, *, interactive=True, auto_fix_all=False,
-        report_only=False, base_year=None):
+        report_only=False, base_year=None, skip_v3=False):
     """Run V1+V2+V3. Returns (any_fix_applied, abort).
+
+    When `skip_v3=True`, the V3 group (TotalTechnologyAnnualActivityLowerLimit
+    lowering) is always skipped regardless of `auto_fix_all`/interactive, while
+    V1/V2 (MaxCapacityInvestment consistency fixes) still apply. Used by the
+    A3 orchestrator to gate LowerLimit adjustments to an allowlist of
+    scenarios.
 
     abort=True only if the user replied with skip-all to *every* group AND the
     caller passed interactive=True with a non-trivial issue set; in practice
@@ -361,12 +367,16 @@ def run(scenario, xlsx_path=None, *, interactive=True, auto_fix_all=False,
         "Max_tot(y) = (Residual + Σ Min_inv[y - OpLife + 1 .. y]) * 1.01",
         _fmt_v2, prompt_mode, interactive=(interactive and not report_only),
     )
+    v3_mode = "skip-all" if skip_v3 else prompt_mode
+    if skip_v3:
+        print("[VALIDATE] --skip-v3: LowerLimit (V3) fixes will not be applied "
+              "for this scenario (not in lowerlimit_scenarios allowlist).")
     accept_v3, prompt_mode = _prompt_group(
         "V3: Activity-vs-Capacity (CAb1 vs AAC3)",
         all_act_issues,
         "ActivityLowerLimit(y) = max_activity(y) * 0.99    "
         "where max_activity = (Residual + Σ Max_inv[y-OL+1..y]) * AvailabilityFactor * CapacityToActivityUnit * Σ(CF·YS)",
-        _fmt_v3, prompt_mode, interactive=(interactive and not report_only),
+        _fmt_v3, v3_mode, interactive=(interactive and not report_only),
     )
 
     applied_groups = set()
@@ -464,6 +474,10 @@ def main():
     grp.add_argument("--non-interactive", action="store_true", help="Do not prompt; fail on issues.")
     grp.add_argument("--auto-fix-all", action="store_true", help="Apply every fix without prompting.")
     grp.add_argument("--report-only", action="store_true", help="Just write the report; do not modify the xlsx.")
+    ap.add_argument("--skip-v3", action="store_true",
+                    help="Skip the V3 LowerLimit (TotalTechnologyAnnualActivityLowerLimit) "
+                         "fixes; V1/V2 MaxCapInv fixes still apply. Used by the A3 "
+                         "orchestrator to gate LowerLimit adjustments to an allowlist.")
     args = ap.parse_args()
 
     if not args.scenario and not args.xlsx:
@@ -483,6 +497,7 @@ def main():
         interactive=interactive,
         auto_fix_all=args.auto_fix_all,
         report_only=args.report_only,
+        skip_v3=args.skip_v3,
     )
     return 0 if not abort else 1
 

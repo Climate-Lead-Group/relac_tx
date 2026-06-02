@@ -17,7 +17,24 @@ orchestrator runs three steps in order against the scenario's
      inconsistencies the lid leaves behind, in particular V3 cases where the
      calibrated ActivityLowerLimit exceeds the capacity that the lid permits
      (e.g. PWRPETHNDXX 2023). B1b lowers the floor to `max_activity * 0.99`
-     so the LP is feasible without un-capping the lid.
+     so the LP is feasible without un-capping the lid. This V3 feasibility
+     relaxation runs for EVERY scenario (see gating below).
+
+LowerLimit gating
+-----------------
+Two operations touch the LowerLimit, and they are gated differently:
+
+  * Step 2 (extend_lowerlimits_pwr.py) *imposes* the calibration floor and is
+    OPT-IN per scenario via the `lowerlimit_scenarios` list in lid_rule.yaml.
+    For a scenario NOT in that list, step 2 is skipped. If the key is
+    absent/empty, NO scenario gets the floor extended.
+  * B1b's V3 fix only *relaxes* an existing floor when it would otherwise make
+    the LP infeasible (it never raises it). It is a feasibility safeguard, so
+    it runs ALWAYS, regardless of the allowlist — A3 never passes `--skip-v3`.
+    (`--skip-v3` still exists on B1b for manual standalone use.)
+
+The MaxCapacityInvestment lid (step 1) and B1b's V1/V2 fixes also always run
+for every scenario regardless.
 
 The pre-stage pipeline that OSTRAM runs (template materialization,
 fix_rnwbio, scripts 1-5, c2a patch, trn residual fixes, etc.) is not needed
@@ -52,8 +69,36 @@ SCENARIO_PREFIX = "A1_Outputs_"
 DEFAULT_RULES_SCRIPT = "add_max_cap_investment_lid_rule.py"
 EXTEND_LL_SCRIPT = "extend_lowerlimits_pwr.py"
 B1B_VALIDATOR = T1_CONFECTION / "B1b_Pre_solver_validation.py"
+LID_RULE_YAML = RULES_SCRIPTS_DIR / "lid_rule.yaml"
 
 PYTHON = sys.executable
+
+
+def load_lowerlimit_scenarios() -> list[str]:
+    """Read the `lowerlimit_scenarios` opt-in allowlist from lid_rule.yaml.
+
+    Returns the list of scenario names that should receive LowerLimit
+    adjustments (step 2 + B1b V3). Returns [] when the file is missing, the
+    key is absent/empty, or PyYAML is unavailable — i.e. opt-in default is
+    "no scenario gets LowerLimit adjustments".
+    """
+    if not LID_RULE_YAML.is_file():
+        return []
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        print(f"  [WARN] PyYAML not installed; cannot read lowerlimit_scenarios "
+              f"from {LID_RULE_YAML.name}. Treating allowlist as empty.")
+        return []
+    with open(LID_RULE_YAML, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+    raw = cfg.get("lowerlimit_scenarios") or []
+    if not isinstance(raw, list):
+        sys.exit(
+            f"ERROR: lowerlimit_scenarios in {LID_RULE_YAML.name} must be a "
+            f"list, got {type(raw).__name__}."
+        )
+    return [str(s).strip() for s in raw if str(s).strip()]
 
 
 def banner(msg: str) -> None:
@@ -138,7 +183,8 @@ def run_subproc(cmd: list, label: str) -> None:
 
 def run_for_scenario(scenario: str, rules_script: str,
                      skip_validation: bool,
-                     force_overwrite: bool = False) -> None:
+                     force_overwrite: bool = False,
+                     apply_lowerlimit: bool = False) -> None:
     input_dir = A1_OUTPUTS_DIR / f"{SCENARIO_PREFIX}{scenario}"
     if not input_dir.is_dir():
         sys.exit(f"ERROR: scenario folder not found: {input_dir}")
@@ -162,14 +208,22 @@ def run_for_scenario(scenario: str, rules_script: str,
         cmd.append("--force-overwrite")
     run_subproc(cmd, label=f"{rules_script} ({scenario})")
 
-    extend_ll_path = RULES_SCRIPTS_DIR / EXTEND_LL_SCRIPT
-    if not extend_ll_path.is_file():
-        sys.exit(f"ERROR: {EXTEND_LL_SCRIPT} not found at {extend_ll_path}")
-    print(f"  extend_ll     : {EXTEND_LL_SCRIPT}")
-    ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir]
-    if force_overwrite:
-        ext_cmd.append("--force-overwrite")
-    run_subproc(ext_cmd, label=f"{EXTEND_LL_SCRIPT} ({scenario})")
+    print(f"  lowerlimit    : extend={'ENABLED' if apply_lowerlimit else 'SKIPPED'} "
+          f"(per lowerlimit_scenarios in {LID_RULE_YAML.name}); "
+          f"B1b V3 feasibility relaxation always ON")
+
+    if apply_lowerlimit:
+        extend_ll_path = RULES_SCRIPTS_DIR / EXTEND_LL_SCRIPT
+        if not extend_ll_path.is_file():
+            sys.exit(f"ERROR: {EXTEND_LL_SCRIPT} not found at {extend_ll_path}")
+        print(f"  extend_ll     : {EXTEND_LL_SCRIPT}")
+        ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir]
+        if force_overwrite:
+            ext_cmd.append("--force-overwrite")
+        run_subproc(ext_cmd, label=f"{EXTEND_LL_SCRIPT} ({scenario})")
+    else:
+        print(f"  [SKIP] {EXTEND_LL_SCRIPT} skipped "
+              f"({scenario} not in lowerlimit_scenarios)")
 
     if skip_validation:
         print("  [SKIP] B1b validation step skipped (--skip-validation)")
@@ -178,9 +232,14 @@ def run_for_scenario(scenario: str, rules_script: str,
     if not B1B_VALIDATOR.is_file():
         sys.exit(f"ERROR: B1b validator not found: {B1B_VALIDATOR}")
 
+    # V3 (the feasibility relaxation that lowers an infeasible ActivityLowerLimit
+    # to max_activity * 0.99) runs for EVERY scenario regardless of the allowlist.
+    # The allowlist only gates step 2 (extend), i.e. whether the floor is imposed
+    # — not whether an existing floor is relaxed to keep the LP feasible.
+    b1b_cmd = [PYTHON, B1B_VALIDATOR, "--xlsx", paramfile, "--auto-fix-all"]
     print(f"  validator     : {B1B_VALIDATOR.name} (--auto-fix-all)")
     run_subproc(
-        [PYTHON, B1B_VALIDATOR, "--xlsx", paramfile, "--auto-fix-all"],
+        b1b_cmd,
         label=f"B1b_Pre_solver_validation ({scenario})",
     )
 
@@ -214,17 +273,21 @@ def main() -> int:
     else:
         scenarios = discovered
 
+    ll_allowlist = load_lowerlimit_scenarios()
+
     t_start = time.time()
     banner("A3 workflow — relac_tx")
-    print(f"  scenarios       : {scenarios}")
-    print(f"  rules_script    : {args.rules_script}")
-    print(f"  skip-validation : {args.skip_validation}")
-    print(f"  force-overwrite : {args.force_overwrite}")
+    print(f"  scenarios            : {scenarios}")
+    print(f"  rules_script         : {args.rules_script}")
+    print(f"  skip-validation      : {args.skip_validation}")
+    print(f"  force-overwrite      : {args.force_overwrite}")
+    print(f"  lowerlimit_scenarios : {ll_allowlist or '(none — opt-in)'}")
 
     for scen in scenarios:
         run_for_scenario(
             scen, args.rules_script, args.skip_validation,
             force_overwrite=args.force_overwrite,
+            apply_lowerlimit=(scen in ll_allowlist),
         )
 
     elapsed = time.time() - t_start
