@@ -56,6 +56,13 @@ TECH_PREFIX = "PWR"
 BASE_YEAR = 2024
 END_YEAR = 2050
 
+# Earliest year this script may write. The 2024 value is still used as the flat
+# floor, but only cells from MODIFY_FROM_YEAR onward are written; years before
+# it (e.g. 2025) keep their existing value so the historical years stay
+# identical across scenarios (see sync_historical_from_bau.py). Override via
+# --modify-from-year. Set to BASE_YEAR+1 (2025) to restore the prior behavior.
+MODIFY_FROM_YEAR = 2026
+
 # Column layout for "Secondary Techs":
 #   B=Tech, E=Parameter, G=Projection.Mode, I=2023, J=2024, ..., AJ=2050.
 COL_TECH = 2
@@ -81,10 +88,15 @@ def _is_empty(val) -> bool:
 
 
 def run(input_dir: Path, force_overwrite: bool,
-        include_types: set[str] | None = None) -> dict:
+        include_types: set[str] | None = None,
+        modify_from_year: int = MODIFY_FROM_YEAR) -> dict:
     paramfile = input_dir / PARAM_FILENAME
     if not paramfile.is_file():
         sys.exit(f"ERROR: {PARAM_FILENAME} not found in {input_dir}")
+
+    # First year actually written: never before MODIFY_FROM_YEAR, and never at
+    # or before BASE_YEAR (the flat-floor anchor itself is not overwritten).
+    start_year = max(modify_from_year, BASE_YEAR + 1)
 
     wb = openpyxl.load_workbook(paramfile)
     if SHEET_NAME not in wb.sheetnames:
@@ -118,7 +130,7 @@ def run(input_dir: Path, force_overwrite: bool,
             continue
 
         row_changes: list[dict] = []
-        for year in range(BASE_YEAR + 1, END_YEAR + 1):
+        for year in range(start_year, END_YEAR + 1):
             col = year_to_col(year)
             prev = ws.cell(row=row, column=col).value
             if not force_overwrite and not _is_empty(prev):
@@ -151,6 +163,8 @@ def run(input_dir: Path, force_overwrite: bool,
         "tech_prefix": TECH_PREFIX,
         "base_year": BASE_YEAR,
         "end_year": END_YEAR,
+        "modify_from_year": modify_from_year,
+        "start_year": start_year,
         "force_overwrite": force_overwrite,
         "include_types": sorted(include_types) if include_types is not None else None,
         "rows_matched": rows_matched,
@@ -174,6 +188,8 @@ def print_summary(log: dict) -> None:
     print(f"  sheet                : {log['sheet']}")
     print(f"  parameter            : {log['parameter']}")
     print(f"  base_year -> end     : {log['base_year']} -> {log['end_year']}")
+    print(f"  modify_from_year     : {log['modify_from_year']} "
+          f"(first written year: {log['start_year']})")
     print(f"  force_overwrite      : {log['force_overwrite']}")
     print(f"  include_types        : {log['include_types'] or 'ALL'}")
     print(f"  rows_matched         : {log['rows_matched']}")
@@ -213,6 +229,16 @@ def main() -> int:
             "Default: all PWR techs."
         ),
     )
+    parser.add_argument(
+        "--modify-from-year",
+        type=int,
+        default=MODIFY_FROM_YEAR,
+        help=(
+            f"Earliest year to write; years before it keep their value "
+            f"(default {MODIFY_FROM_YEAR}). The 2024 flat floor is still the "
+            f"source value. Use 2025 to restore the prior behavior."
+        ),
+    )
     args = parser.parse_args()
 
     include_types = None
@@ -221,7 +247,8 @@ def main() -> int:
             t.strip().upper() for t in args.include_types.split(",") if t.strip()
         }
 
-    log = run(args.input_dir, args.force_overwrite, include_types=include_types)
+    log = run(args.input_dir, args.force_overwrite, include_types=include_types,
+              modify_from_year=args.modify_from_year)
     print_summary(log)
     return 0
 

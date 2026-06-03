@@ -278,7 +278,8 @@ def _to_records(max_adjusts, max_total_adjusts, act_issues, cov_issues=()):
 # Main entry point
 # -------------------------------------------------------------------
 def run(scenario, xlsx_path=None, *, interactive=True, auto_fix_all=False,
-        report_only=False, base_year=None, skip_v3=False):
+        report_only=False, base_year=None, skip_v3=False,
+        modify_from_year=None):
     """Run V1+V2+V3. Returns (any_fix_applied, abort).
 
     When `skip_v3=True`, the V3 group (TotalTechnologyAnnualActivityLowerLimit
@@ -286,6 +287,12 @@ def run(scenario, xlsx_path=None, *, interactive=True, auto_fix_all=False,
     V1/V2 (MaxCapacityInvestment consistency fixes) still apply. Used by the
     A3 orchestrator to gate LowerLimit adjustments to an allowlist of
     scenarios.
+
+    When `modify_from_year` is not None, issues for years strictly before it
+    are dropped from V1/V2/V3 before prompting/applying — those historical
+    years (2023-2025) are kept identical across scenarios by
+    sync_historical_from_bau.py, so B1b must not mutate them. The number of
+    suppressed pre-cutoff issues is printed for visibility.
 
     abort=True only if the user replied with skip-all to *every* group AND the
     caller passed interactive=True with a non-trivial issue set; in practice
@@ -345,6 +352,24 @@ def run(scenario, xlsx_path=None, *, interactive=True, auto_fix_all=False,
             base_year=base_year, apply_changes=False,
         )
         all_act_issues.extend(issues)
+
+    # === Historical-year guard ===
+    # Drop issues for years before modify_from_year so B1b never mutates the
+    # historical cells (2023-2025) that are synced from BAU. Detection above
+    # already ran for all years; here we just filter what gets prompted/applied.
+    if modify_from_year is not None:
+        def _before(a):
+            return a["year"] < modify_from_year
+        n_sup_v12 = sum(1 for a in all_max_adjusts if _before(a)) \
+            + sum(1 for a in all_max_total_adjusts if _before(a))
+        n_sup_v3 = sum(1 for a in all_act_issues if _before(a))
+        all_max_adjusts = [a for a in all_max_adjusts if not _before(a)]
+        all_max_total_adjusts = [a for a in all_max_total_adjusts if not _before(a)]
+        all_act_issues = [a for a in all_act_issues if not _before(a)]
+        if n_sup_v12 or n_sup_v3:
+            print(f"[VALIDATE] modify_from_year={modify_from_year}: suppressed "
+                  f"{n_sup_v12} V1/V2 and {n_sup_v3} V3 pre-{modify_from_year} "
+                  f"issue(s) (historical years left untouched).")
 
     # === Prompt and apply ===
     prompt_mode = "apply-all" if (auto_fix_all and not report_only) else "ask"
@@ -478,6 +503,11 @@ def main():
                     help="Skip the V3 LowerLimit (TotalTechnologyAnnualActivityLowerLimit) "
                          "fixes; V1/V2 MaxCapInv fixes still apply. Used by the A3 "
                          "orchestrator to gate LowerLimit adjustments to an allowlist.")
+    ap.add_argument("--modify-from-year", type=int, default=None,
+                    help="Only apply fixes for years >= this; issues for earlier "
+                         "years are reported-but-not-fixed so historical cells "
+                         "(2023-2025, synced from BAU) stay untouched. Default: "
+                         "no cutoff (fix all years).")
     args = ap.parse_args()
 
     if not args.scenario and not args.xlsx:
@@ -498,6 +528,7 @@ def main():
         auto_fix_all=args.auto_fix_all,
         report_only=args.report_only,
         skip_v3=args.skip_v3,
+        modify_from_year=args.modify_from_year,
     )
     return 0 if not abort else 1
 

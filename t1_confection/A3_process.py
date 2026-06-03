@@ -40,6 +40,14 @@ Two operations touch the LowerLimit, and they are gated differently:
 The MaxCapacityInvestment lid (step 1) and B1b's V1/V2 fixes also always run
 for every scenario regardless.
 
+Historical-year cutoff (MODIFY_FROM_YEAR = 2026)
+------------------------------------------------
+All three steps receive --modify-from-year 2026, so they only modify cells from
+2026 onward. Years 2023-2025 are historical/observed and are kept identical
+across scenarios by sync_historical_from_bau.py, which must be run BEFORE this
+orchestrator (it copies BAU's 2023-2025 columns into INV and OPT). B1b still
+*reports* pre-2026 inconsistencies but does not auto-fix them.
+
 The pre-stage pipeline that OSTRAM runs (template materialization,
 fix_rnwbio, scripts 1-5, c2a patch, trn residual fixes, etc.) is not needed
 in relac_tx because the A1 outputs already come out of A1/A2 in final shape.
@@ -74,6 +82,12 @@ DEFAULT_RULES_SCRIPT = "add_max_cap_investment_lid_rule.py"
 EXTEND_LL_SCRIPT = "extend_lowerlimits_pwr.py"
 B1B_VALIDATOR = T1_CONFECTION / "B1b_Pre_solver_validation.py"
 LID_RULE_YAML = RULES_SCRIPTS_DIR / "lid_rule.yaml"
+
+# Historical-year cutoff: every A3 step (lid, extend, B1b) only modifies cells
+# from this year onward. Years 2023-2025 are historical/observed and are kept
+# identical across scenarios by sync_historical_from_bau.py (run before A3), so
+# A3 must not touch them. Passed to all three steps via --modify-from-year.
+MODIFY_FROM_YEAR = 2026
 
 PYTHON = sys.executable
 
@@ -263,7 +277,8 @@ def run_for_scenario(scenario: str, rules_script: str,
     print(f"  input-dir     : {input_dir}")
     print(f"  rules_script  : {rules_script}")
 
-    cmd = [PYTHON, rs_path, "--input-dir", input_dir]
+    cmd = [PYTHON, rs_path, "--input-dir", input_dir,
+           "--modify-from-year", MODIFY_FROM_YEAR]
     if force_overwrite:
         cmd.append("--force-overwrite")
     run_subproc(cmd, label=f"{rules_script} ({scenario})")
@@ -279,7 +294,8 @@ def run_for_scenario(scenario: str, rules_script: str,
         if not extend_ll_path.is_file():
             sys.exit(f"ERROR: {EXTEND_LL_SCRIPT} not found at {extend_ll_path}")
         print(f"  extend_ll     : {EXTEND_LL_SCRIPT} (scope={scope_desc})")
-        ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir]
+        ext_cmd = [PYTHON, extend_ll_path, "--input-dir", input_dir,
+                   "--modify-from-year", MODIFY_FROM_YEAR]
         if force_overwrite:
             ext_cmd.append("--force-overwrite")
         if include_types is not None:
@@ -300,8 +316,10 @@ def run_for_scenario(scenario: str, rules_script: str,
     # to max_activity * 0.99) runs for EVERY scenario regardless of the allowlist.
     # The allowlist only gates step 2 (extend), i.e. whether the floor is imposed
     # — not whether an existing floor is relaxed to keep the LP feasible.
-    b1b_cmd = [PYTHON, B1B_VALIDATOR, "--xlsx", paramfile, "--auto-fix-all"]
-    print(f"  validator     : {B1B_VALIDATOR.name} (--auto-fix-all)")
+    b1b_cmd = [PYTHON, B1B_VALIDATOR, "--xlsx", paramfile, "--auto-fix-all",
+               "--modify-from-year", MODIFY_FROM_YEAR]
+    print(f"  validator     : {B1B_VALIDATOR.name} (--auto-fix-all, "
+          f"--modify-from-year {MODIFY_FROM_YEAR})")
     run_subproc(
         b1b_cmd,
         label=f"B1b_Pre_solver_validation ({scenario})",
@@ -345,6 +363,7 @@ def main() -> int:
     t_start = time.time()
     banner("A3 workflow — relac_tx")
     print(f"  scenarios            : {scenarios}")
+    print(f"  modify_from_year     : {MODIFY_FROM_YEAR} (cells before it untouched)")
     print(f"  rules_script         : {args.rules_script}")
     print(f"  skip-validation      : {args.skip_validation}")
     print(f"  force-overwrite      : {args.force_overwrite}")

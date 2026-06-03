@@ -217,6 +217,13 @@ ZERO_IS_PLACEHOLDER_IN_LID_ROWS = False
 # radius to techs in TECH_TYPES.csv GENERATION category.
 FORCE_OVERWRITE = False
 
+# Earliest year the lid is allowed to modify. Cells for years strictly before
+# this are left exactly as they are (historical/observed years 2023-2025 are
+# kept identical across scenarios — see sync_historical_from_bau.py). Override
+# via YAML `modify_from_year:` or CLI `--modify-from-year`. Set to a very low
+# value (e.g. 0) to restore the prior all-years behavior.
+MODIFY_FROM_YEAR = 2026
+
 # Tech naming conventions
 PWR_TECH_LENGTH = 11    # e.g. PWRHYDBGDXX (3-letter prefix + 3 fuel + 3 country + 2 region)
 TRN_TECH_LENGTH = 13    # transmission interconnects, e.g. TRNINDEAINDNE -- skipped
@@ -513,6 +520,9 @@ def load_config(yaml_path: Path) -> dict:
     if "force_overwrite" in cfg:
         out["force_overwrite"] = bool(cfg["force_overwrite"])
 
+    if "modify_from_year" in cfg:
+        out["modify_from_year"] = int(cfg["modify_from_year"])
+
     return out
 
 
@@ -528,6 +538,7 @@ def apply_config(cfg: dict) -> None:
     global LID_FLAT_OVERRIDES_BY_TECH
     global LID_SECURITY_FACTOR, LID_RAMP_FROM_DEMAND
     global ZERO_IS_PLACEHOLDER_IN_LID_ROWS, FORCE_OVERWRITE
+    global MODIFY_FROM_YEAR
     if "rule_mode" in cfg:
         LID_RULE_MODE = cfg["rule_mode"]
     if "percentage_default" in cfg:
@@ -548,6 +559,8 @@ def apply_config(cfg: dict) -> None:
         ZERO_IS_PLACEHOLDER_IN_LID_ROWS = cfg["zero_is_placeholder_in_lid_rows"]
     if "force_overwrite" in cfg:
         FORCE_OVERWRITE = cfg["force_overwrite"]
+    if "modify_from_year" in cfg:
+        MODIFY_FROM_YEAR = cfg["modify_from_year"]
 
 
 # ---------------------------------------------------------------------------
@@ -1056,6 +1069,11 @@ def apply_lid_to_sheet(ws, allowed: set, pool_map: dict,
         is_flat_override = tech in LID_FLAT_OVERRIDES_BY_TECH
 
         for year, col in year_cols.items():
+            # Historical-year guard: never touch cells before MODIFY_FROM_YEAR.
+            # Those years (2023-2025) are kept identical across scenarios by
+            # sync_historical_from_bau.py; the lid only shapes 2026+.
+            if year < MODIFY_FROM_YEAR:
+                continue
             cell = ws.cell(row=row_idx, column=col)
             old = cell.value
             pool = pool_map.get((cr, year), 0.0)
@@ -1341,6 +1359,7 @@ def run(input_dir, sheets: list = None,
     )
     log["zero_is_placeholder_in_lid_rows"] = ZERO_IS_PLACEHOLDER_IN_LID_ROWS
     log["force_overwrite"] = FORCE_OVERWRITE
+    log["modify_from_year"] = MODIFY_FROM_YEAR
     log["restrict_to_generation"] = RESTRICT_TO_GENERATION
     log["generation_techs_count"] = (
         len(generation_techs) if generation_techs is not None else None
@@ -1527,6 +1546,14 @@ def main() -> int:
              "rows that have no 9999 anywhere (intentional bans) are still "
              "preserved. CLI flag overrides any YAML setting.",
     )
+    parser.add_argument(
+        "--modify-from-year",
+        type=int,
+        default=None,
+        help="Earliest year the lid may modify; cells before it are left "
+             f"untouched (default from YAML or module constant "
+             f"{MODIFY_FROM_YEAR}). CLI overrides YAML.",
+    )
     args = parser.parse_args()
 
     # Restore-only paths: do nothing else.
@@ -1542,6 +1569,8 @@ def main() -> int:
     cli_overrides: dict = {}
     if args.force_overwrite:
         cli_overrides["force_overwrite"] = True
+    if args.modify_from_year is not None:
+        cli_overrides["modify_from_year"] = args.modify_from_year
 
     try:
         log = run(args.input_dir, args.sheets, args.yaml, cli_overrides=cli_overrides)
