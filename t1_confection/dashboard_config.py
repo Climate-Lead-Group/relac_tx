@@ -200,6 +200,56 @@ def classify_tech_type(tech: str) -> str | None:
     return None
 
 
+# ================================================================
+# Familia de "fuente" para el índice de diversidad HHI (gráfico 13)
+# ----------------------------------------------------------------
+# Indicador de resiliencia agnóstico a la amenaza (Herfindahl-Hirschman):
+# si ninguna fuente domina la matriz, cualquier amenaza alcanza sólo una
+# porción limitada del suministro. La decisión crítica es qué cuenta como
+# fuente "independiente": las fuentes CORRELACIONADAS deben colapsarse en una
+# sola para no sobreestimar la resiliencia (p.ej. toda la hidro —presas
+# hidrológicamente ligadas— = 1 fuente; tecnologías que comparten combustible
+# = 1 fuente). Aquí cada familia = código PWR de 6 letras, agregando todas las
+# plantas de esa familia y de todos los países. Sólo generación (se excluyen
+# almacenamiento, líneas y backstop). Ver classify_source_family.
+# ================================================================
+SOURCE_FAMILY_NAMES = {
+    "PWRBIO": "Biomasa",
+    "PWRCSP": "Solar CSP",
+    "PWRGEO": "Geotérmica",
+    "PWRHYD": "Hidroeléctrica",
+    "PWRSPV": "Solar Fotovoltaica",
+    "PWRWAS": "Residuos",
+    "PWRWOF": "Eólica Marina",
+    "PWRWON": "Eólica Terrestre",
+    "PWRCSS": "Carbón con CCS",
+    "PWRCOA": "Carbón",
+    "PWRCOG": "Cogeneración",
+    "PWRNGS": "Gas Natural",
+    "PWROIL": "Petróleo/Diésel",
+    "PWROTH": "Otros",
+    "PWRPET": "Petcoke",
+    "PWRURN": "Nuclear",
+}
+
+
+def classify_source_family(tech: str) -> str | None:
+    """Familia de fuente (código PWR de 6 letras) para el HHI del gráfico 13.
+
+    Sólo tecnologías de GENERACIÓN (PWR* que no sean almacenamiento ni líneas);
+    el backstop (BCK) se excluye por ser una holgura del modelo, no una fuente
+    real. Colapsa todas las plantas de la misma familia/combustible y de todos
+    los países en UNA sola fuente. Devuelve None si la tecnología no es una
+    fuente de generación.
+    """
+    t = str(tech)
+    if "BCK" in t:
+        return None
+    if classify_tech_type(t) != "Generación":
+        return None
+    return t[:6]
+
+
 # Agrupación de años en periodos (eje X del gráfico 5).
 YEAR_PERIODS = [
     ("2023-2024", range(2023, 2025)),

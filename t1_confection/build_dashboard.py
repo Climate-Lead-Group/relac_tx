@@ -40,6 +40,8 @@ from dashboard_config import (  # noqa: E402
     classify_line_group,
     classify_tech_type,
     classify_line_group_raw,
+    classify_source_family,
+    SOURCE_FAMILY_NAMES,
     year_to_period,
     PERIOD_YEARS,
     PERIOD_ORDER,
@@ -526,6 +528,7 @@ CHART_DESC = {
     "10": "Kilómetros de líneas de transmisión construidos por periodo, desglosados por grupo de línea.",
     "11": "Costo anualizado (capital más operación) por unidad de energía generada, por periodo y escenario.",
     "12": "Indicador de seguridad energética: participación de energía primaria importada (MIN internacional) frente a la producción autóctona (extracción local y fuentes renovables), por año y escenario. La barra inferior (verde) muestra el porcentaje autóctono; el importado se infiere como 100 − x.",
+    "13": "Indicador de resiliencia agnóstico a la amenaza (índice Herfindahl-Hirschman). Sobre la generación anual, agrupa las tecnologías en familias de fuente (toda la hidro = una fuente, etc.) y grafica el número efectivo de fuentes = 1/HHI, una línea por escenario. Un valor mayor significa una matriz más diversificada y resiliente: ninguna fuente domina, así que cualquier amenaza alcanza sólo una porción del suministro. Las fuentes correlacionadas se colapsan a una para no sobreestimar la resiliencia.",
 }
 
 # Pestañas extra: HTML standalone ya generados (no son chart_NN). Se incrustan
@@ -536,9 +539,9 @@ CHART_DESC = {
 # y estas tres se corren un puesto (suben de número) para quedar últimas.
 # (key, título de la pestaña, nombre de archivo en Figures/).
 EXTRA_TABS = [
-    ("13", "Mapas de Transmisión", "TransmissionMaps.html"),
-    ("14", "Despacho", "DispatchChart.html"),
-    ("15", "Diagrama RES", "RES_Diagram.html"),
+    ("14", "Mapas de Transmisión", "TransmissionMaps.html"),
+    ("15", "Despacho", "DispatchChart.html"),
+    ("16", "Diagrama RES", "RES_Diagram.html"),
 ]
 
 
@@ -2011,6 +2014,110 @@ def chart_12():
 
 
 # ================================================================
+# Chart 13 — Resiliencia (HHI): Nº efectivo de fuentes [1/HHI]
+# ----------------------------------------------------------------
+# Indicador de resiliencia agnóstico a la amenaza. Sobre la generación anual
+# (ProductionByTechnology), agrupa las tecnologías en familias de fuente
+# (classify_source_family: toda la hidro = 1 fuente, etc.), calcula las cuotas
+# sᵢ, el HHI = Σ sᵢ² y grafica el número efectivo de fuentes = 1/HHI (una línea
+# por escenario). Mayor = matriz más diversificada = más resiliente, porque
+# cualquier amenaza dirigida a una fuente alcanza una porción menor del
+# suministro. El grupo por familia es la elección conservadora que pide el
+# documento: colapsa fuentes correlacionadas para no inflar la resiliencia.
+# ================================================================
+def chart_13():
+    df = load_column(["ProductionByTechnology"])
+    df = df.dropna(subset=["ProductionByTechnology"])
+    df = df[df["ProductionByTechnology"] != 0]
+
+    df["Fuente"] = df["TECHNOLOGY"].apply(classify_source_family)
+    df = df[df["Fuente"].notna()]
+    df = df[df["YEAR"].isin(ALL_YEARS)]
+
+    # Energía anual por familia de fuente (suma sobre países y timeslices).
+    fam = (
+        df.groupby(["Scenario", "YEAR", "Fuente"])["ProductionByTechnology"]
+        .sum()
+        .reset_index()
+    )
+    fam = fam[fam["ProductionByTechnology"] > 0]
+
+    # HHI = Σ sᵢ² y nº efectivo de fuentes = 1/HHI por (escenario, año).
+    rows = []
+    for (sc, yr), g in fam.groupby(["Scenario", "YEAR"]):
+        total = g["ProductionByTechnology"].sum()
+        if total <= 0:
+            continue
+        shares = g["ProductionByTechnology"].values / total
+        hhi = float((shares ** 2).sum())
+        eff = 1.0 / hhi if hhi > 0 else 0.0
+        dom_code = g.loc[g["ProductionByTechnology"].idxmax(), "Fuente"]
+        rows.append({
+            "Scenario": sc,
+            "YEAR": int(yr),
+            "HHI": hhi,
+            "Eff": eff,
+            "NFuentes": int(len(g)),
+            "Dominante": SOURCE_FAMILY_NAMES.get(dom_code, dom_code),
+            "DomShare": float(shares.max() * 100.0),
+        })
+    res = pd.DataFrame(rows)
+
+    fig = go.Figure()
+    for sc in SCENARIOS:
+        d = res[res["Scenario"] == sc].sort_values("YEAR")
+        years_str = [str(int(y)) for y in d["YEAR"]]
+        customdata = list(zip(
+            d["HHI"], d["NFuentes"], d["Dominante"], d["DomShare"]
+        ))
+        fig.add_trace(
+            go.Scatter(
+                x=years_str,
+                y=d["Eff"].values,
+                name=SCENARIO_ALIAS.get(sc, sc),
+                mode="lines+markers",
+                line=dict(color=COLORS_SCENARIO[sc], width=2.5),
+                marker=dict(size=4, color=COLORS_SCENARIO[sc]),
+                customdata=customdata,
+                hovertemplate=(
+                    "<b>%{fullData.name}</b> · %{x}<br>"
+                    "Nº efectivo de fuentes: %{y:.2f}<br>"
+                    "HHI: %{customdata[0]:.3f}<br>"
+                    "Fuentes activas: %{customdata[1]}<br>"
+                    "Dominante: %{customdata[2]} (%{customdata[3]:.0f}%)"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    fig.update_layout(
+        height=520,
+        width=940,
+        template="plotly_white",
+        separators=",.",
+        font=dict(family="Arial", size=12),
+        legend=dict(
+            orientation="v",
+            x=1.02,
+            y=1.0,
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor="#ddd",
+            borderwidth=1,
+        ),
+        margin=dict(l=90, r=150, t=30, b=60),
+    )
+    fig.update_yaxes(
+        title_text="Nº efectivo de fuentes (1/HHI)",
+        title_font=dict(size=11),
+        gridcolor="#e0e0e0",
+        rangemode="tozero",
+    )
+    fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
+    return (fig, "chart13_resilience_hhi", 940, 520,
+            [str(y) for y in range(2025, 2051)])
+
+
+# ================================================================
 # Registro de gráficos
 # ================================================================
 CHARTS = {
@@ -2026,6 +2133,7 @@ CHARTS = {
     "10": ("Kilómetros de Líneas [km]", chart_10),
     "11": ("Costo Anualizado por Energía [MUSD/TWh]", chart_11),
     "12": ("Seguridad Energética — Importado vs Autóctono [%]", chart_12),
+    "13": ("Resiliencia — Nº efectivo de fuentes (1/HHI)", chart_13),
 }
 
 
