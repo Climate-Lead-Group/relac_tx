@@ -17,8 +17,9 @@ Motivacion:
 Regla por tech/ano Y (2026..2050):
     cap(tech, Y) = NewCapacity_BAU[tech, Y] * SCALE_FACTOR     [GW]
 
-    - Solo se escribe donde NewCapacity_BAU > 0. Donde BAU construyo 0 (o no hay dato)
-      la celda se deja VACIA -> sin tope (default ilimitado en OSeMOSYS).
+    - Donde NewCapacity_BAU > 0 se escribe ese valor * SCALE_FACTOR.
+    - Donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe inversion ese
+      ano en esa tech; el respaldo PWRBCK (mismo nodo 02) cubre la diferencia.
     - Solo se escriben los anos 2026..2050. Las columnas historicas 2023-2025 NUNCA
       se tocan (ni valores ni Projection.Mode), quedan iguales a BAU.
 
@@ -176,27 +177,26 @@ def main() -> None:
     sum_cap = 0.0
     for tech in trn_rows:
         row = row_idx[(tech, PARAM)]
-        wrote_any = False
-        years_with_val: list[int] = []
+        years_with_quota: list[int] = []  # anos con NewCapacity_BAU > 0
         for y in YEARS:
             nc = bau.get((tech, y))
-            if nc is None:  # BAU = 0 o sin dato -> dejar celda VACIA (sin tope)
-                continue
-            cap_gw = nc * SCALE_FACTOR
+            cap_gw = nc * SCALE_FACTOR if nc is not None else 0.0  # BAU=0/sin dato -> 0
             ws.cell(row, year_cols[y]).value = cap_gw
             cells_written += 1
-            wrote_any = True
-            years_with_val.append(y)
-            sum_bau += nc
-            sum_cap += cap_gw
-        if wrote_any:
-            ws.cell(row, 7).value = 'User defined'   # Projection.Mode (col G)
-            techs_touched += 1
-            first_y, last_y = years_with_val[0], years_with_val[-1]
+            if nc is not None:
+                years_with_quota.append(y)
+                sum_bau += nc
+                sum_cap += cap_gw
+        ws.cell(row, 7).value = 'User defined'   # Projection.Mode (col G)
+        techs_touched += 1
+        if years_with_quota:
+            first_y, last_y = years_with_quota[0], years_with_quota[-1]
             first_v = bau[(tech, first_y)] * SCALE_FACTOR
             last_v = bau[(tech, last_y)] * SCALE_FACTOR
-            print(f'  {tech}: {len(years_with_val)} anos | '
-                  f'{first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
+            print(f'  {tech}: {len(years_with_quota)}/{len(YEARS)} anos con cuota '
+                  f'(resto=0) | {first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
+        else:
+            print(f'  {tech}: 0/{len(YEARS)} anos con cuota -> todos 0')
 
     print(f'\nTechs tocadas: {techs_touched} | celdas escritas: {cells_written}')
     print(f'Sanity: suma cap = {sum_cap:.4f} GW  vs  suma NewCapacity BAU = {sum_bau:.4f} GW '
@@ -230,13 +230,11 @@ def main() -> None:
     hist_years = (2023, 2024, 2025)
     for tech in trn_rows:
         r = ri2[(tech, PARAM)]
-        # 1) valores escritos coinciden con bau * factor
+        # 1) valores escritos coinciden con bau * factor (0 donde BAU=0/sin dato)
         for y in YEARS:
             nc = bau.get((tech, y))
+            expected = nc * SCALE_FACTOR if nc is not None else 0.0
             v = ws2.cell(r, yc2[y]).value
-            if nc is None:
-                continue  # deberia seguir vacio; no exigimos None estricto
-            expected = nc * SCALE_FACTOR
             if not isinstance(v, (int, float)) or abs(v - expected) > 1e-6 * max(1.0, abs(expected)):
                 print(f'  VALUE {tech} {y}: got {v!r}, expected {expected:.6f}')
                 violations += 1
