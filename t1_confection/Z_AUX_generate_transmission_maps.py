@@ -1161,12 +1161,13 @@ function updateChart() {{
     }},
     annotations: annotations,
     shapes: shapes,
-    // r amplio: la leyenda (x:1.02) necesita ancho para los nombres de tecnología;
-    // con 240 la caja quedaba pegada al borde y los recortaba.
-    margin: {{ l: 70, r: 340, t: 80, b: 80 }},
+    // Leyenda anclada al BORDE del área de ploteo (x:1.0 en paper) para que el
+    // hueco no crezca con el ancho de ventana (x:1.02 dejaba la caja flotando
+    // lejos en pantallas anchas). r = ancho fijo suficiente para los nombres.
+    margin: {{ l: 70, r: 210, t: 80, b: 80 }},
     height: window.innerHeight * 0.72,
     legend: {{
-      orientation: 'v', x: 1.02, xanchor: 'left', y: 1, yanchor: 'top',
+      orientation: 'v', x: 1.0, xanchor: 'left', y: 1, yanchor: 'top',
       font: {{ size: 13, family: 'Segoe UI', color: '#333' }},
       itemsizing: 'constant',
       bgcolor: '#fff', bordercolor: '#ccc', borderwidth: 1,
