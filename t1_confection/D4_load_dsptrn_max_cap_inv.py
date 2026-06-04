@@ -14,14 +14,20 @@ Motivacion:
     menos transmision, mas respaldo -> el contraste INV vs BAU que se busca, manteniendo
     factibilidad.
 
-Regla por tech/ano Y (2026..2050):
-    cap(tech, Y) = NewCapacity_BAU[tech, Y] * SCALE_FACTOR     [GW]
+Regla por tech/ano Y (dos bloques):
 
-    - Donde NewCapacity_BAU > 0 se escribe ese valor * SCALE_FACTOR.
-    - Donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe inversion ese
-      ano en esa tech; el respaldo PWRBCK (mismo nodo 02) cubre la diferencia.
-    - Solo se escriben los anos 2026..2050. Las columnas historicas 2023-2025 NUNCA
-      se tocan (ni valores ni Projection.Mode), quedan iguales a BAU.
+    2023..2030  ->  celda VACIA (None): INV igual a BAU (sin tope). BAU no se topa a
+                    si mismo, asi que dejar la celda sin valor hace que INV reproduzca
+                    a BAU en esos anos -> PWRBCK no entra a producir temprano. Se LIMPIA
+                    cualquier valor que corridas anteriores hubieran dejado.
+
+    2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
+                    factor(Y) decrece linealmente de 0.90 (2031) a 0.50 (2050).
+                    Donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
+                    inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
+
+Solo se toca TotalAnnualMaxCapacityInvestment; el piso TotalAnnualMinCapacityInvestment
+NO se escribe.
 
 NewCapacity de BAU se lee de RELAC_TX_Combined_Inputs_Outputs.csv (formato largo;
 columnas Scenario, YEAR, TECHNOLOGY, NewCapacity). Ese CSV contiene BAU/INV/OPT;
@@ -51,8 +57,12 @@ SHEET = 'Demand Techs'
 PARAM = 'TotalAnnualMaxCapacityInvestment'
 
 # --- Configuracion ---------------------------------------------------------
-# Perilla a calibrar: fraccion de la NewCapacity de BAU que se permite en INV.
-SCALE_FACTOR = 0.5
+# Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia).
+EQUAL_THROUGH_YEAR = 2030
+
+# Bloque con tope decreciente: factor lineal de CAP_START_FACTOR a CAP_END_FACTOR.
+CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.90
+CAP_END_YEAR, CAP_END_FACTOR = 2050, 0.50
 
 # Escenario de referencia dentro del CSV combinado.
 BAU_SCENARIO = 'BAU'
@@ -60,9 +70,16 @@ BAU_SCENARIO = 'BAU'
 # Familias de transmision que inyectan en el nodo 02 (19 paises c/u = 114 techs).
 TRN_PREFIXES = ('PWRTRN', 'TRNNLI', 'TRNRPO', 'RNWTRN', 'RNWRPO', 'RNWNLI')
 
-# Solo se escriben 2026..2050; 2023-2025 quedan intactos (regla historica).
-YEARS = list(range(2026, 2051))
+# Se recorren todos los anos del horizonte; 2023-2030 se vacian, 2031-2050 se topan.
+YEARS = list(range(2023, 2051))
 # ---------------------------------------------------------------------------
+
+
+def factor_for_year(year: int) -> float:
+    """Factor de tope para anos del bloque con cap (2031..2050): lineal 0.90 -> 0.50."""
+    span = CAP_END_YEAR - CAP_START_YEAR
+    frac = (year - CAP_START_YEAR) / span
+    return CAP_START_FACTOR + (CAP_END_FACTOR - CAP_START_FACTOR) * frac
 
 
 def load_bau_new_capacity(csv_path: Path) -> dict[tuple[str, int], float]:
@@ -134,7 +151,9 @@ def main() -> None:
     print(f'Mode: {mode}')
     print(f'Target:    {PARAM_PATH}')
     print(f'BAU CSV:   {COMBINED_CSV}')
-    print(f'Factor:    {SCALE_FACTOR}  (cap = NewCapacity_BAU x {SCALE_FACTOR})')
+    print(f'Regla:     2023-{EQUAL_THROUGH_YEAR} sin tope (=BAU); '
+          f'{CAP_START_YEAR}-{CAP_END_YEAR} cap = NewCapacity_BAU x factor '
+          f'({CAP_START_FACTOR:.2f} -> {CAP_END_FACTOR:.2f})')
 
     bau = load_bau_new_capacity(COMBINED_CSV)
     techs_in_bau = sorted({t for (t, _y) in bau})
@@ -169,20 +188,25 @@ def main() -> None:
     if not_in_xlsx:
         print(f'  [WARN] techs con NewCapacity en BAU pero sin fila {PARAM} en xlsx: {not_in_xlsx}')
 
-    # Escritura (solo 2026..2050; NUNCA se tocan columnas 2023-2025)
+    # Escritura: 2023-2030 -> vacio (=BAU); 2031-2050 -> cap = bau * factor(y)
     print(f'\n=== WRITES ({PARAM}) ===')
-    cells_written = 0
+    cells_cleared = 0
+    cells_capped = 0
     techs_touched = 0
     sum_bau = 0.0
     sum_cap = 0.0
     for tech in trn_rows:
         row = row_idx[(tech, PARAM)]
-        years_with_quota: list[int] = []  # anos con NewCapacity_BAU > 0
+        years_with_quota: list[int] = []  # anos 2031-2050 con NewCapacity_BAU > 0
         for y in YEARS:
+            if y <= EQUAL_THROUGH_YEAR:
+                ws.cell(row, year_cols[y]).value = None  # igual a BAU: sin tope
+                cells_cleared += 1
+                continue
             nc = bau.get((tech, y))
-            cap_gw = nc * SCALE_FACTOR if nc is not None else 0.0  # BAU=0/sin dato -> 0
+            cap_gw = nc * factor_for_year(y) if nc is not None else 0.0  # BAU=0 -> 0
             ws.cell(row, year_cols[y]).value = cap_gw
-            cells_written += 1
+            cells_capped += 1
             if nc is not None:
                 years_with_quota.append(y)
                 sum_bau += nc
@@ -191,15 +215,17 @@ def main() -> None:
         techs_touched += 1
         if years_with_quota:
             first_y, last_y = years_with_quota[0], years_with_quota[-1]
-            first_v = bau[(tech, first_y)] * SCALE_FACTOR
-            last_v = bau[(tech, last_y)] * SCALE_FACTOR
-            print(f'  {tech}: {len(years_with_quota)}/{len(YEARS)} anos con cuota '
+            first_v = bau[(tech, first_y)] * factor_for_year(first_y)
+            last_v = bau[(tech, last_y)] * factor_for_year(last_y)
+            print(f'  {tech}: {len(years_with_quota)} anos con cuota en 2031-2050 '
                   f'(resto=0) | {first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
         else:
-            print(f'  {tech}: 0/{len(YEARS)} anos con cuota -> todos 0')
+            print(f'  {tech}: sin cuota en 2031-2050 -> todos 0')
 
-    print(f'\nTechs tocadas: {techs_touched} | celdas escritas: {cells_written}')
-    print(f'Sanity: suma cap = {sum_cap:.4f} GW  vs  suma NewCapacity BAU = {sum_bau:.4f} GW '
+    print(f'\nTechs tocadas: {techs_touched} | celdas vaciadas (2023-{EQUAL_THROUGH_YEAR}): '
+          f'{cells_cleared} | celdas con tope ({CAP_START_YEAR}-{CAP_END_YEAR}): {cells_capped}')
+    print(f'Sanity (bloque con tope): suma cap = {sum_cap:.4f} GW  vs  '
+          f'suma NewCapacity BAU = {sum_bau:.4f} GW '
           f'(ratio {sum_cap / sum_bau if sum_bau else 0:.4f})')
 
     if not apply_changes:
@@ -221,35 +247,24 @@ def main() -> None:
     ws2 = wb2[SHEET]
     yc2 = build_year_col_map(ws2)
     ri2 = build_row_index(ws2)
-    wb_bak = openpyxl.load_workbook(backup, data_only=True)
-    ws_bak = wb_bak[SHEET]
-    yc_bak = build_year_col_map(ws_bak)
-    ri_bak = build_row_index(ws_bak)
 
     violations = 0
-    hist_years = (2023, 2024, 2025)
     for tech in trn_rows:
         r = ri2[(tech, PARAM)]
-        # 1) valores escritos coinciden con bau * factor (0 donde BAU=0/sin dato)
         for y in YEARS:
-            nc = bau.get((tech, y))
-            expected = nc * SCALE_FACTOR if nc is not None else 0.0
             v = ws2.cell(r, yc2[y]).value
+            if y <= EQUAL_THROUGH_YEAR:
+                # debe quedar VACIO (=BAU, sin tope)
+                if v is not None:
+                    print(f'  NOTEMPTY {tech} {y}: got {v!r}, esperado vacio')
+                    violations += 1
+                continue
+            nc = bau.get((tech, y))
+            expected = nc * factor_for_year(y) if nc is not None else 0.0
             if not isinstance(v, (int, float)) or abs(v - expected) > 1e-6 * max(1.0, abs(expected)):
                 print(f'  VALUE {tech} {y}: got {v!r}, expected {expected:.6f}')
                 violations += 1
-        # 2) columnas historicas 2023-2025 intactas respecto al backup
-        r_bak = ri_bak[(tech, PARAM)]
-        for y in hist_years:
-            if y not in yc2:
-                continue
-            now = ws2.cell(r, yc2[y]).value
-            before = ws_bak.cell(r_bak, yc_bak[y]).value
-            if now != before:
-                print(f'  HIST {tech} {y}: cambio {before!r} -> {now!r} (NO debio cambiar)')
-                violations += 1
     wb2.close()
-    wb_bak.close()
     print(f'Verificadas {len(trn_rows)} techs. Violations: {violations}')
 
 
