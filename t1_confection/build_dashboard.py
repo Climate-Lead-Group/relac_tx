@@ -45,6 +45,7 @@ from dashboard_config import (  # noqa: E402
     classify_source_family,
     SOURCE_FAMILY_NAMES,
     year_to_period,
+    YEAR_PERIODS,
     PERIOD_YEARS,
     PERIOD_ORDER,
     TRANSMISSION_CATEGORIES,
@@ -291,6 +292,53 @@ _FILTER_JS_FUNCS = r"""
     if(k === 'stackTotal'){ var t = 0; for(var i = 0; i < cm.series.length; i++) t += sumC(cm, cm.series[i], si, label, sel); return t; }
     return 0;
   }
+  // Métricas DERIVADAS (gráficos no aditivos): se reaplica la fórmula del gráfico
+  // sobre las cantidades base re-sumadas por país (ver _derived_model en Python).
+  function computeDerived(cm, si, label, sel){
+    var k = cm.labelKind;
+    if(k === 'secur'){
+      var imp = sumC(cm, 'imp', si, label, sel), auto = sumC(cm, 'auto', si, label, sel);
+      var tot = imp + auto;
+      return { dom: tot > 0 ? auto / tot * 100 : 0, impS: tot > 0 ? imp / tot * 100 : 0 };
+    }
+    if(k === 'trans04'){
+      var anp = sumC(cm, 'acc_new_plan', si, label, sel), tcp = sumC(cm, 'tca_plan', si, label, sel),
+          tnl = sumC(cm, 'tca_nli', si, label, sel), anr = sumC(cm, 'acc_new_rpo', si, label, sel),
+          amr = sumC(cm, 'acc_min_rpo', si, label, sel);
+      var repo = anr - amr;
+      var existentes = Math.max((tcp - anp) - repo / 0.8 - amr / 1.8, 0);
+      var arr = [existentes, anp, amr, tnl, repo * (1 + 1 / 0.8)];
+      var total = 0; arr.forEach(function(v){ total += v; });
+      return { arr: arr, total: total };
+    }
+    if(k === 'ratio'){
+      var years = (cm.periodYears && cm.periodYears[label]) || [];
+      var sum = 0, cnt = 0;
+      years.forEach(function(yr){
+        var den = sumC(cm, 'den', si, yr, sel);
+        if(den > 0){ sum += sumC(cm, 'num', si, yr, sel) / den; cnt++; }
+      });
+      return { val: cnt > 0 ? sum / cnt : 0 };
+    }
+    if(k === 'hhi'){
+      var tot2 = 0, parts = [], domv = 0, domf = '';
+      cm.series.forEach(function(f){
+        var v = sumC(cm, f, si, label, sel);
+        if(v > 0){ parts.push(v); tot2 += v; if(v > domv){ domv = v; domf = f; } }
+      });
+      if(tot2 <= 0) return { eff: 0, hhi: 0, n: 0, domName: '', domShare: 0 };
+      var hhi = 0; parts.forEach(function(v){ var s = v / tot2; hhi += s * s; });
+      return { eff: hhi > 0 ? 1 / hhi : 0, hhi: hhi, n: parts.length,
+               domName: (cm.familyNames && cm.familyNames[domf]) || domf, domShare: domv / tot2 * 100 };
+    }
+    return {};
+  }
+  // Total (altura de pila / valor) para reescalar el eje Y, aditivo o derivado.
+  function totalAt(cm, si, label, sel){
+    if(cm.labelKind === 'trans04') return computeDerived(cm, si, label, sel).total;
+    if(cm.labelKind === 'ratio') return computeDerived(cm, si, label, sel).val;
+    return chartTotal(cm, si, label, sel);
+  }
   function snapshotData(gd){
     // Leemos de gd._fullData (no gd.data): plotly codifica los arrays de numpy
     // como base64 {dtype,bdata} en el HTML; en gd.data siguen sin decodificar al
@@ -361,33 +409,52 @@ _FILTER_JS_FUNCS = r"""
     var ctryActive = !!(ctrySel && allCtry && ctrySel.length < allCtry.length);
     var isMap = !!(cm && cm.labelKind === 'map');
 
-    // y completa (todas las categorías) de la traza i: re-sumada por país si el
-    // filtro está activo y la traza tiene mapeo, si no la y original snapshot.
-    function fullY(i){
-      var fd = gd._fullXY[i];
-      if(ctryActive && cm && cm.traceMap && cm.traceMap[i]){
-        var tm = cm.traceMap[i];
-        return fd.x.map(function(lab){
+    // Series completas (todas las categorías) de la traza i: {y, text, cd}.
+    // Con filtro de país activo re-suma/recomputa según traceMap; si no, devuelve
+    // el snapshot original (para que re-seleccionar todos restaure la vista).
+    function fullSeries(i){
+      var fd = gd._fullXY[i], tm = cm && cm.traceMap && cm.traceMap[i];
+      if(ctryActive && tm && tm.role !== undefined){
+        // Gráficos DERIVADOS: recomputar la métrica por etiqueta.
+        var y = [], text = (cm.labelKind === 'ratio') ? [] : null, cd = (cm.labelKind === 'hhi') ? [] : null;
+        fd.x.forEach(function(lab){
+          var d = computeDerived(cm, tm.si, lab, ctrySel);
+          if(cm.labelKind === 'secur'){ y.push(tm.role === 'dom' ? d.dom : d.impS); }
+          else if(cm.labelKind === 'trans04'){ y.push(d.arr[tm.role]); }
+          else if(cm.labelKind === 'ratio'){ y.push(d.val); text.push(fmtDec(d.val, cm.decimals)); }
+          else if(cm.labelKind === 'hhi'){ y.push(d.eff); cd.push([d.hhi, d.n, d.domName, d.domShare]); }
+          else { y.push(0); }
+        });
+        return { y: y, text: text, cd: cd };
+      }
+      if(ctryActive && tm){
+        // Gráficos ADITIVOS: sumar la serie (o el total para la línea).
+        var y2 = fd.x.map(function(lab){
           if(tm.total){ var t = 0; cm.series.forEach(function(s){ t += sumC(cm, s, tm.si, lab, ctrySel); }); return t; }
           return sumC(cm, tm.series, tm.si, lab, ctrySel);
         });
+        return { y: y2, text: fd.text, cd: null };
       }
-      return fd.y;
+      // Sin filtro: snapshot original (restaura customdata de hhi tras react).
+      var cd0 = (cm && cm.labelKind === 'hhi' && gd._fullMap[i]) ? gd._fullMap[i].customdata : null;
+      return { y: fd.y, text: fd.text, cd: cd0 || null };
     }
 
     var newData = gd.data.map(function(t, i){
       var nt = Object.assign({}, t), fd = gd._fullXY[i];
-      var yfull = fullY(i);  // re-sumada por país si aplica; si no, la y original
+      var fs = fullSeries(i);
       if(selYears && fd.x.length){
-        var nx = [], ny = [], ntext = [];
+        var nx = [], ny = [], ntext = fs.text ? [] : null, ncd = fs.cd ? [] : null;
         fd.x.forEach(function(lab, j){ if(selYears.indexOf(lab) >= 0){
-          nx.push(lab); ny.push(yfull[j]); if(fd.text) ntext.push(fd.text[j]);
+          nx.push(lab); ny.push(fs.y[j]);
+          if(ntext) ntext.push(fs.text[j]); if(ncd) ncd.push(fs.cd[j]);
         } });
-        nt.x = nx; nt.y = ny; if(fd.text) nt.text = ntext;
+        nt.x = nx; nt.y = ny; if(ntext) nt.text = ntext; if(ncd) nt.customdata = ncd;
       } else if(fd.x.length){
         // Sin filtro de años: reponer x/y completas desde el snapshot (react deja
         // gd.data recortado) para que re-seleccionar todos restaure la vista.
-        nt.x = fd.x.slice(); nt.y = yfull.slice(); if(fd.text) nt.text = fd.text.slice();
+        nt.x = fd.x.slice(); nt.y = fs.y.slice();
+        if(fs.text) nt.text = fs.text.slice(); if(fs.cd) nt.customdata = fs.cd.slice();
       }
       var sidx = traceScenarioIdx(gd, t);
       if(sidx >= 0){
@@ -448,7 +515,14 @@ _FILTER_JS_FUNCS = r"""
         var info = gd._annInfo[i]; if(!info) return;
         var m = cm.annModel[info.dl];
         if(ctryActive && m){
-          if(m.kind === 'total'){
+          var lk = cm.labelKind;
+          if(lk === 'secur'){
+            var ds = computeDerived(cm, m.si, m.label, ctrySel);
+            a.text = '<b>' + Math.round(ds.dom) + '%</b>'; a.y = ds.dom / 2;
+          } else if(lk === 'trans04'){
+            var dt = computeDerived(cm, m.si, m.label, ctrySel);
+            a.text = '<b>' + fmtThousand(dt.total) + '</b>'; a.y = dt.total;
+          } else if(m.kind === 'total'){
             var ren = sumC(cm, cm.series[0], m.si, m.label, ctrySel);
             var tot = ren + sumC(cm, cm.series[1], m.si, m.label, ctrySel);
             a.text = '<b>' + fmtThousand(tot) + '</b>'; a.y = ren * 0.60;
@@ -469,15 +543,18 @@ _FILTER_JS_FUNCS = r"""
       });
     }
 
-    // Reescalar el eje Y tras re-sumar países (gráficos apilados con dtick fijo);
-    // sin filtro de país se restaura el rango/dtick originales de Python.
-    if(cm && cm.dtick > 0 && mode === 'rows'){
+    // Reescalar el eje Y tras re-sumar países. Gráficos apilados por filas con
+    // dtick fijo (incluye trans04) y el de ratio (un solo eje). Sin filtro de
+    // país se restauran rango/dtick originales de Python.
+    if(cm && (cm.labelKind === 'ratio' || (cm.dtick > 0 && mode === 'rows'))){
       if(ctryActive){
         var cats = selYears || gd._allCats, mx = 0;
         visIdx.forEach(function(si){ cats.forEach(function(lab){
-          var v = chartTotal(cm, si, lab, ctrySel); if(v > mx) mx = v;
+          var v = totalAt(cm, si, lab, ctrySel); if(v > mx) mx = v;
         }); });
-        var dt = niceDtick(mx), ymax = mx > 0 ? Math.ceil(mx / dt) * dt : dt;
+        var dt = niceDtick(mx);
+        if(cm.labelKind === 'ratio') dt = Math.max(1, Math.round(dt));  // ticks enteros
+        var ymax = mx > 0 ? Math.ceil(mx / dt) * dt : dt;
         yAxisKeys(gd).forEach(function(k){ layout[k] = layout[k] || {}; layout[k].range = [0, ymax]; layout[k].dtick = dt; });
       } else {
         yAxisKeys(gd).forEach(function(k){
@@ -925,14 +1002,7 @@ def _country_model(
     orden en que Python creó las anotaciones. ``ann_kinds`` son los tipos de
     anotación por cada catlabel (p.ej. ["total", "pct"] en share2).
     """
-    countries = sorted(str(c) for c in long["pais"].dropna().unique())
-    comp: dict = {s: [dict() for _ in SCENARIOS] for s in series_order}
-    grp = long.groupby(["Scenario", "series", "catlabel", "pais"])["val"].sum()
-    for (sc, series, lab, pais), v in grp.items():
-        if series not in comp or sc not in SCENARIOS:
-            continue
-        si = SCENARIOS.index(sc)
-        comp[series][si].setdefault(str(lab), {})[str(pais)] = float(v)
+    comp, countries, country_names = _comp_from_long(long, series_order)
 
     trace_map = []
     for si in range(len(SCENARIOS)):
@@ -952,12 +1022,76 @@ def _country_model(
         "decimals": decimals,
         "dtick": dtick,
         "countries": countries,
-        "countryNames": {c: _COUNTRY_NAMES.get(c, c) for c in countries},
+        "countryNames": country_names,
         "series": series_order,
         "comp": comp,
         "traceMap": trace_map,
         "annModel": ann_model,
     }
+
+
+def _comp_from_long(long: pd.DataFrame, series_order: list):
+    """Construye comp[series][si] = {catlabel: {pais: valor}} desde un frame largo.
+
+    ``long`` trae columnas Scenario, catlabel (str), pais (str), series, val.
+    Devuelve (comp, countries_ordenados, {pais: nombre}). Lo usan tanto el modelo
+    aditivo (_country_model) como los modelos DERIVADOS (kinds no aditivos) que
+    embeben cantidades base por país y recomputan la métrica en JS.
+    """
+    countries = sorted(str(c) for c in long["pais"].dropna().unique())
+    comp: dict = {s: [dict() for _ in SCENARIOS] for s in series_order}
+    grp = long.groupby(["Scenario", "series", "catlabel", "pais"])["val"].sum()
+    for (sc, series, lab, pais), v in grp.items():
+        if series not in comp or sc not in SCENARIOS:
+            continue
+        si = SCENARIOS.index(sc)
+        comp[series][si].setdefault(str(lab), {})[str(pais)] = float(v)
+    return comp, countries, {c: _COUNTRY_NAMES.get(c, c) for c in countries}
+
+
+def _derived_model(
+    long: pd.DataFrame,
+    *,
+    labelKind: str,
+    base_series: list,
+    roles_per_scenario: list,
+    ann_labels_by_si: dict,
+    ann_kinds: list,
+    dtick: float = 0.0,
+    decimals: int = 1,
+    extra: dict | None = None,
+):
+    """Modelo de país para gráficos DERIVADOS (no aditivos: 04/11/12/13).
+
+    Embebe en ``comp`` las cantidades BASE aditivas por país (``base_series``) y
+    el JS recomputa la métrica final con la fórmula del gráfico (``labelKind``).
+    ``traceMap`` usa ``role`` (no ``series``): el rol indica qué salida derivada
+    dibuja cada traza, en el MISMO orden en que se crean (por escenario).
+    """
+    comp, countries, country_names = _comp_from_long(long, base_series)
+    trace_map = []
+    for si in range(len(SCENARIOS)):
+        for role in roles_per_scenario:
+            trace_map.append({"role": role, "si": si})
+    ann_model = []
+    for si in range(len(SCENARIOS)):
+        for lab in ann_labels_by_si.get(si, []):
+            for kind in ann_kinds:
+                ann_model.append({"kind": kind, "si": si, "label": str(lab)})
+    model = {
+        "labelKind": labelKind,
+        "decimals": decimals,
+        "dtick": dtick,
+        "countries": countries,
+        "countryNames": country_names,
+        "series": base_series,
+        "comp": comp,
+        "traceMap": trace_map,
+        "annModel": ann_model,
+    }
+    if extra:
+        model.update(extra)
+    return model
 
 
 # ================================================================
@@ -1634,16 +1768,54 @@ def chart_04():
 
     pivot = pd.DataFrame(rows)
 
-    # Gráfico DIFERIDO para el filtro de país (cálculo residual no aditivo): sin
-    # country_long → country_model=None → el selector de país se oculta en JS.
-    fig, name, w, h, cm = _stacked_categories_chart(
+    # --- Modelo de país (DERIVADO 'trans04'): las 5 categorías son combinaciones
+    # LINEALES de 5 cantidades base por grupo de línea (con un max(·,0) final en
+    # "Existentes"); esas 5 cantidades SÍ son aditivas por país. Embebemos las 5
+    # bases por (escenario, año, país) y el JS reaplica la fórmula sobre los
+    # países sel. País = TECHNOLOGY[6:9] (sin interconectores puros en este chart).
+    per_tech["pais"] = per_tech["TECHNOLOGY"].str[6:9]
+    gc = (
+        per_tech.groupby(["Scenario", "YEAR", "pais", "LineGroup"])[cols].sum().reset_index()
+    )
+    base_rows = []
+    for (scenario, year, pais), sub in gc.groupby(["Scenario", "YEAR", "pais"]):
+        s = sub.set_index("LineGroup")
+
+        def cval(group, col):
+            return float(s.loc[group, col]) if group in s.index else 0.0
+
+        base = {
+            "acc_new_plan": cval("PLAN", "AccumulatedNewCapacity"),
+            "tca_plan": cval("PLAN", "TotalCapacityAnnual"),
+            "tca_nli": cval("NLI", "TotalCapacityAnnual"),
+            "acc_new_rpo": cval("RPO", "AccumulatedNewCapacity"),
+            "acc_min_rpo": cval("RPO", "AccumulatedTotalAnnualMinCapacityInvestment"),
+        }
+        for sname, v in base.items():
+            base_rows.append({"Scenario": scenario, "catlabel": str(int(year)),
+                              "pais": pais, "series": sname, "val": v})
+    long = pd.DataFrame(base_rows)
+    cat_names = [c[0] for c in TRANSMISSION_CATEGORIES]
+    ann_labels_by_si = {
+        i: [str(int(y)) for y in sorted(pivot[pivot["Scenario"] == sc]["YEAR"].unique())]
+        for i, sc in enumerate(SCENARIOS)
+    }
+    dtick4 = _nice_dtick(pivot[cat_names].sum(axis=1).max())
+    country_model = _derived_model(
+        long, labelKind="trans04",
+        base_series=["acc_new_plan", "tca_plan", "tca_nli", "acc_new_rpo", "acc_min_rpo"],
+        roles_per_scenario=[0, 1, 2, 3, 4],  # índice de categoría (orden de apilado)
+        ann_labels_by_si=ann_labels_by_si, ann_kinds=["stackTotal"], dtick=dtick4,
+    )
+
+    fig, name, w, h, _cm = _stacked_categories_chart(
         pivot=pivot,
         categories=TRANSMISSION_CATEGORIES,
         y_title="Capacidad Instalada de<br>Transmisión [GW]",
         output_name="chart04_transmission_capacity",
         show_total_line=False,  # la curva de GW es solo del gráfico 1
     )
-    return fig, name, w, h, [str(y) for y in REFERENCE_YEARS], cm
+    return fig, name, w, h, [str(y) for y in REFERENCE_YEARS], country_model
 
 
 # ================================================================
@@ -2275,6 +2447,34 @@ def chart_11():
     # Promedio anual del ratio dentro de cada periodo (SUM/COUNTD(Year)).
     g = m.groupby(["Scenario", "Period"])["ratio"].mean().reset_index()
 
+    # --- Modelo de país (DERIVADO 'ratio'): el ratio NO es aditivo, pero su
+    # numerador (costo) y denominador (producción) SÍ lo son por país. Embebemos
+    # num/den por (escenario, AÑO, país) y el JS recomputa, por periodo, el
+    # promedio anual de Σnum/Σden sobre los países sel. Todas las techs entran;
+    # los códigos de país desconocidos (interconectores TRN) van al bucket "INT".
+    prodc = prod.copy()
+    prodc["pais"] = prodc["TECHNOLOGY"].str[6:9]
+    prodc.loc[~prodc["pais"].isin(_COUNTRY_NAMES), "pais"] = "INT"
+    den = prodc.groupby(["Scenario", "YEAR", "pais"])["ProductionByTechnology"].sum().reset_index()
+    den["val"] = den["ProductionByTechnology"] * 0.277778
+    perc = per.copy()
+    perc["pais"] = perc["TECHNOLOGY"].str[6:9]
+    perc.loc[~perc["pais"].isin(_COUNTRY_NAMES), "pais"] = "INT"
+    perc["val"] = perc["CapitalInvestmentAnnualized"].fillna(0) + perc["OperatingCost"].fillna(0)
+    num = perc.groupby(["Scenario", "YEAR", "pais"])["val"].sum().reset_index()
+    long = pd.concat([
+        num.assign(series="num", catlabel=num["YEAR"].astype(int).astype(str)),
+        den.assign(series="den", catlabel=den["YEAR"].astype(int).astype(str)),
+    ], ignore_index=True)[["Scenario", "catlabel", "pais", "series", "val"]]
+    country_model = _derived_model(
+        long, labelKind="ratio", base_series=["num", "den"],
+        roles_per_scenario=["ratio"], ann_labels_by_si={}, ann_kinds=[],
+        dtick=0.0, decimals=1,
+        extra={"periodYears": {name: [str(y) for y in yrs] for name, yrs in YEAR_PERIODS}},
+    )
+    if "INT" in country_model["countryNames"]:
+        country_model["countryNames"]["INT"] = "Interconexión/otros"
+
     periods = PERIOD_ORDER  # candidatos = todos; default (sin 2023-2024) lo aplica el selector
     fig = go.Figure()
     for sc in SCENARIOS:
@@ -2320,7 +2520,7 @@ def chart_11():
     )
     fig.update_xaxes(type="category", tickfont=dict(size=13))
     return (fig, "chart11_cost_per_energy", 940, 520,
-            [p for p in PERIOD_ORDER if p != "2023-2024"], None)
+            [p for p in PERIOD_ORDER if p != "2023-2024"], country_model)
 
 
 # ================================================================
@@ -2398,6 +2598,33 @@ def chart_12():
     # Shares EXACTOS para que las barras sumen 100 (la etiqueta sí se redondea).
     pivot["DomShare"] = pivot["Autóctono"] / pivot["Total"] * 100
     pivot["ImpShare"] = pivot["Importado"] / pivot["Total"] * 100
+
+    # --- Modelo de país (DERIVADO): importado/autóctono son ADITIVOS por país;
+    # el JS re-normaliza los shares (DomShare/ImpShare) sobre los países sel. ---
+    fos_c = (
+        fos_g.groupby(["Scenario", "YEAR", "pais"])[["imported", "local"]]
+        .sum().reset_index()
+    )
+    sec = fos_c.merge(
+        ren_g.rename(columns={"ProductionByTechnology": "ren"}),
+        on=["Scenario", "YEAR", "pais"], how="outer",
+    ).fillna(0)
+    sec["imp"] = sec["imported"]
+    sec["auto"] = sec["local"] + sec["ren"]
+    sec["catlabel"] = sec["YEAR"].astype(int).astype(str)
+    long = pd.concat([
+        sec.assign(series="imp", val=sec["imp"]),
+        sec.assign(series="auto", val=sec["auto"]),
+    ], ignore_index=True)[["Scenario", "catlabel", "pais", "series", "val"]]
+    ann_labels_by_si = {
+        i: [str(int(y)) for y in pivot[pivot["Scenario"] == sc].sort_values("YEAR")["YEAR"]]
+        for i, sc in enumerate(SCENARIOS)
+    }
+    country_model = _derived_model(
+        long, labelKind="secur", base_series=["imp", "auto"],
+        roles_per_scenario=["dom", "impS"],
+        ann_labels_by_si=ann_labels_by_si, ann_kinds=["securlabel"], dtick=0.0,
+    )
 
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.07)
 
@@ -2508,7 +2735,7 @@ def chart_12():
     fig.update_xaxes(tickfont=dict(size=13), row=3, col=1)
 
     return (fig, "chart12_energy_security", 820, 920,
-            [str(y) for y in REFERENCE_YEARS], None)
+            [str(y) for y in REFERENCE_YEARS], country_model)
 
 
 # ================================================================
@@ -2539,6 +2766,27 @@ def chart_13():
         .reset_index()
     )
     fam = fam[fam["ProductionByTechnology"] > 0]
+
+    # --- Modelo de país (DERIVADO 'hhi'): la generación por familia es ADITIVA
+    # por país; el JS re-suma las familias sobre los países sel y recomputa HHI,
+    # nº efectivo de fuentes y la fuente dominante. País=TECHNOLOGY[6:9] (sólo
+    # generación → códigos de país limpios). ---
+    df["pais"] = df["TECHNOLOGY"].str[6:9]
+    fam_c = (
+        df.groupby(["Scenario", "YEAR", "Fuente", "pais"])["ProductionByTechnology"]
+        .sum().reset_index()
+    )
+    fam_c = fam_c[fam_c["ProductionByTechnology"] > 0]
+    fam_c["catlabel"] = fam_c["YEAR"].astype(int).astype(str)
+    long = fam_c.rename(columns={"Fuente": "series", "ProductionByTechnology": "val"})[
+        ["Scenario", "catlabel", "pais", "series", "val"]
+    ]
+    families = sorted(fam["Fuente"].unique())
+    country_model = _derived_model(
+        long, labelKind="hhi", base_series=families,
+        roles_per_scenario=["eff"], ann_labels_by_si={}, ann_kinds=[], dtick=0.0,
+        extra={"familyNames": {f: SOURCE_FAMILY_NAMES.get(f, f) for f in families}},
+    )
 
     # HHI = Σ sᵢ² y nº efectivo de fuentes = 1/HHI por (escenario, año).
     rows = []
@@ -2612,7 +2860,7 @@ def chart_13():
     )
     fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
     return (fig, "chart13_resilience_hhi", 940, 520,
-            [str(y) for y in range(2025, 2051)], None)
+            [str(y) for y in range(2025, 2051)], country_model)
 
 
 # ================================================================
