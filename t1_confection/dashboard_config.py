@@ -14,6 +14,11 @@ import pandas as pd
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "RELAC_TX_Combined_Inputs_Outputs.csv")
 FIGURES_DIR = os.path.join(BASE_DIR, "Figures")
+# Balance energético anual OLADE/sieLAC (cuotas de importación, gráfico 12).
+OLADE_BALANCE_PATH = os.path.join(
+    BASE_DIR, "Matriz Balance energético",
+    "OLADE - Matriz de balance energético - Anual.xlsx",
+)
 
 # Sufijo opcional para los nombres de archivo generados (vacío = sin sufijo).
 OUTPUT_SUFFIX = ""
@@ -304,3 +309,94 @@ def load_column(columns: list[str], extra_dims: list[str] | None = None) -> pd.D
     df["YEAR"] = df["YEAR"].astype(int)
     _LOAD_CACHE[cache_key] = df
     return df.copy()
+
+
+# ================================================================
+# Cuotas de importación de combustible fósil (balance OLADE — gráfico 12)
+# ----------------------------------------------------------------
+# Para cada país y combustible del modelo, la fracción de la OFERTA TOTAL que
+# es IMPORTACIÓN según el balance energético anual de OLADE/sieLAC. Es un ratio
+# adimensional (no requiere convertir las distintas unidades del balance), que
+# se PROMEDIA sobre los años disponibles (2020-2024) y se aplica constante a
+# todo el horizonte del modelo. Mapeo combustible-modelo -> columna(s) OLADE:
+#   GAS -> GAS NATURAL ; COA -> CARBÓN MINERAL ; URN -> NUCLEAR ;
+#   OIL/PET/OTH -> derivados de petróleo (DIÉSEL OIL SIN BIODIÉSEL + FUEL OIL).
+# El chart aplica fallback 1.0 (importado) donde no haya dato, coherente con la
+# convención del modelo (todo el fósil se enruta por nodos *INT).
+# ================================================================
+# ISO-3 por nombre de país en español (nombres de las hojas del balance).
+COUNTRY_ISO3_BY_NAME = {
+    "Argentina": "ARG", "Bolivia": "BOL", "Brasil": "BRA", "Barbados": "BRB",
+    "Chile": "CHL", "Colombia": "COL", "Costa Rica": "CRI", "Cuba": "CUB",
+    "República Dominicana": "DOM", "Ecuador": "ECU", "Guatemala": "GTM",
+    "Honduras": "HND", "Haití": "HTI", "México": "MEX", "Nicaragua": "NIC",
+    "Panamá": "PAN", "Perú": "PER", "Paraguay": "PRY", "El Salvador": "SLV",
+    "Uruguay": "URY", "Venezuela": "VEN",
+}
+
+# Combustible del modelo (FUEL[:3]) -> columnas del balance OLADE a sumar.
+_OLADE_FUEL_COLUMNS = {
+    "GAS": ["GAS NATURAL"],
+    "COA": ["CARBÓN MINERAL"],
+    "URN": ["NUCLEAR"],
+    # OIL/PET/OTH comparten la cuota de derivados de petróleo.
+    "OIL": ["DIÉSEL OIL SIN BIODIÉSEL", "FUEL OIL"],
+    "PET": ["DIÉSEL OIL SIN BIODIÉSEL", "FUEL OIL"],
+    "OTH": ["DIÉSEL OIL SIN BIODIÉSEL", "FUEL OIL"],
+}
+
+_IMPORT_SHARE_CACHE: dict[str, dict[str, float]] = {}
+
+
+def load_fossil_import_shares() -> dict[str, dict[str, float]]:
+    """{iso3: {fuel_modelo: cuota_importación}} desde el balance OLADE.
+
+    ``fuel_modelo`` es uno de GAS/COA/URN/OIL/PET/OTH; el valor es la fracción
+    importada (0-1) promediada sobre los años disponibles del balance. Combina
+    columnas y promedia por país. Resultado cacheado en memoria.
+    """
+    if _IMPORT_SHARE_CACHE:
+        return _IMPORT_SHARE_CACHE
+
+    sheets = pd.read_excel(OLADE_BALANCE_PATH, sheet_name=None, header=None)
+    # acumula shares por (iso3, fuel) a lo largo de los años -> lista de valores
+    acc: dict[tuple[str, str], list[float]] = {}
+
+    for name, raw in sheets.items():
+        # Nombre de hoja: "AÑO - País".
+        parts = name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        country = parts[1].strip()
+        iso3 = COUNTRY_ISO3_BY_NAME.get(country)
+        if iso3 is None:
+            continue
+
+        # Localiza filas por etiqueta (col 0) y columnas por encabezado (fila 4).
+        labels = {str(raw.iat[i, 0]).strip(): i
+                  for i in range(raw.shape[0]) if pd.notna(raw.iat[i, 0])}
+        row_imp = labels.get("IMPORTACIÓN")
+        row_oferta = labels.get("OFERTA TOTAL")
+        if row_imp is None or row_oferta is None:
+            continue
+        headers = {str(raw.iat[4, c]).strip(): c
+                   for c in range(raw.shape[1]) if pd.notna(raw.iat[4, c])}
+
+        def _val(row: int, col: int) -> float:
+            v = raw.iat[row, col]
+            return float(v) if pd.notna(v) else 0.0
+
+        for fuel, cols in _OLADE_FUEL_COLUMNS.items():
+            imp = sum(_val(row_imp, headers[h]) for h in cols if h in headers)
+            ofe = sum(_val(row_oferta, headers[h]) for h in cols if h in headers)
+            if ofe <= 0:
+                continue  # sin oferta -> sin dato; el chart usará fallback 1.0
+            share = min(max(imp / ofe, 0.0), 1.0)
+            acc.setdefault((iso3, fuel), []).append(share)
+
+    result: dict[str, dict[str, float]] = {}
+    for (iso3, fuel), vals in acc.items():
+        result.setdefault(iso3, {})[fuel] = sum(vals) / len(vals)
+
+    _IMPORT_SHARE_CACHE.update(result)
+    return _IMPORT_SHARE_CACHE

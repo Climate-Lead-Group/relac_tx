@@ -42,6 +42,11 @@ PRODUCTION_BY_TIMESLICE_COL = 'ProductionByTechnology'
 CAPACITY_TO_ACTIVITY_COL = 'CapacityToActivityUnit'
 YEAR_SPLIT_COL = 'YearSplit'
 
+# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/OPT). Se
+# muestra el alias en dropdown/título/infoBar/PNG; el value del <option> queda
+# como el código original para no romper las claves de los datos embebidos.
+SCENARIO_ALIAS = {'BAU': 'OPTIMO', 'OPT': 'PLANIFICADO', 'INV': 'VEGETATIVO'}
+
 
 def find_combined_csv(script_dir):
     """Find the combined inputs/outputs CSV by glob pattern.
@@ -57,29 +62,35 @@ def find_combined_csv(script_dir):
     return Path(matches[0])
 
 
-def load_data(csv_path):
-    """Load the combined CSV and filter to interconnection technologies.
+def prepare_interconnection_df(df):
+    """Filtra un DataFrame ya cargado a tecnologías de interconexión.
 
-    Also extracts the global YearSplit lookup (TIMESLICE -> fraction)
-    from the full CSV before filtering, since YearSplit is not
-    technology-specific.
+    Extrae el lookup global YearSplit (TIMESLICE -> fracción) ANTES de filtrar,
+    porque YearSplit no es específico de la tecnología. Permite reutilizar un
+    DataFrame ya leído (build_dashboard) sin releer el CSV.
 
     Returns (filtered_df, year_split_dict).
     """
-    print(f"  Loading data from {csv_path} ...")
-    df = pd.read_csv(csv_path, low_memory=False)
-
-    # Extract YearSplit before filtering (it is a global parameter)
     ys_rows = df[df[YEAR_SPLIT_COL].notna()][['TIMESLICE', YEAR_SPLIT_COL]].drop_duplicates()
     year_split = dict(zip(ys_rows['TIMESLICE'], ys_rows[YEAR_SPLIT_COL]))
 
     mask = df['TECHNOLOGY'].astype(str).apply(
         lambda t: bool(INTERCONNECTION_PATTERN.match(t))
     )
-    df = df[mask].copy()
-    print(f"  Found {len(df):,} rows with interconnection technologies")
-    print(f"  Unique interconnections: {df['TECHNOLOGY'].nunique()}")
-    return df, year_split
+    out = df[mask].copy()
+    print(f"  Found {len(out):,} rows with interconnection technologies")
+    print(f"  Unique interconnections: {out['TECHNOLOGY'].nunique()}")
+    return out, year_split
+
+
+def load_data(csv_path):
+    """Load the combined CSV and filter to interconnection technologies.
+
+    Returns (filtered_df, year_split_dict).
+    """
+    print(f"  Loading data from {csv_path} ...")
+    df = pd.read_csv(csv_path, low_memory=False)
+    return prepare_interconnection_df(df)
 
 
 def load_centerpoints(csv_path):
@@ -296,6 +307,7 @@ def generate_html(capacity_data, flow_data, ratio_data, nodes, output_path, titl
     flow_json = json.dumps(flow_data)
     ratio_json = json.dumps(ratio_data)
     nodes_json = json.dumps(nodes)
+    alias_json = json.dumps(SCENARIO_ALIAS)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -341,7 +353,7 @@ def generate_html(capacity_data, flow_data, ratio_data, nodes, output_path, titl
 
 <div class="header">
   <h1>{title}</h1>
-  <p>Interactive visualization of interconnection capacity and energy flow</p>
+  <p>Visualización interactiva de la capacidad de interconexión y los flujos de energía.</p>
 </div>
 
 <div class="controls">
@@ -375,6 +387,8 @@ const capacityData = {capacity_json};
 const flowData = {flow_json};
 const ratioData = {ratio_json};
 const nodes = {nodes_json};
+const SCENARIO_ALIAS = {alias_json};
+function scAlias(s){{ return SCENARIO_ALIAS[s] || s; }}
 
 // ─── Unit definitions ────────────────────────────────────────────
 const UNITS = {{
@@ -417,7 +431,7 @@ function init() {{
   const scenarios = Object.keys(capacityData).sort();
   scenarios.forEach(s => {{
     const opt = document.createElement('option');
-    opt.value = s; opt.textContent = s;
+    opt.value = s; opt.textContent = scAlias(s);
     scenarioSel.appendChild(opt);
   }});
   currentScenario = scenarios[0] || '';
@@ -689,7 +703,7 @@ function updateMap() {{
 
   const layout = {{
     title: {{
-      text: `${{baseLabel}} — ${{currentScenario}} — ${{currentYear}} (${{unitDef.label}})`,
+      text: `${{baseLabel}} — ${{scAlias(currentScenario)}} — ${{currentYear}} (${{unitDef.label}})`,
       font: {{ size: 16, family: 'Segoe UI', color: '#333' }}
     }},
     geo: {{
@@ -715,7 +729,7 @@ function updateMap() {{
   const linkCount = currentTab === 'flow' ? links.length * 2 : links.length;
   const dirLabel = currentTab === 'flow' ? ' (bidirectional)' : '';
   document.getElementById('infoBar').textContent =
-    `${{linkCount}} interconnections${{dirLabel}} | Scenario: ${{currentScenario}} | Year: ${{currentYear}} | Unit: ${{unitDef.label}}`;
+    `${{linkCount}} interconnections${{dirLabel}} | Escenario: ${{scAlias(currentScenario)}} | Year: ${{currentYear}} | Unit: ${{unitDef.label}}`;
 }}
 
 function downloadPNG() {{
@@ -724,7 +738,7 @@ function downloadPNG() {{
   const baseLabel = dlLabels[currentTab];
   Plotly.downloadImage('map', {{
     format: 'png', width: 1600, height: 1000,
-    filename: `${{baseLabel}}_${{currentScenario}}_${{currentYear}}_${{unitDef.label}}`
+    filename: `${{baseLabel}}_${{scAlias(currentScenario)}}_${{currentYear}}_${{unitDef.label}}`
   }});
 }}
 
@@ -737,9 +751,11 @@ window.addEventListener('resize', () => {{
 </body>
 </html>"""
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
-    print(f"  HTML saved to {output_path}")
+    if output_path:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        print(f"  HTML saved to {output_path}")
+    return html
 
 
 # ---------------------------------------------------------------------------
@@ -772,22 +788,17 @@ TECH_LABELS = {
 }
 
 
-def load_dispatch_data(csv_path):
-    """Load combined CSV and extract dispatch data for PWR* technologies.
+def prepare_dispatch_df(df):
+    """Filtra un DataFrame ya cargado a las filas de despacho (PWR* por timeslice).
 
+    Reutilizable desde build_dashboard sin releer el CSV.
     Returns (dispatch_df, year_split_dict).
     """
-    print(f"  Loading dispatch data from {csv_path} ...")
-    df = pd.read_csv(csv_path, low_memory=False)
-
     # Extract YearSplit lookup
     ys_rows = df[df[YEAR_SPLIT_COL].notna()][['TIMESLICE', YEAR_SPLIT_COL]].drop_duplicates()
     year_split = dict(zip(ys_rows['TIMESLICE'], ys_rows[YEAR_SPLIT_COL]))
 
     # Filter: ELC*00/01/02 fuels, non-null production, timeslice present.
-    # No prefix filter: FUEL_SUFFIX alone partitions generation (00/01) from
-    # bus-02 delivery (02). Real PWR generators only emit 00/01; PWRTRN/RNW*/TRN*
-    # only emit 02, so the partition is clean by construction.
     mask = (
         df['FUEL'].astype(str).apply(lambda f: bool(DISPATCH_FUEL_PATTERN.match(f)))
         & df[PRODUCTION_BY_TIMESLICE_COL].notna()
@@ -808,6 +819,16 @@ def load_dispatch_data(csv_path):
     print(f"  Tech codes: {sorted(ddf['TECH_CODE'].unique().tolist())}")
 
     return ddf, year_split
+
+
+def load_dispatch_data(csv_path):
+    """Load combined CSV and extract dispatch data for PWR* technologies.
+
+    Returns (dispatch_df, year_split_dict).
+    """
+    print(f"  Loading dispatch data from {csv_path} ...")
+    df = pd.read_csv(csv_path, low_memory=False)
+    return prepare_dispatch_df(df)
 
 
 def prepare_dispatch_json(ddf, year_split):
@@ -874,6 +895,7 @@ def generate_dispatch_html(dispatch_data, ts_order, output_path, title):
     colors_json = json.dumps(TECH_COLORS)
     labels_json = json.dumps(TECH_LABELS)
     ts_order_json = json.dumps(ts_order)
+    alias_json = json.dumps(SCENARIO_ALIAS)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -915,7 +937,7 @@ def generate_dispatch_html(dispatch_data, ts_order, output_path, title):
 
 <div class="header">
   <h1>{title}</h1>
-  <p>Generation mix by technology and timeslice (stacked area)</p>
+  <p>Despacho de generación por tecnología y bloque horario (área apilada, incluye vertimiento).</p>
 </div>
 
 <div class="controls">
@@ -954,6 +976,8 @@ const STACK_ORDER = {stack_order_json};
 const TECH_COLORS = {colors_json};
 const TECH_LABELS = {labels_json};
 const TS_ORDER = {ts_order_json};
+const SCENARIO_ALIAS = {alias_json};
+function scAlias(s){{ return SCENARIO_ALIAS[s] || s; }}
 
 const UNITS = [
   {{ label: 'PJ', factor: 1 }},
@@ -986,7 +1010,7 @@ function init() {{
   const scenarioSel = document.getElementById('scenarioSelect');
   scenarios.forEach(s => {{
     const opt = document.createElement('option');
-    opt.value = s; opt.textContent = s;
+    opt.value = s; opt.textContent = scAlias(s);
     scenarioSel.appendChild(opt);
   }});
   currentScenario = scenarios[0] || '';
@@ -1073,7 +1097,28 @@ function updateChart() {{
       stackgroup: 'one',
       line: {{ width: 0.5, color: TECH_COLORS[tc] || '#999' }},
       fillcolor: TECH_COLORS[tc] || '#999',
+      showlegend: false,
       hovertemplate: `%{{x}}<br>${{TECH_LABELS[tc] || tc}}: %{{y:.2f}} ${{unitDef.label}}<extra></extra>`
+    }});
+  }});
+
+  // Entradas de leyenda como CUADROS de color sólidos (las trazas de área solo
+  // muestran una línea de 0.5px en la leyenda y casi no se distingue el color).
+  // Son trazas "solo-leyenda" sin datos (y:[null]) -> no dibujan nada en el
+  // gráfico. Se listan de tope a base de la pila para que la leyenda siga el
+  // orden visual de apilado.
+  orderedTechs.slice().reverse().forEach(tc => {{
+    traces.push({{
+      x: [TS_ORDER[0]],
+      y: [null],
+      name: TECH_LABELS[tc] || tc,
+      type: 'scatter',
+      mode: 'markers',
+      marker: {{ size: 14, symbol: 'square',
+                 color: TECH_COLORS[tc] || '#999',
+                 line: {{ width: 0.5, color: '#fff' }} }},
+      showlegend: true,
+      hoverinfo: 'skip'
     }});
   }});
 
@@ -1100,7 +1145,7 @@ function updateChart() {{
 
   const layout = {{
     title: {{
-      text: `Generation Mix — ${{currentScenario}} — ${{currentYear}} — ${{currentRegion}} (${{unitDef.label}})`,
+      text: `Despacho de generación — ${{scAlias(currentScenario)}} — ${{currentYear}} — ${{currentRegion}} (${{unitDef.label}})`,
       font: {{ size: 16, family: 'Segoe UI', color: '#333' }}
     }},
     xaxis: {{
@@ -1116,12 +1161,14 @@ function updateChart() {{
     }},
     annotations: annotations,
     shapes: shapes,
-    margin: {{ l: 70, r: 30, t: 80, b: 80 }},
+    margin: {{ l: 70, r: 240, t: 80, b: 80 }},
     height: window.innerHeight * 0.72,
     legend: {{
-      orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center',
-      font: {{ size: 11 }},
-      traceorder: 'normal'
+      orientation: 'v', x: 1.02, xanchor: 'left', y: 1, yanchor: 'top',
+      font: {{ size: 13, family: 'Segoe UI', color: '#333' }},
+      itemsizing: 'constant',
+      bgcolor: '#fff', bordercolor: '#ccc', borderwidth: 1,
+      title: {{ text: '<b>Tecnología</b>', font: {{ size: 12, color: '#555' }} }}
     }},
     hovermode: 'x unified'
   }};
@@ -1129,14 +1176,14 @@ function updateChart() {{
   Plotly.react('chart', traces, layout, {{ responsive: true }});
 
   document.getElementById('infoBar').textContent =
-    `${{orderedTechs.length}} technologies | Region: ${{currentRegion}} | Scenario: ${{currentScenario}} | Year: ${{currentYear}}`;
+    `${{orderedTechs.length}} technologies | Region: ${{currentRegion}} | Escenario: ${{scAlias(currentScenario)}} | Year: ${{currentYear}}`;
 }}
 
 function downloadPNG() {{
   const unitDef = UNITS[currentUnitIdx];
   Plotly.downloadImage('chart', {{
     format: 'png', width: 1600, height: 900,
-    filename: `DispatchChart_${{currentScenario}}_${{currentYear}}_${{currentRegion}}_${{unitDef.label}}`
+    filename: `DispatchChart_${{scAlias(currentScenario)}}_${{currentYear}}_${{currentRegion}}_${{unitDef.label}}`
   }});
 }}
 
@@ -1149,9 +1196,11 @@ window.addEventListener('resize', () => {{
 </body>
 </html>"""
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
-    print(f"  Dispatch HTML saved to {output_path}")
+    if output_path:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        print(f"  Dispatch HTML saved to {output_path}")
+    return html
 
 
 # ---------------------------------------------------------------------------
@@ -1176,11 +1225,9 @@ def main():
 
     output_dir.mkdir(exist_ok=True)
 
-    # Derive project name from CSV stem (e.g. RELAC_TX_Combined_... -> RELAC TX)
-    csv_stem = csv_path.stem
-    project_name = csv_stem.split('_Combined')[0].replace('_', ' ')
-    tx_title = f"{project_name} Transmission Maps"
-    disp_title = f"{project_name} Dispatch Chart"
+    # Títulos en español, sin el nombre del modelo (antes se anteponía "RELAC TX").
+    tx_title = "Mapas de Transmisión"
+    disp_title = "Despacho"
 
     # --- Transmission Maps ---
     print("=" * 60)

@@ -212,7 +212,7 @@ def generate_html(all_links, regions, output_path):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OSTRAM - Reference Energy System (RES)</title>
+<title>Diagrama RES</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -237,6 +237,11 @@ def generate_html(all_links, regions, output_path):
     font-size: 1.3em;
     font-weight: 600;
     color: #e0e0e0;
+  }}
+  .header-titles p {{
+    font-size: 0.8em;
+    color: #9fb3d1;
+    margin-top: 3px;
   }}
   .header h1 span {{
     color: #f5a623;
@@ -409,7 +414,10 @@ def generate_html(all_links, regions, output_path):
 <body>
 
 <div class="header">
-  <h1><span>OSTRAM</span> &mdash; Reference Energy System (RES)</h1>
+  <div class="header-titles">
+    <h1>Diagrama RES</h1>
+    <p>Sistema de Referencia Energético: combustibles, tecnologías y demandas, y sus conexiones.</p>
+  </div>
   <div class="controls">
     <div class="zoom-controls">
       <button class="zoom-btn" id="zoom-out" title="Zoom out">&#8722;</button>
@@ -822,7 +830,7 @@ function renderSankey() {{
     displaylogo: false,
     toImageButtonOptions: {{
       format: 'png',
-      filename: 'OSTRAM_RES',
+      filename: 'RES_Diagram',
       height: 2400,
       width: 4800,
       scale: 2,
@@ -837,10 +845,12 @@ renderSankey();
 </body>
 </html>"""
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
-    print(f"  RES diagram saved to: {output_path}")
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        print(f"  RES diagram saved to: {output_path}")
+    return html
 
 
 # ---------------------------------------------------------------------------
