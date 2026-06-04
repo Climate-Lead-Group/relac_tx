@@ -1161,7 +1161,9 @@ function updateChart() {{
     }},
     annotations: annotations,
     shapes: shapes,
-    margin: {{ l: 70, r: 240, t: 80, b: 80 }},
+    // r amplio: la leyenda (x:1.02) necesita ancho para los nombres de tecnología;
+    // con 240 la caja quedaba pegada al borde y los recortaba.
+    margin: {{ l: 70, r: 340, t: 80, b: 80 }},
     height: window.innerHeight * 0.72,
     legend: {{
       orientation: 'v', x: 1.02, xanchor: 'left', y: 1, yanchor: 'top',
