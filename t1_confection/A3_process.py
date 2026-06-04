@@ -42,11 +42,23 @@ for every scenario regardless.
 
 Historical-year cutoff (MODIFY_FROM_YEAR = 2026)
 ------------------------------------------------
-All three steps receive --modify-from-year 2026, so they only modify cells from
-2026 onward. Years 2023-2025 are historical/observed and are kept identical
-across scenarios by sync_historical_from_bau.py, which must be run BEFORE this
-orchestrator (it copies BAU's 2023-2025 columns into INV and OPT). B1b still
-*reports* pre-2026 inconsistencies but does not auto-fix them.
+All three per-scenario steps receive --modify-from-year 2026, so they only
+modify cells from 2026 onward. Years 2023-2025 are historical/observed and are
+kept identical across scenarios by sync_historical_from_bau.py, which must be
+run BEFORE this orchestrator (it copies BAU's 2023-2025 columns into INV and
+OPT). B1b still *reports* pre-2026 inconsistencies but does not auto-fix them.
+
+Final BAU harmonization (historical_sync_through)
+-------------------------------------------------
+As its LAST step, after every per-scenario step has run, this orchestrator pins
+each scenario listed under `historical_sync_through` in lid_rule.yaml to BAU for
+years 2023..<through> (inclusive) by invoking sync_historical_from_bau.py
+--apply. Because it runs last, it OVERRIDES anything the lid rule, the lowerlimit
+extension, B1b, or the BAU-only D3 caps left in that window for the target
+scenario. Current map: OPT->2025 (historical only; OPT optimization unchanged),
+INV->2030 (INV mirrors BAU through 2030, diverging only from 2031, exactly where
+D4_load_dsptrn_max_cap_inv.py begins capping). Only year-value cells are copied
+(Projection.Mode is left intact). Disable with --skip-historical-sync.
 
 The pre-stage pipeline that OSTRAM runs (template materialization,
 fix_rnwbio, scripts 1-5, c2a patch, trn residual fixes, etc.) is not needed
@@ -63,6 +75,7 @@ Usage:
     python t1_confection/A3_process.py --scenario BAU,INV
     python t1_confection/A3_process.py --list           # show discovered scenarios
     python t1_confection/A3_process.py --skip-validation # skip B1b auto-fix step
+    python t1_confection/A3_process.py --skip-historical-sync # skip final BAU harmonization
 """
 from __future__ import annotations
 
@@ -78,15 +91,26 @@ RULES_SCRIPTS_DIR = A3_PROCESS_DIR / "rules_scripts"
 A1_OUTPUTS_DIR = T1_CONFECTION / "A1_Outputs"
 SCENARIO_PREFIX = "A1_Outputs_"
 
+# Source scenario for the final BAU harmonization pass (must match
+# SOURCE_SCENARIO in sync_historical_from_bau.py).
+SOURCE_SCENARIO = "BAU"
+
 DEFAULT_RULES_SCRIPT = "add_max_cap_investment_lid_rule.py"
 EXTEND_LL_SCRIPT = "extend_lowerlimits_pwr.py"
 B1B_VALIDATOR = T1_CONFECTION / "B1b_Pre_solver_validation.py"
+SYNC_HIST_SCRIPT = T1_CONFECTION / "sync_historical_from_bau.py"
 LID_RULE_YAML = RULES_SCRIPTS_DIR / "lid_rule.yaml"
 
-# Historical-year cutoff: every A3 step (lid, extend, B1b) only modifies cells
-# from this year onward. Years 2023-2025 are historical/observed and are kept
-# identical across scenarios by sync_historical_from_bau.py (run before A3), so
-# A3 must not touch them. Passed to all three steps via --modify-from-year.
+# Historical-year cutoff: every per-scenario A3 step (lid, extend, B1b) only
+# modifies cells from this year onward. Years 2023-2025 are historical/observed
+# and are kept identical across scenarios by sync_historical_from_bau.py (run
+# before A3), so A3's per-scenario steps must not touch them. Passed to all
+# three steps via --modify-from-year.
+#
+# NOTE: this is independent of the final BAU harmonization pass (see
+# `historical_sync_through` in lid_rule.yaml and run_historical_sync below),
+# which DELIBERATELY rewrites the harmonized window — including 2026+ for INV —
+# to match BAU after every per-scenario step has run.
 MODIFY_FROM_YEAR = 2026
 
 PYTHON = sys.executable
@@ -174,6 +198,49 @@ def load_lowerlimit_scenarios() -> dict[str, set[str] | None]:
     return scope
 
 
+def load_historical_sync_through() -> dict[str, int]:
+    """Read the per-scenario BAU-harmonization cutoff from lid_rule.yaml.
+
+    Returns {scenario: through_year}: the target scenario's year columns from
+    2023 through `through_year` (inclusive) are copied from BAU as A3's final
+    step. A scenario not listed is not harmonized.
+
+    Returns {} when the file/key is missing or PyYAML is unavailable — i.e. the
+    safe default is "harmonize nothing" (A3 behaves as before this feature).
+    """
+    if not LID_RULE_YAML.is_file():
+        return {}
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        print(f"  [WARN] PyYAML not installed; cannot read historical_sync_through "
+              f"from {LID_RULE_YAML.name}. No BAU harmonization will run.")
+        return {}
+    with open(LID_RULE_YAML, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+
+    raw = cfg.get("historical_sync_through")
+    if not raw:
+        return {}
+    if not isinstance(raw, dict):
+        sys.exit(
+            f"ERROR: historical_sync_through in {LID_RULE_YAML.name} must be a "
+            f"mapping {{scenario: year}}, got {type(raw).__name__}."
+        )
+    out: dict[str, int] = {}
+    for scen, year in raw.items():
+        name = str(scen).strip()
+        if not name:
+            continue
+        if not isinstance(year, int) or isinstance(year, bool):
+            sys.exit(
+                f"ERROR: historical_sync_through[{name}] in {LID_RULE_YAML.name} "
+                f"must be an integer year, got {year!r}."
+            )
+        out[name] = year
+    return out
+
+
 def banner(msg: str) -> None:
     bar = "=" * 78
     print(f"\n{bar}\n{msg}\n{bar}")
@@ -230,6 +297,12 @@ def parse_cli_args() -> argparse.Namespace:
              "lid values in MaxCapInv cells are overwritten by the new lid. "
              "Use when iterating on the lid schedule without restoring the "
              "xlsx between runs.",
+    )
+    p.add_argument(
+        "--skip-historical-sync", action="store_true",
+        help="Skip the final BAU harmonization pass (historical_sync_through in "
+             "lid_rule.yaml) that pins each listed scenario's early years to BAU "
+             "after all per-scenario steps run.",
     )
     return p.parse_args()
 
@@ -326,6 +399,23 @@ def run_for_scenario(scenario: str, rules_script: str,
     )
 
 
+def run_historical_sync(scenario: str, through_year: int) -> None:
+    """Pin `scenario`'s year columns 2023..through_year to BAU (A3 final step).
+
+    Invokes sync_historical_from_bau.py --apply for a single target scenario.
+    The sync source is always the current BAU workbook on disk; it does a
+    positional copy of year cells only and aborts (non-zero exit) on any
+    structural mismatch, which run_subproc turns into a hard failure.
+    """
+    if not SYNC_HIST_SCRIPT.is_file():
+        sys.exit(f"ERROR: historical-sync script not found: {SYNC_HIST_SCRIPT}")
+    years = ",".join(str(y) for y in range(2023, through_year + 1))
+    cmd = [PYTHON, SYNC_HIST_SCRIPT, "--apply",
+           "--scenarios", scenario, "--years", years]
+    print(f"  harmonize     : {scenario} <- BAU for 2023-{through_year}")
+    run_subproc(cmd, label=f"historical_sync ({scenario} <- BAU, 2023-{through_year})")
+
+
 def main() -> int:
     args = parse_cli_args()
 
@@ -360,6 +450,8 @@ def main() -> int:
         s: ("all" if t is None else sorted(t)) for s, t in ll_scope.items()
     }
 
+    hist_sync = {} if args.skip_historical_sync else load_historical_sync_through()
+
     t_start = time.time()
     banner("A3 workflow — relac_tx")
     print(f"  scenarios            : {scenarios}")
@@ -368,6 +460,11 @@ def main() -> int:
     print(f"  skip-validation      : {args.skip_validation}")
     print(f"  force-overwrite      : {args.force_overwrite}")
     print(f"  lowerlimit_scenarios : {ll_summary or '(none — opt-in)'}")
+    if args.skip_historical_sync:
+        print(f"  historical_sync      : SKIPPED (--skip-historical-sync)")
+    else:
+        print(f"  historical_sync      : "
+              f"{ {s: f'2023-{y}' for s, y in hist_sync.items()} or '(none)'}")
 
     for scen in scenarios:
         run_for_scenario(
@@ -376,6 +473,22 @@ def main() -> int:
             apply_lowerlimit=(scen in ll_scope),
             include_types=ll_scope.get(scen),
         )
+
+    # Final step: pin each harmonized scenario's early years to BAU. Runs after
+    # every per-scenario step so it overrides the lid / extend / B1b output and
+    # the BAU-only D3 caps in the harmonized window. Only scenarios processed in
+    # THIS run are harmonized; BAU is the source and is skipped as a target.
+    sync_targets = [
+        s for s in scenarios
+        if s in hist_sync and s != SOURCE_SCENARIO
+    ]
+    if sync_targets:
+        banner("Final harmonization — pin early years to BAU")
+        if SOURCE_SCENARIO not in scenarios:
+            print(f"  [NOTE] {SOURCE_SCENARIO} not in this run; harmonizing against "
+                  f"the existing {SOURCE_SCENARIO} workbook on disk.")
+        for scen in sync_targets:
+            run_historical_sync(scen, hist_sync[scen])
 
     elapsed = time.time() - t_start
     banner(f"DONE in {elapsed:.1f}s — {len(scenarios)} scenario(s) processed")

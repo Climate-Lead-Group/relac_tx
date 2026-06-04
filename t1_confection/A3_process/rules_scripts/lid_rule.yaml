@@ -192,3 +192,30 @@ lowerlimit_scenarios:
   BAU: all
   INV: all
   OPT: renewable
+
+# 9) Near-term harmonization with BAU (2026-06-04):
+# As its FINAL step, A3_process.py forces the early-year columns of each listed
+# scenario to match BAU exactly, by invoking sync_historical_from_bau.py
+# (positional copy of BAU's year cells into the target workbook). This runs
+# AFTER the lid rule, the lowerlimit extension, and B1b for every scenario, so
+# it overrides any divergence those steps — or the BAU-only caps written by
+# D3_load_lac_max_capacity_caps.py — introduced in the harmonized window for
+# the target scenario.
+#
+# Per scenario: the THROUGH year (inclusive). Years 2023..<through> are copied
+# from BAU; the scenario is free to diverge from <through>+1 onward.
+#
+#   OPT -> 2025 : only the historical/observed years are pinned to BAU; OPT's
+#                 optimization is free from 2026 (UNCHANGED behaviour).
+#   INV -> 2030 : INV mirrors BAU through 2030 and only diverges from 2031,
+#                 which is exactly where D4_load_dsptrn_max_cap_inv.py starts
+#                 capping transmission MaxCapInv. (CTO request 2026-06-04.)
+#
+# Only year-value cells are copied; Projection.Mode and other key columns are
+# left intact (a row may legitimately be 'User defined' because its 2031+ cells
+# differ). A scenario omitted here (or this whole block empty/absent) is NOT
+# harmonized. BAU is the source and is never a target. Disable for a run with
+# --skip-historical-sync.
+historical_sync_through:
+  INV: 2030
+  OPT: 2025
