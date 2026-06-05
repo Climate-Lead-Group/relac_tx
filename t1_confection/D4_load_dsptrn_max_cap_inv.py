@@ -30,6 +30,15 @@ Regla por tech/ano Y (tres bloques):
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
                     factor(Y) decrece linealmente de 0.99 (2031) a 0.80 (2050).
 
+                    EXCEPCION por pais (EXEMPT_COUNTRIES = PER, CRI, PAN, COL):
+                    esos paises NO reciben el descuento; usan factor 1.0 (senda
+                    BAU completa) + head-room EXEMPT_MARGIN (CRI: +5%). Sus seis
+                    techs de transmision nodo-02 activaban el respaldo PWRBCK
+                    (VariableCost 1750) al quedar topadas por debajo del pico;
+                    restaurar la senda BAU lo elimina. (Antes esto se hacia
+                    aguas abajo en fix_inv_transmission_caps.py; ahora vive aqui
+                    como unica fuente de verdad del tope de transmision INV.)
+
 En 2026..2050, donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
 inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
 
@@ -77,6 +86,13 @@ FLAT_FACTOR_THROUGH_YEAR, FLAT_FACTOR = 2030, 1.0
 CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.99
 CAP_END_YEAR, CAP_END_FACTOR = 2050, 0.80
 
+# Paises exentos del descuento 2031-2050: mantienen factor 1.0 (senda BAU
+# completa) + un head-room opcional, para no activar el respaldo PWRBCK en su
+# nodo 02. (Pliega aqui lo que hacia fix_inv_transmission_caps.py aguas abajo.)
+EXEMPT_COUNTRIES = ('PER', 'CRI', 'PAN', 'COL')
+EXEMPT_RESTORE_FACTOR = 1.0
+EXEMPT_MARGIN = {'CRI': 0.05}  # CRI satura las 12 timeslices -> 5% extra
+
 # Escenario de referencia dentro del CSV combinado.
 BAU_SCENARIO = 'BAU'
 
@@ -88,17 +104,30 @@ YEARS = list(range(2023, 2051))
 # ---------------------------------------------------------------------------
 
 
-def factor_for_year(year: int) -> float:
+def factor_for_year(year: int, country: str | None = None) -> float:
     """Factor de tope para los anos topados (2026..2050).
 
     2026..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
-    2031..2050  -> lineal CAP_START_FACTOR (0.99) -> CAP_END_FACTOR (0.80).
+    2031..2050  -> lineal CAP_START_FACTOR (0.99) -> CAP_END_FACTOR (0.80),
+                   SALVO paises exentos (EXEMPT_COUNTRIES): esos usan
+                   EXEMPT_RESTORE_FACTOR (1.0) + head-room EXEMPT_MARGIN, o sea
+                   mantienen la senda BAU completa para no activar PWRBCK.
     """
     if year <= FLAT_FACTOR_THROUGH_YEAR:
         return FLAT_FACTOR
+    if country in EXEMPT_COUNTRIES:
+        return EXEMPT_RESTORE_FACTOR * (1.0 + EXEMPT_MARGIN.get(country, 0.0))
     span = CAP_END_YEAR - CAP_START_YEAR
     frac = (year - CAP_START_YEAR) / span
     return CAP_START_FACTOR + (CAP_END_FACTOR - CAP_START_FACTOR) * frac
+
+
+def country_of(tech: str) -> str:
+    """ISO3 embebido en un codigo de transmision length-11 (chars 6:9).
+
+    Layout: PREFIX(6) + COUNTRY(3) + 'XX'. Todos los TRN_PREFIXES miden 6.
+    """
+    return tech[6:9]
 
 
 def load_bau_new_capacity(csv_path: Path) -> dict[tuple[str, int], float]:
@@ -174,6 +203,8 @@ def main() -> None:
           f'2026-{FLAT_FACTOR_THROUGH_YEAR} cap = NewCapacity_BAU x {FLAT_FACTOR:.2f}; '
           f'{CAP_START_YEAR}-{CAP_END_YEAR} cap = NewCapacity_BAU x factor '
           f'({CAP_START_FACTOR:.2f} -> {CAP_END_FACTOR:.2f})')
+    print(f'Exentos:   {EXEMPT_COUNTRIES} -> factor {EXEMPT_RESTORE_FACTOR:.2f} '
+          f'(senda BAU completa) + margen {EXEMPT_MARGIN} en {CAP_START_YEAR}-{CAP_END_YEAR}')
 
     bau = load_bau_new_capacity(COMBINED_CSV)
     techs_in_bau = sorted({t for (t, _y) in bau})
@@ -224,7 +255,7 @@ def main() -> None:
                 cells_cleared += 1
                 continue
             nc = bau.get((tech, y))
-            cap_gw = nc * factor_for_year(y) if nc is not None else 0.0  # BAU=0 -> 0
+            cap_gw = nc * factor_for_year(y, country_of(tech)) if nc is not None else 0.0  # BAU=0 -> 0
             ws.cell(row, year_cols[y]).value = cap_gw
             cells_capped += 1
             if nc is not None:
@@ -235,8 +266,8 @@ def main() -> None:
         techs_touched += 1
         if years_with_quota:
             first_y, last_y = years_with_quota[0], years_with_quota[-1]
-            first_v = bau[(tech, first_y)] * factor_for_year(first_y)
-            last_v = bau[(tech, last_y)] * factor_for_year(last_y)
+            first_v = bau[(tech, first_y)] * factor_for_year(first_y, country_of(tech))
+            last_v = bau[(tech, last_y)] * factor_for_year(last_y, country_of(tech))
             print(f'  {tech}: {len(years_with_quota)} anos con cuota en 2026-2050 '
                   f'(resto=0) | {first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
         else:
@@ -280,7 +311,7 @@ def main() -> None:
                     violations += 1
                 continue
             nc = bau.get((tech, y))
-            expected = nc * factor_for_year(y) if nc is not None else 0.0
+            expected = nc * factor_for_year(y, country_of(tech)) if nc is not None else 0.0
             if not isinstance(v, (int, float)) or abs(v - expected) > 1e-6 * max(1.0, abs(expected)):
                 print(f'  VALUE {tech} {y}: got {v!r}, expected {expected:.6f}')
                 violations += 1
