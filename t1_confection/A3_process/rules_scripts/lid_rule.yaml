@@ -210,7 +210,7 @@ lowerlimit_scenarios:
 #   INV -> 2030 : INV mirrors BAU through 2030 for everything EXCEPT transmission.
 #                 D4_load_dsptrn_max_cap_inv.py now caps transmission MaxCapInv
 #                 from 2026 (cap = NewCapacity_BAU * factor; factor 1.0 in
-#                 2026-2030, then 0.90->0.50 over 2031-2050), so TX diverges from
+#                 2026-2030, then 0.99->0.80 over 2031-2050), so TX diverges from
 #                 2026. sync_historical_from_bau.py was modified to skip the TX
 #                 MaxCapInv rows (TRN*) for years >= 2026 so this sync does NOT
 #                 snap them back to BAU; generation and the rest still mirror BAU

@@ -28,7 +28,7 @@ Regla por tech/ano Y (tres bloques):
                     filas TRN desde 2026.
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
-                    factor(Y) decrece linealmente de 0.90 (2031) a 0.50 (2050).
+                    factor(Y) decrece linealmente de 0.99 (2031) a 0.80 (2050).
 
 En 2026..2050, donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
 inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
@@ -74,8 +74,8 @@ EQUAL_THROUGH_YEAR = 2025
 FLAT_FACTOR_THROUGH_YEAR, FLAT_FACTOR = 2030, 1.0
 
 # Bloque con tope decreciente: factor lineal de CAP_START_FACTOR a CAP_END_FACTOR.
-CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.90
-CAP_END_YEAR, CAP_END_FACTOR = 2050, 0.50
+CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.99
+CAP_END_YEAR, CAP_END_FACTOR = 2050, 0.80
 
 # Escenario de referencia dentro del CSV combinado.
 BAU_SCENARIO = 'BAU'
@@ -92,7 +92,7 @@ def factor_for_year(year: int) -> float:
     """Factor de tope para los anos topados (2026..2050).
 
     2026..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
-    2031..2050  -> lineal CAP_START_FACTOR (0.90) -> CAP_END_FACTOR (0.50).
+    2031..2050  -> lineal CAP_START_FACTOR (0.99) -> CAP_END_FACTOR (0.80).
     """
     if year <= FLAT_FACTOR_THROUGH_YEAR:
         return FLAT_FACTOR
