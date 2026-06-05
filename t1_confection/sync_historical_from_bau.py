@@ -19,6 +19,12 @@ Alcance
   "2023"). Las hojas sin columnas de ano (p.ej. 'Fixed Horizon Parameters')
   se omiten automaticamente.
 - Solo los anos en --years (default 2023,2024,2025).
+- EXCEPCION: en la hoja 'Demand Techs', las filas de
+  TotalAnnualMaxCapacityInvestment de tecnologias de transmision (TRN*) NO se
+  copian para anos >= 2026. Ahi manda el tope que escribe
+  D4_load_dsptrn_max_cap_inv.py (la Transmision de INV diverge de BAU desde
+  2026). Los anos <= 2025 (historicos) si se copian. OPT solo sincroniza
+  2023-2025, asi que esta excepcion nunca le aplica.
 
 Seguridad
 ---------
@@ -53,6 +59,18 @@ SOURCE_SCENARIO = "BAU"
 DEFAULT_TARGET_SCENARIOS = ["INV", "OPT"]
 DEFAULT_YEARS = [2023, 2024, 2025]
 
+# Transmission MaxCapInv divergence. D4_load_dsptrn_max_cap_inv.py escribe el
+# tope anual de transmision para INV desde TX_DIVERGE_YEAR en adelante (cap =
+# NewCapacity_BAU * factor). Esas celdas NO deben volver a BAU por este sync, o
+# INV perderia su tope de transmision. Por eso, para anos >= TX_DIVERGE_YEAR se
+# saltan las filas de transmision (TX_PARAM sobre techs TX_PREFIXES) de la hoja
+# TX_SHEET. Los anos < TX_DIVERGE_YEAR (historicos) siempre se copian. OPT solo
+# sincroniza 2023-2025, asi que esta exclusion nunca le aplica.
+TX_DIVERGE_YEAR = 2026
+TX_SHEET = "Demand Techs"
+TX_PARAM = "TotalAnnualMaxCapacityInvestment"
+TX_PREFIXES = ("PWRTRN", "TRNNLI", "TRNRPO", "RNWTRN", "RNWRPO", "RNWNLI")
+
 
 def param_path(scenario: str) -> Path:
     return A1_OUTPUTS / f"A1_Outputs_{scenario}" / PARAM_FILENAME
@@ -86,6 +104,14 @@ def find_param_col(header: list) -> int | None:
     """1-based index of the 'Parameter' column in the header, or None."""
     for i, h in enumerate(header, start=1):
         if isinstance(h, str) and h.strip() == "Parameter":
+            return i
+    return None
+
+
+def find_tech_col(header: list) -> int | None:
+    """1-based index of the 'Tech' column in the header, or None."""
+    for i, h in enumerate(header, start=1):
+        if isinstance(h, str) and h.strip() == "Tech":
             return i
     return None
 
@@ -130,7 +156,10 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
                 )
 
             param_col = find_param_col(header_row(src_ws))
+            tech_col = find_tech_col(header_row(src_ws))
+            is_tx_sheet = sheet == TX_SHEET
             cells_changed = 0
+            cells_protected = 0
             for row in range(2, src_ws.max_row + 1):
                 # Guard against row misalignment: the Parameter column (when
                 # present) must match between BAU and target for this row.
@@ -143,7 +172,20 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
                             f"(BAU={sp!r}, target={tp!r}); aborting to avoid "
                             f"misaligned copy."
                         )
+                # Protect D4's transmission MaxCapInv cap from being snapped back
+                # to BAU in 2026+. Only the TX_PARAM rows of TX_PREFIXES techs on
+                # the TX_SHEET are shielded, and only for years >= TX_DIVERGE_YEAR.
+                protect_tx = False
+                if is_tx_sheet and tech_col is not None and param_col is not None:
+                    tv = src_ws.cell(row=row, column=tech_col).value
+                    pv = src_ws.cell(row=row, column=param_col).value
+                    if (isinstance(tv, str) and tv.strip().startswith(TX_PREFIXES)
+                            and isinstance(pv, str) and pv.strip() == TX_PARAM):
+                        protect_tx = True
                 for y, col in src_cols.items():
+                    if protect_tx and y >= TX_DIVERGE_YEAR:
+                        cells_protected += 1
+                        continue
                     sv = src_ws.cell(row=row, column=col).value
                     tc = tgt_ws.cell(row=row, column=col)
                     if tc.value != sv:
@@ -154,6 +196,7 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
                 "sheet": sheet,
                 "years": sorted(src_cols),
                 "cells_changed": cells_changed,
+                "cells_protected": cells_protected,
             })
             summary["total_cells"] += cells_changed
 
@@ -218,8 +261,10 @@ def main() -> int:
                 if "skipped" in s:
                     print(f"  [skip] {s['sheet']:28s} ({s['skipped']})")
                 else:
+                    prot = s.get("cells_protected", 0)
+                    prot_str = f" tx_protected={prot}" if prot else ""
                     print(f"  {s['sheet']:28s} years={s['years']} "
-                          f"cells_changed={s['cells_changed']}")
+                          f"cells_changed={s['cells_changed']}{prot_str}")
             print(f"  TOTAL cells changed: {summary['total_cells']}")
             if apply_changes and "backup" in summary:
                 print(f"  Backup: {summary['backup']}")

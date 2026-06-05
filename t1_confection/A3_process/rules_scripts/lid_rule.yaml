@@ -207,9 +207,15 @@ lowerlimit_scenarios:
 #
 #   OPT -> 2025 : only the historical/observed years are pinned to BAU; OPT's
 #                 optimization is free from 2026 (UNCHANGED behaviour).
-#   INV -> 2030 : INV mirrors BAU through 2030 and only diverges from 2031,
-#                 which is exactly where D4_load_dsptrn_max_cap_inv.py starts
-#                 capping transmission MaxCapInv. (CTO request 2026-06-04.)
+#   INV -> 2030 : INV mirrors BAU through 2030 for everything EXCEPT transmission.
+#                 D4_load_dsptrn_max_cap_inv.py now caps transmission MaxCapInv
+#                 from 2026 (cap = NewCapacity_BAU * factor; factor 1.0 in
+#                 2026-2030, then 0.90->0.50 over 2031-2050), so TX diverges from
+#                 2026. sync_historical_from_bau.py was modified to skip the TX
+#                 MaxCapInv rows (TRN*) for years >= 2026 so this sync does NOT
+#                 snap them back to BAU; generation and the rest still mirror BAU
+#                 through 2030. (TX-from-2026 change 2026-06-04; original
+#                 INV-mirrors-BAU-through-2030 CTO request 2026-06-04.)
 #
 # Only year-value cells are copied; Projection.Mode and other key columns are
 # left intact (a row may legitimately be 'User defined' because its 2031+ cells

@@ -14,17 +14,24 @@ Motivacion:
     menos transmision, mas respaldo -> el contraste INV vs BAU que se busca, manteniendo
     factibilidad.
 
-Regla por tech/ano Y (dos bloques):
+Regla por tech/ano Y (tres bloques):
 
-    2023..2030  ->  celda VACIA (None): INV igual a BAU (sin tope). BAU no se topa a
-                    si mismo, asi que dejar la celda sin valor hace que INV reproduzca
-                    a BAU en esos anos -> PWRBCK no entra a producir temprano. Se LIMPIA
-                    cualquier valor que corridas anteriores hubieran dejado.
+    2023..2025  ->  celda VACIA (None): INV igual a BAU (sin tope). Son los anos
+                    historicos/observados; el sync final de A3 los fija a BAU igual.
+                    Se LIMPIA cualquier valor que corridas anteriores hubieran dejado.
+
+    2026..2030  ->  cap = NewCapacity_BAU[tech, Y] * 1.0     [GW]
+                    Tope = exactamente lo que BAU construyo (sin descuento). Es aqui
+                    donde la Transmision de INV empieza a divergir de BAU. La
+                    generacion y demas siguen = BAU hasta 2030 porque
+                    sync_historical_from_bau.py fue modificado para NO pisar estas
+                    filas TRN desde 2026.
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
                     factor(Y) decrece linealmente de 0.90 (2031) a 0.50 (2050).
-                    Donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
-                    inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
+
+En 2026..2050, donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
+inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
 
 Solo se toca TotalAnnualMaxCapacityInvestment; el piso TotalAnnualMinCapacityInvestment
 NO se escribe.
@@ -57,8 +64,14 @@ SHEET = 'Demand Techs'
 PARAM = 'TotalAnnualMaxCapacityInvestment'
 
 # --- Configuracion ---------------------------------------------------------
-# Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia).
-EQUAL_THROUGH_YEAR = 2030
+# Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia). Solo los
+# anos historicos/observados (2023-2025); desde 2026 la Transmision se topa.
+EQUAL_THROUGH_YEAR = 2025
+
+# Bloque plano: 2026..FLAT_FACTOR_THROUGH_YEAR usan FLAT_FACTOR (sin descuento
+# => cap = NewCapacity_BAU exacto). Es la ventana donde TX diverge de BAU
+# mientras el resto del escenario sigue = BAU hasta 2030.
+FLAT_FACTOR_THROUGH_YEAR, FLAT_FACTOR = 2030, 1.0
 
 # Bloque con tope decreciente: factor lineal de CAP_START_FACTOR a CAP_END_FACTOR.
 CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.90
@@ -76,7 +89,13 @@ YEARS = list(range(2023, 2051))
 
 
 def factor_for_year(year: int) -> float:
-    """Factor de tope para anos del bloque con cap (2031..2050): lineal 0.90 -> 0.50."""
+    """Factor de tope para los anos topados (2026..2050).
+
+    2026..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
+    2031..2050  -> lineal CAP_START_FACTOR (0.90) -> CAP_END_FACTOR (0.50).
+    """
+    if year <= FLAT_FACTOR_THROUGH_YEAR:
+        return FLAT_FACTOR
     span = CAP_END_YEAR - CAP_START_YEAR
     frac = (year - CAP_START_YEAR) / span
     return CAP_START_FACTOR + (CAP_END_FACTOR - CAP_START_FACTOR) * frac
@@ -152,6 +171,7 @@ def main() -> None:
     print(f'Target:    {PARAM_PATH}')
     print(f'BAU CSV:   {COMBINED_CSV}')
     print(f'Regla:     2023-{EQUAL_THROUGH_YEAR} sin tope (=BAU); '
+          f'2026-{FLAT_FACTOR_THROUGH_YEAR} cap = NewCapacity_BAU x {FLAT_FACTOR:.2f}; '
           f'{CAP_START_YEAR}-{CAP_END_YEAR} cap = NewCapacity_BAU x factor '
           f'({CAP_START_FACTOR:.2f} -> {CAP_END_FACTOR:.2f})')
 
@@ -197,7 +217,7 @@ def main() -> None:
     sum_cap = 0.0
     for tech in trn_rows:
         row = row_idx[(tech, PARAM)]
-        years_with_quota: list[int] = []  # anos 2031-2050 con NewCapacity_BAU > 0
+        years_with_quota: list[int] = []  # anos 2026-2050 con NewCapacity_BAU > 0
         for y in YEARS:
             if y <= EQUAL_THROUGH_YEAR:
                 ws.cell(row, year_cols[y]).value = None  # igual a BAU: sin tope
@@ -217,13 +237,13 @@ def main() -> None:
             first_y, last_y = years_with_quota[0], years_with_quota[-1]
             first_v = bau[(tech, first_y)] * factor_for_year(first_y)
             last_v = bau[(tech, last_y)] * factor_for_year(last_y)
-            print(f'  {tech}: {len(years_with_quota)} anos con cuota en 2031-2050 '
+            print(f'  {tech}: {len(years_with_quota)} anos con cuota en 2026-2050 '
                   f'(resto=0) | {first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
         else:
-            print(f'  {tech}: sin cuota en 2031-2050 -> todos 0')
+            print(f'  {tech}: sin cuota en 2026-2050 -> todos 0')
 
     print(f'\nTechs tocadas: {techs_touched} | celdas vaciadas (2023-{EQUAL_THROUGH_YEAR}): '
-          f'{cells_cleared} | celdas con tope ({CAP_START_YEAR}-{CAP_END_YEAR}): {cells_capped}')
+          f'{cells_cleared} | celdas con tope (2026-{CAP_END_YEAR}): {cells_capped}')
     print(f'Sanity (bloque con tope): suma cap = {sum_cap:.4f} GW  vs  '
           f'suma NewCapacity BAU = {sum_bau:.4f} GW '
           f'(ratio {sum_cap / sum_bau if sum_bau else 0:.4f})')
