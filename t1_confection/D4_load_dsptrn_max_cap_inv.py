@@ -3,16 +3,19 @@ D4_load_dsptrn_max_cap_inv.py
 
 Escribe TotalAnnualMaxCapacityInvestment (GW) para las tecnologias de TRANSMISION
 que inyectan en el nodo 02 (no para el sumador DSPTRN) en la hoja 'Demand Techs'
-de A-O_Parametrization.xlsx del escenario INV.
+de A-O_Parametrization.xlsx de los escenarios destino (INV y/o OPT; ver --scenario).
 
 Motivacion:
     El sumador DSPTRN{ISO3}XX tiene capacidad residual 9999 y costo cero, asi que
-    cualquier tope sobre el NUNCA es vinculante (BAU e INV daban la misma inversion
-    en transmision). En su lugar, topamos directamente las tecnologias de transmision
+    cualquier tope sobre el NUNCA es vinculante (BAU daba la misma inversion en
+    transmision). En su lugar, topamos directamente las tecnologias de transmision
     reales, usando como cuota lo que BAU ya construyo (NewCapacity), escalado por un
-    factor < 1. Como el respaldo PWRBCK inyecta en el mismo nodo 02, cubre la diferencia:
-    menos transmision, mas respaldo -> el contraste INV vs BAU que se busca, manteniendo
-    factibilidad.
+    factor por escenario.
+      - INV: factor < 1 (restringe). Como el respaldo PWRBCK inyecta en el mismo
+        nodo 02, cubre la diferencia: menos transmision, mas respaldo -> el
+        contraste INV vs BAU que se busca, manteniendo factibilidad.
+      - OPT: factor > 1 (head-room de EXPANSION por encima de BAU).
+    Los factores por escenario viven en SCENARIO_CONFIG.
 
 Regla por tech/ano Y (tres bloques):
 
@@ -28,9 +31,11 @@ Regla por tech/ano Y (tres bloques):
                     filas TRN desde 2026.
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
-                    factor(Y) decrece linealmente de 0.99 (2031) a 0.80 (2050).
+                    factor(Y) es lineal entre cap_start_factor y cap_end_factor
+                    del escenario (INV: 0.99->0.80 restringe; OPT: 1.01->1.20
+                    expande por encima de BAU). Ver SCENARIO_CONFIG.
 
-                    EXCEPCION por pais (EXEMPT_COUNTRIES = PER, CRI, PAN, COL):
+                    EXCEPCION por pais (solo INV, exempt_countries = PER, CRI, PAN, COL):
                     esos paises NO reciben el descuento; usan factor 1.0 (senda
                     BAU completa) + head-room EXEMPT_MARGIN (CRI: +5%). Sus seis
                     techs de transmision nodo-02 activaban el respaldo PWRBCK
@@ -66,13 +71,17 @@ import openpyxl
 
 HERE = Path(__file__).resolve().parent
 COMBINED_CSV = HERE / 'RELAC_TX_Combined_Inputs_Outputs.csv'
-SCENARIO_DIR = HERE / 'A1_Outputs' / 'A1_Outputs_INV'
-PARAM_PATH = SCENARIO_DIR / 'A-O_Parametrization.xlsx'
+A1_OUTPUTS = HERE / 'A1_Outputs'
 
 SHEET = 'Demand Techs'
 PARAM = 'TotalAnnualMaxCapacityInvestment'
 
-# --- Configuracion ---------------------------------------------------------
+
+def param_path(scenario: str) -> Path:
+    """Ruta al A-O_Parametrization.xlsx del escenario destino (INV, OPT, ...)."""
+    return A1_OUTPUTS / f'A1_Outputs_{scenario}' / 'A-O_Parametrization.xlsx'
+
+# --- Configuracion comun (todos los escenarios) ----------------------------
 # Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia). Solo los
 # anos historicos/observados (2023-2025); desde 2026 la Transmision se topa.
 EQUAL_THROUGH_YEAR = 2025
@@ -82,16 +91,35 @@ EQUAL_THROUGH_YEAR = 2025
 # mientras el resto del escenario sigue = BAU hasta 2030.
 FLAT_FACTOR_THROUGH_YEAR, FLAT_FACTOR = 2030, 1.0
 
-# Bloque con tope decreciente: factor lineal de CAP_START_FACTOR a CAP_END_FACTOR.
-CAP_START_YEAR, CAP_START_FACTOR = 2031, 0.99
-CAP_END_YEAR, CAP_END_FACTOR = 2050, 0.80
+# Bloque con factor lineal en 2031-2050 (los factores extremos van por escenario).
+CAP_START_YEAR, CAP_END_YEAR = 2031, 2050
 
-# Paises exentos del descuento 2031-2050: mantienen factor 1.0 (senda BAU
-# completa) + un head-room opcional, para no activar el respaldo PWRBCK en su
-# nodo 02. (Pliega aqui lo que hacia fix_inv_transmission_caps.py aguas abajo.)
-EXEMPT_COUNTRIES = ('PER', 'CRI', 'PAN', 'COL')
-EXEMPT_RESTORE_FACTOR = 1.0
-EXEMPT_MARGIN = {'CRI': 0.05}  # CRI satura las 12 timeslices -> 5% extra
+# --- Configuracion por escenario -------------------------------------------
+# Para cada escenario destino, el factor lineal CAP_START_FACTOR -> CAP_END_FACTOR
+# aplicado a NewCapacity(BAU) en 2031-2050, y exenciones por pais (mantienen
+# senda BAU + head-room) para no activar el respaldo PWRBCK en su nodo 02.
+#
+#   INV: tope < BAU (0.99 -> 0.80) para empujar respaldo / contraste vs BAU,
+#        SALVO paises exentos (PER/CRI/PAN/COL) que mantienen senda BAU + margen.
+#   OPT: tope > BAU (1.01 -> 1.20): head-room de EXPANSION por encima de BAU; no
+#        necesita exenciones (ya da mas que BAU, no fuerza PWRBCK).
+SCENARIO_CONFIG = {
+    'INV': {
+        'cap_start_factor': 0.99,
+        'cap_end_factor': 0.80,
+        'exempt_countries': ('PER', 'CRI', 'PAN', 'COL'),
+        'exempt_restore_factor': 1.0,
+        'exempt_margin': {'CRI': 0.05},  # CRI satura las 12 timeslices -> 5% extra
+    },
+    'OPT': {
+        'cap_start_factor': 1.01,
+        'cap_end_factor': 1.20,
+        'exempt_countries': (),
+        'exempt_restore_factor': 1.0,
+        'exempt_margin': {},
+    },
+}
+DEFAULT_SCENARIOS = ('INV',)  # comportamiento por defecto = solo INV (como antes)
 
 # Escenario de referencia dentro del CSV combinado.
 BAU_SCENARIO = 'BAU'
@@ -99,27 +127,27 @@ BAU_SCENARIO = 'BAU'
 # Familias de transmision que inyectan en el nodo 02 (19 paises c/u = 114 techs).
 TRN_PREFIXES = ('PWRTRN', 'TRNNLI', 'TRNRPO', 'RNWTRN', 'RNWRPO', 'RNWNLI')
 
-# Se recorren todos los anos del horizonte; 2023-2030 se vacian, 2031-2050 se topan.
+# Se recorren todos los anos del horizonte; 2023-2025 se vacian, 2026-2050 se topan.
 YEARS = list(range(2023, 2051))
 # ---------------------------------------------------------------------------
 
 
-def factor_for_year(year: int, country: str | None = None) -> float:
-    """Factor de tope para los anos topados (2026..2050).
+def factor_for_year(year: int, cfg: dict, country: str | None = None) -> float:
+    """Factor de tope para los anos topados (2026..2050), segun config `cfg`.
 
     2026..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
-    2031..2050  -> lineal CAP_START_FACTOR (0.99) -> CAP_END_FACTOR (0.80),
-                   SALVO paises exentos (EXEMPT_COUNTRIES): esos usan
-                   EXEMPT_RESTORE_FACTOR (1.0) + head-room EXEMPT_MARGIN, o sea
-                   mantienen la senda BAU completa para no activar PWRBCK.
+    2031..2050  -> lineal cfg['cap_start_factor'] -> cfg['cap_end_factor'],
+                   SALVO paises exentos (cfg['exempt_countries']): esos usan
+                   cfg['exempt_restore_factor'] (1.0) + head-room
+                   cfg['exempt_margin'], o sea mantienen la senda BAU completa.
     """
     if year <= FLAT_FACTOR_THROUGH_YEAR:
         return FLAT_FACTOR
-    if country in EXEMPT_COUNTRIES:
-        return EXEMPT_RESTORE_FACTOR * (1.0 + EXEMPT_MARGIN.get(country, 0.0))
+    if country in cfg['exempt_countries']:
+        return cfg['exempt_restore_factor'] * (1.0 + cfg['exempt_margin'].get(country, 0.0))
     span = CAP_END_YEAR - CAP_START_YEAR
     frac = (year - CAP_START_YEAR) / span
-    return CAP_START_FACTOR + (CAP_END_FACTOR - CAP_START_FACTOR) * frac
+    return cfg['cap_start_factor'] + (cfg['cap_end_factor'] - cfg['cap_start_factor']) * frac
 
 
 def country_of(tech: str) -> str:
@@ -187,34 +215,29 @@ def build_row_index(ws) -> dict[tuple[str, str], int]:
     return index
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--apply', action='store_true', help='escribe cambios (crea backup)')
-    group.add_argument('--dry-run', action='store_true', help='preview sin escribir (default)')
-    args = parser.parse_args()
+def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> int:
+    """Aplica (o previsualiza) el tope de transmision para un escenario.
 
-    apply_changes = args.apply and not args.dry_run
-    mode = 'APPLY' if apply_changes else 'DRY-RUN'
-    print(f'Mode: {mode}')
-    print(f'Target:    {PARAM_PATH}')
-    print(f'BAU CSV:   {COMBINED_CSV}')
+    Devuelve el numero de violaciones detectadas en verificacion (0 en dry-run).
+    """
+    pth = param_path(scenario)
+    print(f'\n========== ESCENARIO {scenario} ==========')
+    print(f'Target:    {pth}')
     print(f'Regla:     2023-{EQUAL_THROUGH_YEAR} sin tope (=BAU); '
           f'2026-{FLAT_FACTOR_THROUGH_YEAR} cap = NewCapacity_BAU x {FLAT_FACTOR:.2f}; '
           f'{CAP_START_YEAR}-{CAP_END_YEAR} cap = NewCapacity_BAU x factor '
-          f'({CAP_START_FACTOR:.2f} -> {CAP_END_FACTOR:.2f})')
-    print(f'Exentos:   {EXEMPT_COUNTRIES} -> factor {EXEMPT_RESTORE_FACTOR:.2f} '
-          f'(senda BAU completa) + margen {EXEMPT_MARGIN} en {CAP_START_YEAR}-{CAP_END_YEAR}')
+          f"({cfg['cap_start_factor']:.2f} -> {cfg['cap_end_factor']:.2f})")
+    if cfg['exempt_countries']:
+        print(f"Exentos:   {cfg['exempt_countries']} -> factor "
+              f"{cfg['exempt_restore_factor']:.2f} (senda BAU completa) + margen "
+              f"{cfg['exempt_margin']} en {CAP_START_YEAR}-{CAP_END_YEAR}")
+    else:
+        print('Exentos:   (ninguno)')
 
-    bau = load_bau_new_capacity(COMBINED_CSV)
-    techs_in_bau = sorted({t for (t, _y) in bau})
-    print(f'\nNewCapacity BAU leida: {len(bau)} celdas (tech,ano) > 0 '
-          f'sobre {len(techs_in_bau)} techs de transmision.')
+    if not pth.exists():
+        raise FileNotFoundError(f'No existe: {pth}')
 
-    if not PARAM_PATH.exists():
-        raise FileNotFoundError(f'No existe: {PARAM_PATH}')
-
-    wb = openpyxl.load_workbook(PARAM_PATH)
+    wb = openpyxl.load_workbook(pth)
     if SHEET not in wb.sheetnames:
         raise KeyError(f'Hoja {SHEET!r} no encontrada. Hojas: {wb.sheetnames}')
     ws = wb[SHEET]
@@ -235,11 +258,12 @@ def main() -> None:
         )
 
     # Aviso si BAU tiene techs que no estan en el xlsx (mapeo por string completo).
+    techs_in_bau = sorted({t for (t, _y) in bau})
     not_in_xlsx = sorted(set(techs_in_bau) - set(trn_rows))
     if not_in_xlsx:
         print(f'  [WARN] techs con NewCapacity en BAU pero sin fila {PARAM} en xlsx: {not_in_xlsx}')
 
-    # Escritura: 2023-2030 -> vacio (=BAU); 2031-2050 -> cap = bau * factor(y)
+    # Escritura: 2023-2025 -> vacio (=BAU); 2026-2050 -> cap = bau * factor(y)
     print(f'\n=== WRITES ({PARAM}) ===')
     cells_cleared = 0
     cells_capped = 0
@@ -255,7 +279,7 @@ def main() -> None:
                 cells_cleared += 1
                 continue
             nc = bau.get((tech, y))
-            cap_gw = nc * factor_for_year(y, country_of(tech)) if nc is not None else 0.0  # BAU=0 -> 0
+            cap_gw = nc * factor_for_year(y, cfg, country_of(tech)) if nc is not None else 0.0  # BAU=0 -> 0
             ws.cell(row, year_cols[y]).value = cap_gw
             cells_capped += 1
             if nc is not None:
@@ -266,8 +290,8 @@ def main() -> None:
         techs_touched += 1
         if years_with_quota:
             first_y, last_y = years_with_quota[0], years_with_quota[-1]
-            first_v = bau[(tech, first_y)] * factor_for_year(first_y, country_of(tech))
-            last_v = bau[(tech, last_y)] * factor_for_year(last_y, country_of(tech))
+            first_v = bau[(tech, first_y)] * factor_for_year(first_y, cfg, country_of(tech))
+            last_v = bau[(tech, last_y)] * factor_for_year(last_y, cfg, country_of(tech))
             print(f'  {tech}: {len(years_with_quota)} anos con cuota en 2026-2050 '
                   f'(resto=0) | {first_v:.4g} ({first_y}) .. {last_v:.4g} ({last_y})')
         else:
@@ -280,21 +304,21 @@ def main() -> None:
           f'(ratio {sum_cap / sum_bau if sum_bau else 0:.4f})')
 
     if not apply_changes:
-        print('\n[DRY-RUN] no se guardaron cambios.')
+        print(f'\n[DRY-RUN] {scenario}: no se guardaron cambios.')
         wb.close()
-        return
+        return 0
 
     ts = datetime.now().strftime('%Y%m%d-%H%M%S')
-    backup = PARAM_PATH.with_suffix(f'.backup-trn-maxinv-{ts}.xlsx')
-    shutil.copy2(PARAM_PATH, backup)
+    backup = pth.with_suffix(f'.backup-trn-maxinv-{ts}.xlsx')
+    shutil.copy2(pth, backup)
     print(f'\nBackup: {backup.name}')
-    wb.save(PARAM_PATH)
+    wb.save(pth)
     wb.close()
-    print(f'Guardado: {PARAM_PATH}')
+    print(f'Guardado: {pth}')
 
     # Verificacion
     print('\n=== VERIFICATION ===')
-    wb2 = openpyxl.load_workbook(PARAM_PATH, data_only=True)
+    wb2 = openpyxl.load_workbook(pth, data_only=True)
     ws2 = wb2[SHEET]
     yc2 = build_year_col_map(ws2)
     ri2 = build_row_index(ws2)
@@ -311,12 +335,50 @@ def main() -> None:
                     violations += 1
                 continue
             nc = bau.get((tech, y))
-            expected = nc * factor_for_year(y, country_of(tech)) if nc is not None else 0.0
+            expected = nc * factor_for_year(y, cfg, country_of(tech)) if nc is not None else 0.0
             if not isinstance(v, (int, float)) or abs(v - expected) > 1e-6 * max(1.0, abs(expected)):
                 print(f'  VALUE {tech} {y}: got {v!r}, expected {expected:.6f}')
                 violations += 1
     wb2.close()
     print(f'Verificadas {len(trn_rows)} techs. Violations: {violations}')
+    return violations
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--apply', action='store_true', help='escribe cambios (crea backup)')
+    group.add_argument('--dry-run', action='store_true', help='preview sin escribir (default)')
+    parser.add_argument(
+        '--scenario', default=','.join(DEFAULT_SCENARIOS),
+        help=f'escenario(s) destino, separados por coma. Opciones: '
+             f'{",".join(SCENARIO_CONFIG)}. Default: {",".join(DEFAULT_SCENARIOS)}.')
+    args = parser.parse_args()
+
+    apply_changes = args.apply and not args.dry_run
+    mode = 'APPLY' if apply_changes else 'DRY-RUN'
+    scenarios = [s.strip() for s in args.scenario.split(',') if s.strip()]
+    unknown = [s for s in scenarios if s not in SCENARIO_CONFIG]
+    if unknown:
+        raise SystemExit(
+            f'ERROR: escenario(s) no configurado(s): {unknown}. '
+            f'Disponibles: {list(SCENARIO_CONFIG)}.')
+
+    print(f'Mode: {mode}')
+    print(f'BAU CSV:   {COMBINED_CSV}')
+    print(f'Escenarios: {scenarios}')
+
+    bau = load_bau_new_capacity(COMBINED_CSV)
+    techs_in_bau = sorted({t for (t, _y) in bau})
+    print(f'NewCapacity BAU leida: {len(bau)} celdas (tech,ano) > 0 '
+          f'sobre {len(techs_in_bau)} techs de transmision.')
+
+    total_violations = 0
+    for scen in scenarios:
+        total_violations += run_scenario(scen, SCENARIO_CONFIG[scen], bau, apply_changes)
+
+    if apply_changes and total_violations:
+        raise SystemExit(f'\nERROR: {total_violations} violaciones en verificacion.')
 
 
 if __name__ == '__main__':
