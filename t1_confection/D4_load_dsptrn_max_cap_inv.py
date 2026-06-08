@@ -3,7 +3,8 @@ D4_load_dsptrn_max_cap_inv.py
 
 Escribe TotalAnnualMaxCapacityInvestment (GW) para las tecnologias de TRANSMISION
 que inyectan en el nodo 02 (no para el sumador DSPTRN) en la hoja 'Demand Techs'
-de A-O_Parametrization.xlsx de los escenarios destino (INV y/o OPT; ver --scenario).
+de A-O_Parametrization.xlsx del escenario destino INV (ver --scenario; OPT esta
+desactivado a proposito para no alterar sus datos).
 
 Motivacion:
     El sumador DSPTRN{ISO3}XX tiene capacidad residual 9999 y costo cero, asi que
@@ -14,8 +15,8 @@ Motivacion:
       - INV: factor < 1 (restringe). Como el respaldo PWRBCK inyecta en el mismo
         nodo 02, cubre la diferencia: menos transmision, mas respaldo -> el
         contraste INV vs BAU que se busca, manteniendo factibilidad.
-      - OPT: factor > 1 (head-room de EXPANSION por encima de BAU).
-    Los factores por escenario viven en SCENARIO_CONFIG.
+    Los factores por escenario viven en SCENARIO_CONFIG. OPT no esta configurado
+    (D4 no topa la transmision de OPT).
 
 Regla por tech/ano Y (tres bloques):
 
@@ -32,8 +33,7 @@ Regla por tech/ano Y (tres bloques):
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
                     factor(Y) es lineal entre cap_start_factor y cap_end_factor
-                    del escenario (INV: 0.99->0.80 restringe; OPT: 1.01->1.20
-                    expande por encima de BAU). Ver SCENARIO_CONFIG.
+                    del escenario (INV: 0.99->0.80 restringe). Ver SCENARIO_CONFIG.
 
                     EXCEPCION por pais (solo INV, exempt_countries = PER, CRI, PAN, COL):
                     esos paises NO reciben el descuento; usan factor 1.0 (senda
@@ -101,8 +101,10 @@ CAP_START_YEAR, CAP_END_YEAR = 2031, 2050
 #
 #   INV: tope < BAU (0.99 -> 0.80) para empujar respaldo / contraste vs BAU,
 #        SALVO paises exentos (PER/CRI/PAN/COL) que mantienen senda BAU + margen.
-#   OPT: tope > BAU (1.01 -> 1.20): head-room de EXPANSION por encima de BAU; no
-#        necesita exenciones (ya da mas que BAU, no fuerza PWRBCK).
+#
+# OPT NO se configura aqui a proposito: D4 no debe topar la transmision de OPT
+# (eso introducia cambios de datos en OPT respecto a la linea base 2affcec). Un
+# `--scenario OPT` se rechaza en main() por escenario no configurado. Solo INV.
 SCENARIO_CONFIG = {
     'INV': {
         'cap_start_factor': 0.99,
@@ -110,13 +112,6 @@ SCENARIO_CONFIG = {
         'exempt_countries': ('PER', 'CRI', 'PAN', 'COL'),
         'exempt_restore_factor': 1.0,
         'exempt_margin': {'CRI': 0.05},  # CRI satura las 12 timeslices -> 5% extra
-    },
-    'OPT': {
-        'cap_start_factor': 1.01,
-        'cap_end_factor': 1.20,
-        'exempt_countries': (),
-        'exempt_restore_factor': 1.0,
-        'exempt_margin': {},
     },
 }
 DEFAULT_SCENARIOS = ('INV',)  # comportamiento por defecto = solo INV (como antes)
