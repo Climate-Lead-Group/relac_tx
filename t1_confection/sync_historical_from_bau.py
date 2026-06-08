@@ -25,6 +25,13 @@ Alcance
   D4_load_dsptrn_max_cap_inv.py (la Transmision de INV diverge de BAU desde
   2026). Los anos <= 2025 (historicos) si se copian. OPT solo sincroniza
   2023-2025, asi que esta excepcion nunca le aplica.
+- EXCEPCION GENERICA (--protect-params): los parametros nombrados en
+  --protect-params NO se copian para anos >= 2026 (en cualquier hoja). Sirve
+  para escenarios que divergen deliberadamente de BAU en un parametro desde
+  2026 y cuya divergencia debe sobrevivir al sync (que de otro modo lo
+  sobre-escribe en la ventana sincronizada). Los anos <= 2025 (historicos)
+  siempre se copian. Ej.: VGB protege TotalTechnologyAnnualActivityLowerLimit
+  (piso solo en renovables) y TotalAnnualMinCapacityInvestment (PEGs = OPT).
 
 Seguridad
 ---------
@@ -70,6 +77,12 @@ TX_DIVERGE_YEAR = 2026
 TX_SHEET = "Demand Techs"
 TX_PARAM = "TotalAnnualMaxCapacityInvestment"
 TX_PREFIXES = ("PWRTRN", "TRNNLI", "TRNRPO", "RNWTRN", "RNWRPO", "RNWNLI")
+
+# Generic per-parameter protection (--protect-params). Rows whose 'Parameter'
+# is in the protect set are NOT copied from BAU for years >= this boundary, on
+# ANY sheet. Same divergence boundary as transmission (2026): years <= 2025 are
+# historical and always synced.
+PROTECT_PARAMS_FROM_YEAR = TX_DIVERGE_YEAR
 
 
 def param_path(scenario: str) -> Path:
@@ -117,12 +130,15 @@ def find_tech_col(header: list) -> int | None:
 
 
 def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
-                  apply_changes: bool) -> dict:
+                  apply_changes: bool, protect_params: set[str] | None = None) -> dict:
     """Copy year cells from BAU into one target scenario workbook.
 
-    `src_ws_map` is {sheet_name: source_worksheet}. Returns a summary dict.
+    `src_ws_map` is {sheet_name: source_worksheet}. `protect_params` is a set of
+    Parameter names whose rows are NOT copied for years >= PROTECT_PARAMS_FROM_YEAR
+    (on any sheet); historical years are still synced. Returns a summary dict.
     Raises ValueError on any structural mismatch (caller aborts the run).
     """
+    protect_params = protect_params or set()
     tgt_wb = openpyxl.load_workbook(tgt_path)
     summary = {"path": str(tgt_path), "sheets": [], "total_cells": 0}
 
@@ -182,8 +198,18 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
                     if (isinstance(tv, str) and tv.strip().startswith(TX_PREFIXES)
                             and isinstance(pv, str) and pv.strip() == TX_PARAM):
                         protect_tx = True
+                # Generic parameter protection: shield deliberately-diverged
+                # parameters (e.g. VGB's LowerLimit / PEGs) from 2026 onward.
+                protect_param = False
+                if protect_params and param_col is not None:
+                    pv2 = src_ws.cell(row=row, column=param_col).value
+                    if isinstance(pv2, str) and pv2.strip() in protect_params:
+                        protect_param = True
                 for y, col in src_cols.items():
                     if protect_tx and y >= TX_DIVERGE_YEAR:
+                        cells_protected += 1
+                        continue
+                    if protect_param and y >= PROTECT_PARAMS_FROM_YEAR:
                         cells_protected += 1
                         continue
                     sv = src_ws.cell(row=row, column=col).value
@@ -231,17 +257,27 @@ def main() -> int:
         help=f"anos a copiar, separados por coma (default: "
              f"{','.join(str(y) for y in DEFAULT_YEARS)})",
     )
+    ap.add_argument(
+        "--protect-params", default="",
+        help="parametros (separados por coma) que NO se copian desde BAU para "
+             f"anos >= {PROTECT_PARAMS_FROM_YEAR}, en cualquier hoja. Los anos "
+             "historicos (<= 2025) siempre se copian.",
+    )
     args = ap.parse_args()
 
     apply_changes = args.apply and not args.dry_run
     mode = "APPLY" if apply_changes else "DRY-RUN"
     targets = [s.strip() for s in args.scenarios.split(",") if s.strip()]
     years = {int(y.strip()) for y in args.years.split(",") if y.strip()}
+    protect_params = {p.strip() for p in args.protect_params.split(",") if p.strip()}
 
     print(f"Mode      : {mode}")
     print(f"Source    : {SOURCE_SCENARIO}")
     print(f"Targets   : {targets}")
     print(f"Years     : {sorted(years)}")
+    if protect_params:
+        print(f"Protect   : {sorted(protect_params)} (not synced for years "
+              f">= {PROTECT_PARAMS_FROM_YEAR})")
 
     src_path = param_path(SOURCE_SCENARIO)
     if not src_path.exists():
@@ -256,13 +292,14 @@ def main() -> int:
             if not tgt_path.exists():
                 sys.exit(f"ERROR: no existe target {tgt_path}")
             print(f"\n=== {scen} <- {SOURCE_SCENARIO} ===")
-            summary = sync_scenario(src_ws_map, src_wb, tgt_path, years, apply_changes)
+            summary = sync_scenario(src_ws_map, src_wb, tgt_path, years,
+                                     apply_changes, protect_params)
             for s in summary["sheets"]:
                 if "skipped" in s:
                     print(f"  [skip] {s['sheet']:28s} ({s['skipped']})")
                 else:
                     prot = s.get("cells_protected", 0)
-                    prot_str = f" tx_protected={prot}" if prot else ""
+                    prot_str = f" protected={prot}" if prot else ""
                     print(f"  {s['sheet']:28s} years={s['years']} "
                           f"cells_changed={s['cells_changed']}{prot_str}")
             print(f"  TOTAL cells changed: {summary['total_cells']}")

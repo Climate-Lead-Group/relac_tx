@@ -241,6 +241,51 @@ def load_historical_sync_through() -> dict[str, int]:
     return out
 
 
+def load_historical_sync_protect() -> dict[str, set[str]]:
+    """Read the per-scenario sync-protection map from lid_rule.yaml.
+
+    Returns {scenario: {param_name, ...}}: parameters that must NOT be copied
+    from BAU for years >= 2026 during the historical sync (passed to
+    sync_historical_from_bau.py via --protect-params). Used for scenarios that
+    deliberately diverge from BAU on a parameter from 2026 onward and must keep
+    that divergence through the sync (e.g. VGB's LowerLimit and PEGs).
+
+    A scenario not listed protects nothing. Returns {} when the file/key is
+    missing or PyYAML is unavailable.
+    """
+    if not LID_RULE_YAML.is_file():
+        return {}
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        return {}
+    with open(LID_RULE_YAML, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+
+    raw = cfg.get("historical_sync_protect_from_2026")
+    if not raw:
+        return {}
+    if not isinstance(raw, dict):
+        sys.exit(
+            f"ERROR: historical_sync_protect_from_2026 in {LID_RULE_YAML.name} "
+            f"must be a mapping {{scenario: [param, ...]}}, got "
+            f"{type(raw).__name__}."
+        )
+    out: dict[str, set[str]] = {}
+    for scen, params in raw.items():
+        name = str(scen).strip()
+        if not name:
+            continue
+        if not isinstance(params, list):
+            sys.exit(
+                f"ERROR: historical_sync_protect_from_2026[{name}] in "
+                f"{LID_RULE_YAML.name} must be a list of parameter names, got "
+                f"{type(params).__name__}."
+            )
+        out[name] = {str(p).strip() for p in params if str(p).strip()}
+    return out
+
+
 def banner(msg: str) -> None:
     bar = "=" * 78
     print(f"\n{bar}\n{msg}\n{bar}")
@@ -399,20 +444,28 @@ def run_for_scenario(scenario: str, rules_script: str,
     )
 
 
-def run_historical_sync(scenario: str, through_year: int) -> None:
+def run_historical_sync(scenario: str, through_year: int,
+                        protect_params: set[str] | None = None) -> None:
     """Pin `scenario`'s year columns 2023..through_year to BAU (A3 final step).
 
     Invokes sync_historical_from_bau.py --apply for a single target scenario.
     The sync source is always the current BAU workbook on disk; it does a
     positional copy of year cells only and aborts (non-zero exit) on any
     structural mismatch, which run_subproc turns into a hard failure.
+
+    `protect_params` (from historical_sync_protect_from_2026) is forwarded as
+    --protect-params: those parameters are not snapped back to BAU for years
+    >= 2026, so the scenario's deliberate divergence survives this final step.
     """
     if not SYNC_HIST_SCRIPT.is_file():
         sys.exit(f"ERROR: historical-sync script not found: {SYNC_HIST_SCRIPT}")
     years = ",".join(str(y) for y in range(2023, through_year + 1))
     cmd = [PYTHON, SYNC_HIST_SCRIPT, "--apply",
            "--scenarios", scenario, "--years", years]
-    print(f"  harmonize     : {scenario} <- BAU for 2023-{through_year}")
+    if protect_params:
+        cmd += ["--protect-params", ",".join(sorted(protect_params))]
+    prot = f", protect={sorted(protect_params)} (>=2026)" if protect_params else ""
+    print(f"  harmonize     : {scenario} <- BAU for 2023-{through_year}{prot}")
     run_subproc(cmd, label=f"historical_sync ({scenario} <- BAU, 2023-{through_year})")
 
 
@@ -451,6 +504,7 @@ def main() -> int:
     }
 
     hist_sync = {} if args.skip_historical_sync else load_historical_sync_through()
+    hist_protect = {} if args.skip_historical_sync else load_historical_sync_protect()
 
     t_start = time.time()
     banner("A3 workflow — relac_tx")
@@ -465,6 +519,9 @@ def main() -> int:
     else:
         print(f"  historical_sync      : "
               f"{ {s: f'2023-{y}' for s, y in hist_sync.items()} or '(none)'}")
+        if hist_protect:
+            print(f"  sync_protect (>=2026): "
+                  f"{ {s: sorted(p) for s, p in hist_protect.items()} }")
 
     for scen in scenarios:
         run_for_scenario(
@@ -488,7 +545,7 @@ def main() -> int:
             print(f"  [NOTE] {SOURCE_SCENARIO} not in this run; harmonizing against "
                   f"the existing {SOURCE_SCENARIO} workbook on disk.")
         for scen in sync_targets:
-            run_historical_sync(scen, hist_sync[scen])
+            run_historical_sync(scen, hist_sync[scen], hist_protect.get(scen))
 
     elapsed = time.time() - t_start
     banner(f"DONE in {elapsed:.1f}s — {len(scenarios)} scenario(s) processed")

@@ -192,6 +192,7 @@ lowerlimit_scenarios:
   BAU: all
   INV: all
   OPT: renewable
+  VGB: renewable  # VEGETATIVO_B: same partial scope as OPT (floor on renewables only)
 
 # 9) Near-term harmonization with BAU (2026-06-04):
 # As its FINAL step, A3_process.py forces the early-year columns of each listed
@@ -225,3 +226,27 @@ lowerlimit_scenarios:
 historical_sync_through:
   INV: 2030
   OPT: 2025
+  VGB: 2030   # VEGETATIVO_B mirrors BAU through 2030 like INV, EXCEPT the
+              # parameters protected below (LowerLimit + PEGs).
+
+# 10) Per-scenario sync protection (2026-06-08):
+# Parameters listed here for a scenario are NOT copied from BAU for years >=
+# 2026 during the historical_sync_through pass (forwarded to
+# sync_historical_from_bau.py as --protect-params). This generalizes the
+# built-in transmission MaxCapInv protection: use it when a scenario
+# deliberately diverges from BAU on a parameter from 2026 onward and that
+# divergence must survive the sync (which otherwise OVERRIDES everything in the
+# synced window because it runs as A3's final step). Historical years (2023-
+# 2025) are ALWAYS synced regardless of this list. A scenario not listed
+# protects nothing.
+#
+# VGB syncs to BAU through 2030 (like INV) but keeps its own:
+#   - TotalTechnologyAnnualActivityLowerLimit : renewable-only floor; non-
+#     renewables cleared 2026+ (matches OPT). Without protection the sync would
+#     re-impose BAU's flat floor on the non-renewables for 2026-2030.
+#   - TotalAnnualMinCapacityInvestment        : the PEGs, set equal to OPT.
+#     Without protection the sync would snap them back to BAU for 2026-2030.
+historical_sync_protect_from_2026:
+  VGB:
+    - TotalTechnologyAnnualActivityLowerLimit
+    - TotalAnnualMinCapacityInvestment
