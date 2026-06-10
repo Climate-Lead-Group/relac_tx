@@ -42,10 +42,13 @@ PRODUCTION_BY_TIMESLICE_COL = 'ProductionByTechnology'
 CAPACITY_TO_ACTIVITY_COL = 'CapacityToActivityUnit'
 YEAR_SPLIT_COL = 'YearSplit'
 
-# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/OPT). Se
-# muestra el alias en dropdown/título/infoBar/PNG; el value del <option> queda
+# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/VGB/OPT).
+# Se muestra el alias en dropdown/título/infoBar/PNG; el value del <option> queda
 # como el código original para no romper las claves de los datos embebidos.
-SCENARIO_ALIAS = {'BAU': 'OPTIMO', 'OPT': 'PLANIFICADO', 'INV': 'VEGETATIVO'}
+SCENARIO_ALIAS = {
+    'BAU': 'OPTIMO', 'OPT': 'PLANIFICADO',
+    'INV': 'VEGETATIVO A', 'VGB': 'VEGETATIVO B',
+}
 
 
 def find_combined_csv(script_dir):

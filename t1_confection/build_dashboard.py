@@ -60,6 +60,24 @@ from dashboard_config import (  # noqa: E402
 )
 
 
+# Nº de escenarios y alto del lienzo de los gráficos de filas apiladas (una fila
+# por escenario): el alto escala con el nº de escenarios para que cada subplot
+# conserve su tamaño (920 px estaba calibrado a 3 escenarios).
+_NSC = len(SCENARIOS)
+_STACK_H = int(round(920 * _NSC / 3))
+
+
+def _set_row_xticks(fig, n_rows: int) -> None:
+    """Oculta las etiquetas del eje X en todas las filas salvo la última.
+
+    Con shared_xaxes sólo la fila inferior lleva años/periodos; el JS del
+    dashboard recoloca esto dinámicamente según los escenarios visibles.
+    """
+    for r in range(1, n_rows):
+        fig.update_xaxes(showticklabels=False, row=r, col=1)
+    fig.update_xaxes(tickfont=dict(size=13), row=n_rows, col=1)
+
+
 # ================================================================
 # Export PNG vía Chrome headless
 # ----------------------------------------------------------------
@@ -151,13 +169,20 @@ def save_png(fig: go.Figure, name: str, width: int, height: int,
     if default_x is not None:
         import json
         sc_aliases = [SCENARIO_ALIAS.get(s, s) for s in SCENARIOS]
+        period_years = {nm: [str(y) for y in yrs] for nm, yrs in YEAR_PERIODS}
+        # Modo nativo del PNG: si el default son periodos (no \d{4}), colapsa.
+        agg = "sum" if "chart10" in name else "avg"
         runner = (
             "<script>" + _FILTER_JS_FUNCS +
             "(function(){var DEF=" + json.dumps([str(x) for x in default_x]) + ";"
             "var SC=" + json.dumps(sc_aliases) + ";"
+            "window.CHART_PERIODYEARS=" + json.dumps(period_years) + ";"
+            "window.CHART_PERIODORDER=" + json.dumps(PERIOD_ORDER) + ";"
             "function go(){var gd=document.querySelector('.plotly-graph-div');"
             "if(!gd||!gd._fullLayout){return setTimeout(go,100);}"
             "snapshotData(gd); gd._scAliases=SC;"
+            "gd._xMode = /^[0-9]{4}$/.test(DEF[0]) ? 'years' : 'periods';"
+            "gd._periodAgg=" + json.dumps(agg) + ";"
             "applyFilters(gd, gd._allCats.length?DEF:null, SC);}"
             "go();})();</script>"
         )
@@ -180,51 +205,62 @@ def save_png(fig: go.Figure, name: str, width: int, height: int,
 # para que los sliders sepan a qué tocar; los ejes reales se detectan solos.
 # Las anotaciones (números GW/%) son arrastrables.
 # ================================================================
+# Paleta del UI del dashboard (NO de los datos de las figuras): teal oscuro
+# #00414D + teal #23978E (acentos/activos) sobre gris claro #DFE0E6 (fondos).
+# Los grises #b3bcc2 (bordes) y #cdd6d8 (hover) son derivados neutros del claro.
 _DASHBOARD_CSS = """
   body{margin:0;font-family:Arial,sans-serif;color:#222;background:#fff;}
-  #ctrlPanel{position:sticky;top:0;z-index:20;background:#f7f7f7;border-bottom:1px solid #ddd;
+  #ctrlPanel{position:sticky;top:0;z-index:20;background:#DFE0E6;border-bottom:2px solid #00414D;
              padding:10px 16px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;}
-  #ctrlPanel label{font-size:13px;color:#333;}
-  #nav{position:sticky;top:49px;z-index:19;background:#fff;border-bottom:1px solid #eee;
+  #ctrlPanel label{font-size:13px;color:#00414D;}
+  #ctrlPanel input[type=range]{accent-color:#23978E;}
+  #nav{position:sticky;top:50px;z-index:19;background:#DFE0E6;border-bottom:1px solid #00414D;
        padding:8px 16px;display:flex;gap:6px;flex-wrap:wrap;}
-  .navbtn{padding:6px 11px;border:1px solid #ccc;background:#f4f4f4;cursor:pointer;
-          border-radius:4px;font-size:13px;color:#333;}
-  .navbtn:hover{background:#eaeaea;}
-  .navbtn.active{background:#4E9A4D;color:#fff;border-color:#4E9A4D;}
+  .navbtn{padding:6px 11px;border:1px solid #b3bcc2;background:#fff;cursor:pointer;
+          border-radius:4px;font-size:13px;color:#00414D;}
+  .navbtn:hover{background:#cdd6d8;}
+  .navbtn.active{background:#23978E;color:#fff;border-color:#23978E;}
   .chartwrap{display:none;padding:14px 16px;}
   .chartwrap.active{display:block;}
   /* Fila de selectores tipo dropdown (años/periodos, escenarios, países). */
   .selrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin:0 0 12px 2px;}
   .ddbox{position:relative;display:inline-block;}
   .ddbox.hidden{display:none;}
-  .ddbtn{font-size:13px;color:#333;background:#fafafa;border:1px solid #ccc;border-radius:5px;
+  .ddbtn{font-size:13px;color:#00414D;background:#fff;border:1px solid #b3bcc2;border-radius:5px;
          padding:7px 12px;cursor:pointer;user-select:none;white-space:nowrap;}
-  .ddbtn:hover{background:#f0f0f0;}
-  .ddbtn .ddcaret{margin-left:6px;color:#888;}
-  .ddbox.open .ddbtn{background:#eef4fb;border-color:#1170AA;}
+  .ddbtn:hover{background:#DFE0E6;}
+  .ddbtn .ddcaret{margin-left:6px;color:#23978E;}
+  .ddbox.open .ddbtn{background:#DFE0E6;border-color:#23978E;}
   .ddpop{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:30;background:#fff;
-         border:1px solid #ccc;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.14);
+         border:1px solid #b3bcc2;border-radius:6px;box-shadow:0 6px 18px rgba(0,65,77,0.18);
          padding:8px;min-width:200px;max-height:340px;overflow:auto;}
   .ddbox.open .ddpop{display:block;}
-  .ddquick{display:flex;gap:6px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:6px;}
-  .ddquick button{font-size:12px;color:#1170AA;background:#f1f6fb;border:1px solid #cfe0ef;
+  .ddquick{display:flex;gap:6px;margin-bottom:6px;border-bottom:1px solid #DFE0E6;padding-bottom:6px;}
+  .ddquick button{font-size:12px;color:#00414D;background:#DFE0E6;border:1px solid #b3bcc2;
                   border-radius:4px;padding:3px 9px;cursor:pointer;}
-  .ddquick button:hover{background:#e3eef9;}
-  .ddlist label{display:block;font-size:13px;color:#333;cursor:pointer;user-select:none;
+  .ddquick button:hover{background:#cdd6d8;}
+  .ddlist label{display:block;font-size:13px;color:#222;cursor:pointer;user-select:none;
                 padding:2px 2px;white-space:nowrap;}
-  .ddlist input{vertical-align:middle;margin-right:5px;}
+  .ddlist input{vertical-align:middle;margin-right:5px;accent-color:#23978E;}
+  /* Control segmentado (elección única), p.ej. el toggle "Eje X". */
+  .ddbox.seg{display:inline-flex;align-items:center;gap:5px;}
+  .seglabel{font-size:13px;color:#00414D;}
+  .segbtn{font-size:12px;color:#00414D;background:#fff;border:1px solid #b3bcc2;
+          border-radius:5px;padding:7px 11px;cursor:pointer;white-space:nowrap;}
+  .segbtn:hover{background:#DFE0E6;}
+  .segbtn.active{background:#23978E;color:#fff;border-color:#23978E;}
   /* iframe de las pestañas extra (HTML standalone con sus propios controles). */
   .extframe{width:100%;height:calc(100vh - 130px);border:0;display:block;}
-  /* Header por gráfico (mismo estilo que las figuras standalone). */
-  .chdr{background:linear-gradient(135deg,#1a237e,#0d47a1);color:#fff;
+  /* Header por gráfico (gradiente de la paleta del dashboard). */
+  .chdr{background:linear-gradient(135deg,#00414D,#23978E);color:#fff;
         padding:16px 22px;border-radius:8px;margin:0 0 12px 0;}
   .chdr h1{font-size:1.4em;font-weight:600;margin:0;}
-  .chdr p{font-size:0.9em;opacity:0.88;margin:5px 0 0 0;}
+  .chdr p{font-size:0.9em;opacity:0.9;margin:5px 0 0 0;}
 """
 
 _DASHBOARD_PANEL = """
 <div id="ctrlPanel">
-  <strong style="color:#333;">Controles</strong>
+  <strong style="color:#00414D;">Controles</strong>
   <label>Fuente ejes:
     <input id="axisFont" type="range" min="50" max="250" step="5" value="100" style="vertical-align:middle;">
     <span id="axisFontVal">100</span>%
@@ -233,7 +269,7 @@ _DASHBOARD_PANEL = """
     <input id="labelFont" type="range" min="50" max="300" step="5" value="100" style="vertical-align:middle;">
     <span id="labelFontVal">100</span>%
   </label>
-  <span style="font-size:12px;color:#777;">Arrastra los números (GW / %) dentro del gráfico para reposicionarlos.</span>
+  <span style="font-size:12px;color:#5b6e72;">Arrastra los números (GW / %) dentro del gráfico para reposicionarlos.</span>
 </div>
 """
 
@@ -339,6 +375,24 @@ _FILTER_JS_FUNCS = r"""
     if(cm.labelKind === 'ratio') return computeDerived(cm, si, label, sel).val;
     return chartTotal(cm, si, label, sel);
   }
+  // Suma de la pila de BARRAS VISIBLES en un eje Y (subplot/escenario) y una
+  // etiqueta X. Base del recálculo de la "suma de referencia" al togglear las
+  // series desde la leyenda: lee newData (con años/escenarios/países ya
+  // aplicados), así compone con el resto de filtros sin depender del modelo de
+  // país. Devuelve {grupoLeyenda: valor, __total, __n} (__n = nº de barras que
+  // aportan, para distinguir "pila en cero" de "fila de escenario oculta").
+  function visibleBarsAt(newData, yax, label){
+    var out = { __total: 0, __n: 0 };
+    newData.forEach(function(nt){
+      if(nt.type !== 'bar' || nt.visible === false) return;
+      if((nt.yaxis || 'y') !== yax) return;
+      var xs = nt.x || [], j = xs.indexOf(label); if(j < 0) return;
+      var v = (nt.y && nt.y[j] != null) ? nt.y[j] : 0;
+      var g = nt.legendgroup || nt.name || '';
+      out[g] = (out[g] || 0) + v; out.__total += v; out.__n++;
+    });
+    return out;
+  }
   function snapshotData(gd){
     // Leemos de gd._fullData (no gd.data): plotly codifica los arrays de numpy
     // como base64 {dtype,bdata} en el HTML; en gd.data siguen sin decodificar al
@@ -364,9 +418,11 @@ _FILTER_JS_FUNCS = r"""
       var xref = (a.xref || 'x').split(' ')[0];
       var axkey = xref === 'x' ? 'xaxis' : 'xaxis' + xref.slice(1);
       var cats = (gd._fullLayout[axkey] && gd._fullLayout[axkey]._categories) || gd._allCats;
+      // yaxis = eje Y del subplot (para emparejar barras visibles al togglear series).
+      var yref = (a.yref || 'y').split(' ')[0];
       // dl = índice secuencial de datalabel (alineado a country_model.annModel);
       // y0/text0 = valores originales (para restaurar al re-seleccionar todos).
-      return { label: String(cats[Math.round(a.x)]), dl: dl++, y0: a.y, text0: a.text };
+      return { label: String(cats[Math.round(a.x)]), dl: dl++, y0: a.y, text0: a.text, yaxis: yref };
     });
     // Snapshot de arrays por elemento (mapa): para filtrar países sin que
     // Plotly.react vaya recortando acumulativamente gd.data en cada llamada.
@@ -394,13 +450,42 @@ _FILTER_JS_FUNCS = r"""
   // Filtra años (categorías del eje X), escenarios (filas/columnas/trazas) Y
   // países (re-suma en JS del desglose embebido) y reconstruye la figura con
   // Plotly.react (colapsa el espacio de lo oculto).
-  function applyFilters(gd, years, scAliases, countries){
+  function applyFilters(gd, years, scAliases, countries, seriesSel){
     var mode = gd._mode, allSc = gd._scAliases || [];
     var cm = gd._countryModel || null;
     var visIdx = [];
     for(var k = 0; k < allSc.length; k++){ if(scAliases.indexOf(allSc[k]) >= 0) visIdx.push(k); }
 
-    var selYears = years ? gd._allCats.filter(function(c){ return years.indexOf(c) >= 0; }) : null;
+    // Eje X: todas las figuras son NATIVAS-AÑO; el modo "periodos" colapsa los
+    // años en periodos fijos (promedio = suma÷nº años, o suma en el gráfico 10).
+    var xMode = gd._xMode || 'years', isPeriods = (xMode === 'periods');
+    var pAgg = gd._periodAgg || 'avg';
+    var PORDER = window.CHART_PERIODORDER || [], PY = window.CHART_PERIODYEARS || {};
+    var displayCats = isPeriods ? PORDER : (gd._allCats || []);
+    // `years` (del selector temporal) trae las categorías del modo actual.
+    var selCats = years ? displayCats.filter(function(c){ return years.indexOf(c) >= 0; }) : null;
+    var Y2P = {};  // año -> periodo (para reposicionar anotaciones al colapsar)
+    if(isPeriods){ PORDER.forEach(function(p){ (PY[p] || []).forEach(function(y){ Y2P[y] = p; }); }); }
+    function collapse(yearVals, fdx, agg){
+      return PORDER.map(function(p){
+        var ys = PY[p] || [], s = 0;
+        ys.forEach(function(y){ var j = fdx.indexOf(y); if(j >= 0 && yearVals[j] != null) s += yearVals[j]; });
+        return ys.length ? (agg === 'sum' ? s : s / ys.length) : 0;
+      });
+    }
+    function collapseCd(cdArr, fdx){  // customdata de hhi: promedio aproximado del periodo
+      return PORDER.map(function(p){
+        var ys = PY[p] || [], n = 0, h = 0, nn = 0, ds = 0;
+        ys.forEach(function(y){ var j = fdx.indexOf(y); if(j >= 0 && cdArr[j]){ h += cdArr[j][0]; nn += cdArr[j][1]; ds += cdArr[j][3]; n++; } });
+        return n ? [h / n, Math.round(nn / n), '(prom. periodo)', ds / n] : [0, 0, '—', 0];
+      });
+    }
+
+    // Series/leyendas: activo sólo si el subconjunto es estrictamente menor que
+    // "todas" (así re-seleccionar todas restaura exactamente la vista original).
+    var lg = gd._legendGroups || [];
+    var seriesActive = !!(seriesSel && lg.length && seriesSel.length < lg.length);
+    function seriesVis(g){ return (seriesSel == null) || (seriesSel.indexOf(g) >= 0); }
 
     // País: activo sólo si hay modelo y el subconjunto es estrictamente menor que
     // "todos" (así re-seleccionar todos restaura exactamente la vista original).
@@ -443,24 +528,37 @@ _FILTER_JS_FUNCS = r"""
     var newData = gd.data.map(function(t, i){
       var nt = Object.assign({}, t), fd = gd._fullXY[i];
       var fs = fullSeries(i);
-      if(selYears && fd.x.length){
-        var nx = [], ny = [], ntext = fs.text ? [] : null, ncd = fs.cd ? [] : null;
-        fd.x.forEach(function(lab, j){ if(selYears.indexOf(lab) >= 0){
-          nx.push(lab); ny.push(fs.y[j]);
-          if(ntext) ntext.push(fs.text[j]); if(ncd) ncd.push(fs.cd[j]);
-        } });
+      if(fd.x.length){
+        // Base en el modo actual (años, o periodos colapsando los años) y luego
+        // recorte a la selección del selector temporal. Reponer x/y completas
+        // evita que react vaya recortando acumulativamente gd.data.
+        var baseCats, baseY, baseText, baseCd;
+        if(isPeriods){
+          baseCats = PORDER;
+          baseY = collapse(fs.y, fd.x, pAgg);
+          baseText = fs.text ? baseY.map(function(v){ return fmtDec(v, cm ? cm.decimals : 1); }) : null;
+          baseCd = fs.cd ? collapseCd(fs.cd, fd.x) : null;
+        } else {
+          baseCats = fd.x; baseY = fs.y; baseText = fs.text; baseCd = fs.cd;
+        }
+        var cats = selCats || baseCats;
+        var nx = [], ny = [], ntext = baseText ? [] : null, ncd = baseCd ? [] : null;
+        cats.forEach(function(lab){
+          var j = baseCats.indexOf(lab); if(j < 0) return;
+          nx.push(lab); ny.push(baseY[j]);
+          if(ntext) ntext.push(baseText[j]); if(ncd) ncd.push(baseCd[j]);
+        });
         nt.x = nx; nt.y = ny; if(ntext) nt.text = ntext; if(ncd) nt.customdata = ncd;
-      } else if(fd.x.length){
-        // Sin filtro de años: reponer x/y completas desde el snapshot (react deja
-        // gd.data recortado) para que re-seleccionar todos restaure la vista.
-        nt.x = fd.x.slice(); nt.y = fs.y.slice();
-        if(fs.text) nt.text = fs.text.slice(); if(fs.cd) nt.customdata = fs.cd.slice();
       }
       var sidx = traceScenarioIdx(gd, t);
+      var grp = t.legendgroup || t.name || '';
+      var sv = seriesVis(grp);  // serie (leyenda) seleccionada
       if(sidx >= 0){
-        nt.visible = (visIdx.indexOf(sidx) >= 0);
-        if(mode === 'rows'){ nt.showlegend = (sidx === visIdx[0]) ? gd._origShow[i] : false; }
-      }
+        // Una traza se ve si su escenario Y su serie están activos; al ocultarse
+        // por serie desaparece también su entrada de leyenda (visible=false).
+        nt.visible = (visIdx.indexOf(sidx) >= 0) && sv;
+        if(mode === 'rows'){ nt.showlegend = (sidx === visIdx[0] && sv) ? gd._origShow[i] : false; }
+      } else if(!sv){ nt.visible = false; }
       // Mapa: restaurar SIEMPRE los arrays completos desde el snapshot (react deja
       // gd.data recortado) y, si el filtro está activo, recortar a los países sel.
       if(isMap && cm.mapTraces && cm.mapTraces[i]){
@@ -497,73 +595,90 @@ _FILTER_JS_FUNCS = r"""
     }
 
     var layout = JSON.parse(JSON.stringify(gd.layout));
-    if(selYears){
+    // Categorías del eje X según el modo (años o periodos) y la selección temporal.
+    if(selCats || isPeriods){
       xAxisKeys(gd).forEach(function(k){
-        layout[k] = layout[k] || {}; layout[k].categoryarray = selYears.slice(); layout[k].categoryorder = 'array';
-      });
-      (layout.annotations || []).forEach(function(a, i){
-        var info = gd._annInfo[i]; if(!info) return;
-        var pos = selYears.indexOf(info.label);
-        if(pos < 0){ a.visible = false; } else { a.visible = true; a.x = pos; }
+        layout[k] = layout[k] || {};
+        layout[k].categoryarray = (selCats || displayCats).slice();
+        layout[k].categoryorder = 'array';
       });
     }
 
-    // Recomputar texto/posición de las etiquetas datalabel según los países
-    // seleccionados; al desactivar el filtro se restauran los valores originales.
-    if(cm && cm.annModel){
-      (layout.annotations || []).forEach(function(a, i){
-        var info = gd._annInfo[i]; if(!info) return;
-        var m = cm.annModel[info.dl];
-        if(ctryActive && m){
-          var lk = cm.labelKind;
-          if(lk === 'secur'){
-            var ds = computeDerived(cm, m.si, m.label, ctrySel);
-            a.text = '<b>' + Math.round(ds.dom) + '%</b>'; a.y = ds.dom / 2;
-          } else if(lk === 'trans04'){
-            var dt = computeDerived(cm, m.si, m.label, ctrySel);
-            a.text = '<b>' + fmtThousand(dt.total) + '</b>'; a.y = dt.total;
-          } else if(m.kind === 'total'){
-            var ren = sumC(cm, cm.series[0], m.si, m.label, ctrySel);
-            var tot = ren + sumC(cm, cm.series[1], m.si, m.label, ctrySel);
-            a.text = '<b>' + fmtThousand(tot) + '</b>'; a.y = ren * 0.60;
-          } else if(m.kind === 'pct'){
-            var ren2 = sumC(cm, cm.series[0], m.si, m.label, ctrySel);
-            var tot2 = ren2 + sumC(cm, cm.series[1], m.si, m.label, ctrySel);
-            a.text = '<b>' + (tot2 > 0 ? Math.round(ren2 / tot2 * 100) : 0) + '%</b>'; a.y = ren2 * 0.28;
-          } else if(m.kind === 'single'){
-            var val = sumC(cm, 'val', m.si, m.label, ctrySel);
-            a.text = '<b>' + fmtDec(val, cm.decimals) + '</b>'; a.y = val * 0.5;
-          } else if(m.kind === 'stackTotal'){
-            var tt = chartTotal(cm, m.si, m.label, ctrySel);
-            a.text = '<b>' + fmtThousand(tt) + '</b>'; a.y = tt;
-          }
-        } else {
-          a.text = info.text0; a.y = info.y0;
-        }
-      });
-    }
+    // Anotaciones (datalabels): visibilidad, posición x y "suma de referencia"
+    // en UNA pasada que cubre años/periodos + país + series. Cuando la vista
+    // difiere del estado estático, recomputa cada etiqueta desde las BARRAS
+    // VISIBLES de newData (que ya refleja modo/país/series); si no, restaura el
+    // valor original. En periodos se conserva UNA etiqueta por periodo (las demás
+    // se ocultan) reposicionada al índice del periodo. Esto unifica el antiguo
+    // recálculo por país y el de series, y añade el colapso por periodo.
+    var recomputeAnn = isPeriods || ctryActive || seriesActive;
+    var annCats = selCats || displayCats, annSeen = {};
+    (layout.annotations || []).forEach(function(a, i){
+      var info = gd._annInfo[i]; if(!info) return;
+      var m = (cm && cm.annModel) ? cm.annModel[info.dl] : null;
+      var kind = m ? m.kind : 'stackTotal';
+      var disp = isPeriods ? (Y2P[info.label] || info.label) : info.label;
+      var pos = annCats.indexOf(disp);
+      if(pos < 0){ a.visible = false; return; }
+      if(isPeriods){
+        // 1 etiqueta por (fila, periodo, tipo) — share2 tiene total Y % por barra.
+        var sk = (info.yaxis || 'y') + '|' + disp + '|' + kind;
+        if(annSeen[sk]){ a.visible = false; return; }
+        annSeen[sk] = 1;
+      }
+      a.visible = true; a.x = pos;
+      if(!recomputeAnn){ a.text = info.text0; a.y = info.y0; return; }
+      var bars = visibleBarsAt(newData, info.yaxis || 'y', disp);
+      if(bars.__n === 0){ a.visible = false; return; }
+      var total = bars.__total;
+      if(kind === 'stackTotal'){
+        a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = total;
+      } else if(kind === 'total'){            // 01/02 — total de la pila (naranja)
+        var ren = (cm && bars[cm.series[0]]) || 0;
+        a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = ren * 0.60;
+      } else if(kind === 'pct'){              // 01/02 — % renovable (blanco)
+        var r2 = (cm && bars[cm.series[0]]) || 0;
+        a.text = '<b>' + (total > 0 ? Math.round(r2 / total * 100) : 0) + '%</b>'; a.y = r2 * 0.28;
+      } else if(kind === 'single'){           // 03 — valor de la única serie
+        a.text = '<b>' + fmtDec(total, cm ? cm.decimals : 1) + '</b>'; a.y = total * 0.5;
+      } else if(kind === 'securlabel'){       // 12 — % autóctono (no es una suma)
+        var dom = bars['Autóctono'] || 0;
+        a.text = '<b>' + Math.round(dom) + '%</b>'; a.y = dom / 2;
+      }
+    });
 
-    // Reescalar el eje Y tras re-sumar países. Gráficos apilados por filas con
-    // dtick fijo (incluye trans04) y el de ratio (un solo eje). Sin filtro de
-    // país se restauran rango/dtick originales de Python.
-    if(cm && (cm.labelKind === 'ratio' || (cm.dtick > 0 && mode === 'rows'))){
-      if(ctryActive){
-        var cats = selYears || gd._allCats, mx = 0;
-        visIdx.forEach(function(si){ cats.forEach(function(lab){
-          var v = totalAt(cm, si, lab, ctrySel); if(v > mx) mx = v;
-        }); });
-        var dt = niceDtick(mx);
-        if(cm.labelKind === 'ratio') dt = Math.max(1, Math.round(dt));  // ticks enteros
-        var ymax = mx > 0 ? Math.ceil(mx / dt) * dt : dt;
-        yAxisKeys(gd).forEach(function(k){ layout[k] = layout[k] || {}; layout[k].range = [0, ymax]; layout[k].dtick = dt; });
-      } else {
-        yAxisKeys(gd).forEach(function(k){
-          var a0 = gd._yAx0[k]; if(!a0) return;
-          layout[k] = layout[k] || {};
-          if(a0.range) layout[k].range = a0.range.slice();
-          if(a0.dtick != null) layout[k].dtick = a0.dtick;
+    // Reescalado del eje Y. La vista por periodo (promedio), el filtro de país y
+    // el toggle de series cambian la magnitud; recomputa rango/dtick desde las
+    // BARRAS VISIBLES de newData. 'secur' (%), líneas y hhi mantienen su rango;
+    // sin esos filtros se restauran rango/dtick originales de Python.
+    var doRescale = isPeriods || ctryActive || seriesActive;
+    var rescaleKinds = { stackTotal: 1, single: 1, share2: 1, trans04: 1, ratio: 1 };
+    var canRescale = (!cm) || rescaleKinds[cm.labelKind];
+    if(doRescale && canRescale){
+      var mx = 0;
+      if(mode === 'rows'){
+        var rcats = selCats || displayCats;
+        visIdx.forEach(function(si){
+          var yk = si === 0 ? 'y' : 'y' + (si + 1);
+          rcats.forEach(function(lab){ var b = visibleBarsAt(newData, yk, lab); if(b.__total > mx) mx = b.__total; });
+        });
+      } else {  // 'traces' (p.ej. ratio): máximo sobre las barras visibles
+        newData.forEach(function(nt){
+          if(nt.type !== 'bar' || nt.visible === false) return;
+          (nt.y || []).forEach(function(v){ if(v != null && v > mx) mx = v; });
         });
       }
+      var dt = niceDtick(mx);
+      if(cm && cm.labelKind === 'ratio') dt = Math.max(1, Math.round(dt));  // ticks enteros
+      var ymax = mx > 0 ? Math.ceil(mx / dt) * dt : dt;
+      yAxisKeys(gd).forEach(function(k){ layout[k] = layout[k] || {}; layout[k].range = [0, ymax]; layout[k].dtick = dt; });
+    } else {
+      yAxisKeys(gd).forEach(function(k){
+        var a0 = gd._yAx0[k]; if(!a0) return;
+        layout[k] = layout[k] || {};
+        if(a0.range) layout[k].range = a0.range.slice();
+        if(a0.dtick != null) layout[k].dtick = a0.dtick;
+      });
     }
 
     if(mode === 'rows'){
@@ -708,6 +823,26 @@ _DASHBOARD_SCRIPT = """
     updateBtn();
     return { checkedVals: checkedVals };
   }
+  // Control SEGMENTADO (elección única): etiqueta + botones; resalta el activo.
+  // items = [{key, label, ...}]; onPick recibe el item elegido.
+  function buildSegmented(box, label, items, currentKey, onPick){
+    box.className = 'ddbox seg';
+    box.innerHTML = '';
+    var lab = document.createElement('span'); lab.className = 'seglabel';
+    lab.textContent = label + ': '; box.appendChild(lab);
+    items.forEach(function(it){
+      var b = document.createElement('button'); b.type = 'button';
+      b.className = 'segbtn' + (it.key === currentKey ? ' active' : '');
+      b.textContent = it.label;
+      b.addEventListener('click', function(e){
+        e.preventDefault();
+        Array.prototype.slice.call(box.querySelectorAll('.segbtn')).forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        onPick(it);
+      });
+      box.appendChild(b);
+    });
+  }
   function buildSelectors(){
     var defaults = window.CHART_DEFAULTS || {};
     var scenAll = window.CHART_SCENARIOS || {};
@@ -723,20 +858,56 @@ _DASHBOARD_SCRIPT = """
       var ybox = document.getElementById('ysel_' + key);
       var sbox = document.getElementById('scsel_' + key);
       var cbox = document.getElementById('ctsel_' + key);
-      var yctl = null, sctl = null, cctl = null;
+      var xbox = document.getElementById('xsel_' + key);
+      var yctl = null, sctl = null, cctl = null, lgctl = null;
       function years(){ return yctl ? yctl.checkedVals() : null; }
       function scens(){ return sctl ? sctl.checkedVals() : gd._scAliases.slice(); }
       function countries(){ return cctl ? cctl.checkedVals() : null; }
-      function apply(){ applyFilters(gd, years(), scens(), countries()); }
-      // Años/periodos (oculto si el gráfico no tiene eje categórico).
+      function series(){ return lgctl ? lgctl.checkedVals() : null; }
+      function apply(){ applyFilters(gd, years(), scens(), countries(), series()); }
+
+      // Eje X (años | periodos): todas las figuras son nativas-año; el modo
+      // periodos colapsa en el navegador. El selector temporal (ysel) lista años
+      // o periodos según el modo y se reconstruye al cambiarlo.
+      var xmeta = (window.CHART_XMETA || {})[key] || null;
+      var PORDER = window.CHART_PERIODORDER || [];
+      gd._xMode = xmeta ? xmeta.native : 'years';
+      gd._periodAgg = xmeta ? xmeta.periodAgg : 'avg';
+      function curDefault(){
+        if(!xmeta) return defaults[key] || null;
+        return gd._xMode === 'periods' ? xmeta.periodsDefault : xmeta.yearsDefault;
+      }
+      function buildYsel(){
+        if(!ybox || !gd._allCats.length) return;
+        var cats = gd._xMode === 'periods' ? PORDER : gd._allCats, def = curDefault();
+        var yitems = cats.map(function(c){ return { value: c, label: c }; });
+        yctl = buildDropdown(ybox, gd._xMode === 'periods' ? 'Periodos' : 'Años', yitems,
+                 function(c){ return def ? (def.indexOf(c) >= 0) : true; }, apply, def);
+      }
+      // Selector temporal (oculto si el gráfico no tiene eje categórico).
       if(ybox){
         if(!gd._allCats.length){ ybox.classList.add('hidden'); }
+        else { buildYsel(); }
+      }
+      // Toggle "Eje X" (segmentado). El gráfico 10 ofrece Total y Promedio.
+      if(xbox){
+        if(!gd._allCats.length || !xmeta){ xbox.classList.add('hidden'); }
         else {
-          var def = defaults[key] || null;
-          var ylabel = /^\\d{4}$/.test(gd._allCats[0]) ? 'Años' : 'Periodos';
-          var yitems = gd._allCats.map(function(c){ return { value: c, label: c }; });
-          yctl = buildDropdown(ybox, ylabel, yitems,
-                   function(c){ return def ? (def.indexOf(c) >= 0) : true; }, apply, def);
+          var aggOpts = xmeta.periodAggOptions || ['avg'];
+          var aggName = { sum: 'Periodos · Total', avg: 'Periodos · Promedio' };
+          var xitems = [{ key: 'years', label: 'Años', mode: 'years', agg: null }];
+          if(aggOpts.length > 1){
+            aggOpts.forEach(function(ag){ xitems.push({ key: 'periods:' + ag, label: aggName[ag] || ('Periodos·' + ag), mode: 'periods', agg: ag }); });
+          } else {
+            xitems.push({ key: 'periods:' + aggOpts[0], label: 'Periodos', mode: 'periods', agg: aggOpts[0] });
+          }
+          var curKey = gd._xMode === 'years' ? 'years' : ('periods:' + gd._periodAgg);
+          buildSegmented(xbox, 'Eje X', xitems, curKey, function(o){
+            gd._xMode = o.mode;
+            if(o.agg) gd._periodAgg = o.agg;
+            buildYsel();   // reconstruir el selector temporal (años o periodos)
+            apply();
+          });
         }
       }
       // Escenarios (default = todos).
@@ -755,7 +926,28 @@ _DASHBOARD_SCRIPT = """
           cctl = buildDropdown(cbox, 'Países', citems, function(){ return true; }, apply, cm.countries.slice());
         }
       }
-      apply();  // vista inicial (default de años + todos los escenarios + todos los países)
+      // Series (leyendas de la figura). Sólo cuando las entradas de leyenda son
+      // CATEGORÍAS (apilados/cuota); si son los escenarios (gráficos de líneas o
+      // de barras por escenario) se omite por redundar con "Escenarios". Al
+      // desactivar una serie desaparece de la leyenda (que se reajusta) y la
+      // "suma de referencia" se recomputa y reposiciona.
+      var sebox = document.getElementById('sesel_' + key);
+      var groups = [], gseen = {};
+      (gd.data || []).forEach(function(t, i){
+        if(gd._origShow[i] === false) return;          // sólo trazas con leyenda
+        var g = t.legendgroup || t.name || '';
+        if(g && !gseen[g]){ gseen[g] = 1; groups.push(g); }
+      });
+      gd._legendGroups = groups;
+      if(sebox){
+        var allScen = groups.length && groups.every(function(g){ return gd._scAliases.indexOf(g) >= 0; });
+        if(!groups.length || allScen){ sebox.classList.add('hidden'); }
+        else {
+          var lgitems = groups.map(function(g){ return { value: g, label: g }; });
+          lgctl = buildDropdown(sebox, 'Series', lgitems, function(){ return true; }, apply, groups.slice());
+        }
+      }
+      apply();  // vista inicial (default de años + todos los escenarios/países/series)
     });
   }
 
@@ -800,13 +992,14 @@ CHART_DESC = {
     "07": "Costo anual promedio por periodo (capital más operación), apilado por tipo: generación, transmisión y almacenamiento.",
     "08": "Emisiones anuales de CO₂ del sistema eléctrico, una línea por escenario.",
     "09": "Inversión de capital promedio anual por país (2025–2050), un mapa por escenario.",
-    "10": "Kilómetros de líneas de transmisión construidos por periodo, desglosados por grupo de línea.",
+    "10": "Kilómetros de líneas de transmisión construidos, desglosados por grupo de línea. Con el toggle «Eje X» puede verse por año o por periodo; en modo periodo, «Total» suma los km construidos en el periodo (vista por defecto) y «Promedio» los divide por el nº de años (km/año).",
     "11": "Costo anualizado (capital más operación) por unidad de energía generada, por periodo y escenario.",
     "12": "Indicador de seguridad energética: participación de energía primaria importada (MIN internacional) frente a la producción autóctona (extracción local y fuentes renovables), por año y escenario. La barra inferior (verde) muestra el porcentaje autóctono; el importado se infiere como 100 − x.",
     "13": "Indicador de resiliencia agnóstico a la amenaza (índice Herfindahl-Hirschman). Sobre la generación anual, agrupa las tecnologías en familias de fuente (toda la hidro = una fuente, etc.) y grafica el número efectivo de fuentes = 1/HHI, una línea por escenario. Un valor mayor significa una matriz más diversificada y resiliente: ninguna fuente domina, así que cualquier amenaza alcanza sólo una porción del suministro. Las fuentes correlacionadas se colapsan a una para no sobreestimar la resiliencia.",
+    "14": "Costo total del sistema (promedio anual por periodo), apilado en CAPEX, O&M y Combustible. A diferencia de los gráficos 05 y 07 —que solo cuentan capital y operación de plantas, red y almacenamiento—, este incluye el costo de energía primaria/combustible (OperatingCost de las tecnologías de extracción MIN*). Al sumar el combustible, el escenario con la transmisión topada deja de parecer el más barato: su menor inversión se compensa con creces por una mayor factura de combustible (más respaldo fósil).",
 }
 
-# Pestañas extra (14 Mapas de Transmisión, 15 Despacho, 16 Diagrama RES): NO son
+# Pestañas extra (15 Mapas de Transmisión, 16 Despacho, 17 Diagrama RES): NO son
 # chart_NN. Se generan AQUÍ llamando a las funciones de sus scripts (que ahora
 # devuelven el HTML como string y aceptan datos ya cargados) y se incrustan vía
 # <iframe srcdoc=...>, así el dashboard NO depende de archivos hermanos en
@@ -814,7 +1007,7 @@ CHART_DESC = {
 # internet, igual que antes). CONVENCIÓN: van SIEMPRE al final; al agregar un
 # gráfico nativo nuevo, estas tres suben de número para quedar últimas.
 def _extra_tab_htmls() -> list:
-    """Genera el HTML (string) de las pestañas 14/15/16.
+    """Genera el HTML (string) de las pestañas 15/16/17.
 
     Reutiliza ``load_column`` (con caché en memoria) para NO releer el CSV de
     308 MB por subprocess. Devuelve [(key, title, html), ...]; omite con aviso
@@ -824,7 +1017,7 @@ def _extra_tab_htmls() -> list:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     centerpoints_path = os.path.join(script_dir, "Miscellaneous", "centerpoints.csv")
 
-    # --- 14 Mapas de Transmisión + 15 Despacho (mismo CSV, una sola carga) ---
+    # --- 15 Mapas de Transmisión + 16 Despacho (mismo CSV, una sola carga) ---
     try:
         import Z_AUX_generate_transmission_maps as tx
         df = load_column(
@@ -837,18 +1030,18 @@ def _extra_tab_htmls() -> list:
         idf, ys = tx.prepare_interconnection_df(df)
         cap, flow, ratio = tx.prepare_json_data(idf, centerpoints, ys)
         nodes = tx.build_node_list(centerpoints, cap, flow, ratio)
-        out.append(("14", "Mapas de Transmisión",
+        out.append(("15", "Mapas de Transmisión",
                     tx.generate_html(cap, flow, ratio, nodes, None, "Mapas de Transmisión")))
 
         ddf, ys2 = tx.prepare_dispatch_df(df)
         disp = tx.prepare_dispatch_json(ddf, ys2)
         ts_order = tx.build_timeslice_order(ys2)
-        out.append(("15", "Despacho",
+        out.append(("16", "Despacho",
                     tx.generate_dispatch_html(disp, ts_order, None, "Despacho")))
     except Exception as e:  # noqa: BLE001 — degradar con aviso, no romper el build
-        print(f"  [aviso] pestañas 14/15 (transmisión/despacho) omitidas: {e}")
+        print(f"  [aviso] pestañas 15/16 (transmisión/despacho) omitidas: {e}")
 
-    # --- 16 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
+    # --- 17 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
     try:
         import Z_AUX_generate_RES_diagram as res
         xlsx = res.SCRIPT_DIR / "A1_Outputs" / "A1_Outputs_BAU" / "A-O_AR_Model_Base_Year.xlsx"
@@ -856,11 +1049,24 @@ def _extra_tab_htmls() -> list:
             raise FileNotFoundError(f"falta {xlsx}")
         links = res.load_base_year_data(xlsx)
         regions = res.discover_regions(links)
-        out.append(("16", "Diagrama RES", res.generate_html(links, regions, None)))
+        out.append(("17", "Diagrama RES", res.generate_html(links, regions, None)))
     except Exception as e:  # noqa: BLE001
-        print(f"  [aviso] pestaña 16 (RES) omitida: {e}")
+        print(f"  [aviso] pestaña 17 (RES) omitida: {e}")
 
     return out
+
+
+# Toggle "Eje X: Años | Periodos" — metadatos por gráfico.
+# Todas las figuras temporales se construyen NATIVAS-AÑO; el modo "Periodos"
+# colapsa los años en periodos fijos (YEAR_PERIODS) en el navegador. Este mapa
+# define qué gráficos arrancan mostrando periodos por defecto (el resto, años).
+CHART_XMODE_NATIVE = {
+    "05": "periods", "07": "periods", "10": "periods",
+    "11": "periods", "14": "periods",
+}
+# Gráficos cuya agregación de periodo es elegible (1ª opción = por defecto).
+# Por defecto los demás promedian ("avg"); el 10 ofrece Total (suma) y Promedio.
+CHART_PERIOD_AGG = {"10": ["sum", "avg"]}
 
 
 def build_combined_dashboard(items: list) -> None:
@@ -904,9 +1110,11 @@ def build_combined_dashboard(items: list) -> None:
         wraps.append(
             f'<div class="chartwrap{active}" id="{wrap_id}">{header}'
             f'<div class="selrow">'
+            f'<div class="ddbox" id="xsel_{key}"></div>'
             f'<div class="ddbox" id="ysel_{key}"></div>'
             f'<div class="ddbox" id="scsel_{key}"></div>'
             f'<div class="ddbox" id="ctsel_{key}"></div>'
+            f'<div class="ddbox" id="sesel_{key}"></div>'
             f'</div>{div}</div>'
         )
 
@@ -924,13 +1132,34 @@ def build_combined_dashboard(items: list) -> None:
             f'<iframe class="extframe" srcdoc="{srcdoc}" loading="lazy"></iframe></div>'
         )
 
+    # Metadatos del toggle "Eje X" por gráfico (sólo los que tienen eje temporal,
+    # es decir los que aportan default_x). Defaults por modo: años = años de
+    # referencia; periodos = todos menos 2023-2024 (igual que hoy).
+    years_default = [str(y) for y in REFERENCE_YEARS]
+    periods_default = [p for p in PERIOD_ORDER if p != "2023-2024"]
+    period_years = {name: [str(y) for y in yrs] for name, yrs in YEAR_PERIODS}
+    xmeta = {}
+    for key, nat_def in defaults.items():
+        native = CHART_XMODE_NATIVE.get(key, "years")
+        agg_opts = CHART_PERIOD_AGG.get(key, ["avg"])
+        xmeta[key] = {
+            "native": native,
+            "yearsDefault": nat_def if native == "years" else years_default,
+            "periodsDefault": nat_def if native == "periods" else periods_default,
+            "periodAgg": agg_opts[0],
+            "periodAggOptions": agg_opts,
+        }
+
     html = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'/>"
         f"<style>{_DASHBOARD_CSS}</style>"
         f"<script>{get_plotlyjs()}</script>"
         f"<script>window.CHART_DEFAULTS = {json.dumps(defaults)};"
         f"window.CHART_SCENARIOS = {json.dumps(scenarios)};"
-        f"window.CHART_COUNTRY = {json.dumps(countries)};</script>"
+        f"window.CHART_COUNTRY = {json.dumps(countries)};"
+        f"window.CHART_XMETA = {json.dumps(xmeta)};"
+        f"window.CHART_PERIODYEARS = {json.dumps(period_years)};"
+        f"window.CHART_PERIODORDER = {json.dumps(PERIOD_ORDER)};</script>"
         "</head><body>"
         + _DASHBOARD_PANEL
         + '<div id="nav">' + "".join(nav) + "</div>"
@@ -1173,7 +1402,7 @@ def _stacked_share_chart(
         dtick=dtick,
     )
 
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
 
     y_max = pivot["Total"].max()
     y_axis_max = int(math.ceil(y_max / dtick)) * dtick
@@ -1259,7 +1488,7 @@ def _stacked_share_chart(
 
     fig.update_layout(
         barmode="stack",
-        height=920,
+        height=_STACK_H,
         width=820,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
@@ -1321,11 +1550,9 @@ def _stacked_share_chart(
     # FIX clave: forzar eje categórico. Con shared_xaxes + barras apiladas,
     # plotly auto-detecta mal el tipo de eje y colapsa todos los años en uno.
     fig.update_xaxes(type="category")
-    fig.update_xaxes(showticklabels=False, row=1, col=1)
-    fig.update_xaxes(showticklabels=False, row=2, col=1)
-    fig.update_xaxes(tickfont=dict(size=13), row=3, col=1)
+    _set_row_xticks(fig, _NSC)
 
-    return fig, output_name, 820, 920, country_model
+    return fig, output_name, 820, _STACK_H, country_model
 
 
 # ================================================================
@@ -1402,7 +1629,7 @@ def _single_series_bars(
 
     grouped = df.groupby(["Scenario", "YEAR"])["val"].sum().reset_index()
 
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
 
     y_max = grouped["val"].max()
     dtick = _nice_dtick(y_max)
@@ -1465,7 +1692,7 @@ def _single_series_bars(
 
     fig.update_layout(
         barmode="group",
-        height=920,
+        height=_STACK_H,
         width=820,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
@@ -1510,11 +1737,9 @@ def _single_series_bars(
         )
 
     fig.update_xaxes(type="category")
-    fig.update_xaxes(showticklabels=False, row=1, col=1)
-    fig.update_xaxes(showticklabels=False, row=2, col=1)
-    fig.update_xaxes(tickfont=dict(size=13), row=3, col=1)
+    _set_row_xticks(fig, _NSC)
 
-    return fig, output_name, 820, 920, country_model
+    return fig, output_name, 820, _STACK_H, country_model
 
 
 # ================================================================
@@ -1573,7 +1798,7 @@ def _stacked_categories_chart(
     else:
         pivot["_xpos"] = pivot[x_col]
 
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
 
     y_max = pivot["Total"].max()
     dtick = _nice_dtick(y_max)
@@ -1651,7 +1876,7 @@ def _stacked_categories_chart(
 
     fig.update_layout(
         barmode="stack",
-        height=920,
+        height=_STACK_H,
         width=820,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
@@ -1697,11 +1922,9 @@ def _stacked_categories_chart(
         )
 
     fig.update_xaxes(type="category")
-    fig.update_xaxes(showticklabels=False, row=1, col=1)
-    fig.update_xaxes(showticklabels=False, row=2, col=1)
-    fig.update_xaxes(tickfont=dict(size=13), row=3, col=1)
+    _set_row_xticks(fig, _NSC)
 
-    return fig, output_name, 820, 920, country_model
+    return fig, output_name, 820, _STACK_H, country_model
 
 
 # ================================================================
@@ -1844,15 +2067,14 @@ def chart_05():
     adj = per["TECHNOLOGY"].str.startswith(("PWRTRN", "RNWTRN"))
     per["val"] = per["CapitalInvestment"].where(~adj, per["CapitalInvestment"] / 1.2)
 
-    per["Period"] = per["YEAR"].apply(year_to_period)
-    per = per[per["Period"].notna()]
+    per = per[per["YEAR"].isin(ALL_YEARS)]
 
-    # Suma por escenario/periodo/tipo, luego promedio anual (÷ años del periodo).
-    g = per.groupby(["Scenario", "Period", "TechType"])["val"].sum().reset_index()
-    g["val"] = g["val"] / g["Period"].map(PERIOD_YEARS)
-
+    # Pivot POR AÑO (nativo-año): la vista por periodo promedia los años en el
+    # navegador (toggle "Eje X"); el promedio anual del periodo coincide con la
+    # versión previa (suma de los años del periodo ÷ nº de años).
+    g = per.groupby(["Scenario", "YEAR", "TechType"])["val"].sum().reset_index()
     pivot = g.pivot_table(
-        index=["Scenario", "Period"],
+        index=["Scenario", "YEAR"],
         columns="TechType",
         values="val",
         fill_value=0,
@@ -1862,11 +2084,11 @@ def chart_05():
         if name not in pivot.columns:
             pivot[name] = 0
 
-    # --- Componentes por país (mismo promedio anual por periodo) ---
+    # --- Componentes por país-AÑO (sin promediar; el JS promedia por periodo) ---
     per["pais"] = per["TECHNOLOGY"].str[6:9]
-    gcl = per.groupby(["Scenario", "Period", "pais", "TechType"])["val"].sum().reset_index()
-    gcl["val"] = gcl["val"] / gcl["Period"].map(PERIOD_YEARS)
-    country_long = gcl.rename(columns={"Period": "catlabel", "TechType": "series"})[
+    gcl = per.groupby(["Scenario", "YEAR", "pais", "TechType"])["val"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    country_long = gcl.rename(columns={"TechType": "series"})[
         ["Scenario", "catlabel", "pais", "series", "val"]
     ]
 
@@ -1875,8 +2097,7 @@ def chart_05():
         categories=INVESTMENT_CATEGORIES,
         y_title="Inversión de Capital<br>[MUSD]",
         output_name="chart05_total_investment",
-        x_col="Period",
-        x_order=PERIOD_ORDER,
+        x_col="YEAR",
         show_total_line=False,
         country_long=country_long,
     )
@@ -2036,23 +2257,21 @@ def chart_07():
     capex = capex.where(~adj, capex / 1.2)
     per["val"] = capex + per["OperatingCost"].fillna(0)
 
-    per["Period"] = per["YEAR"].apply(year_to_period)
-    g = per.groupby(["Scenario", "Period", "TechType"])["val"].sum().reset_index()
-    g["val"] = g["val"] / g["Period"].map(PERIOD_YEARS)
-
+    # Pivot POR AÑO (nativo-año): el promedio anual del periodo lo hace el JS.
+    g = per.groupby(["Scenario", "YEAR", "TechType"])["val"].sum().reset_index()
     pivot = g.pivot_table(
-        index=["Scenario", "Period"], columns="TechType", values="val", fill_value=0
+        index=["Scenario", "YEAR"], columns="TechType", values="val", fill_value=0
     ).reset_index()
     pivot.columns.name = None
     for name, _ in INVESTMENT_CATEGORIES:
         if name not in pivot.columns:
             pivot[name] = 0
 
-    # --- Componentes por país (mismo promedio anual por periodo) ---
+    # --- Componentes por país-AÑO (sin promediar; el JS promedia por periodo) ---
     per["pais"] = per["TECHNOLOGY"].str[6:9]
-    gcl = per.groupby(["Scenario", "Period", "pais", "TechType"])["val"].sum().reset_index()
-    gcl["val"] = gcl["val"] / gcl["Period"].map(PERIOD_YEARS)
-    country_long = gcl.rename(columns={"Period": "catlabel", "TechType": "series"})[
+    gcl = per.groupby(["Scenario", "YEAR", "pais", "TechType"])["val"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    country_long = gcl.rename(columns={"TechType": "series"})[
         ["Scenario", "catlabel", "pais", "series", "val"]
     ]
 
@@ -2061,8 +2280,7 @@ def chart_07():
         categories=INVESTMENT_CATEGORIES,
         y_title="Costo Anual Promedio<br>CAPEX+OPEX [MUSD/año]",
         output_name="chart07_opex_capex",
-        x_col="Period",
-        x_order=PERIOD_ORDER,
+        x_col="YEAR",
         show_total_line=False,
         country_long=country_long,
     )
@@ -2248,9 +2466,10 @@ def chart_09():
     labelpos.update(_col_positions(west, -123, 32, -52))
     labelpos.update(_col_positions(east, -27, 30, -50))
 
+    map_w = int(round(1340 * _NSC / 3))  # ancho escala con el nº de escenarios
     fig = make_subplots(
-        rows=1, cols=3,
-        specs=[[{"type": "choropleth"}, {"type": "choropleth"}, {"type": "choropleth"}]],
+        rows=1, cols=_NSC,
+        specs=[[{"type": "choropleth"} for _ in range(_NSC)]],
         subplot_titles=[SCENARIO_ALIAS.get(s, s) for s in SCENARIOS],
         horizontal_spacing=0.01,
     )
@@ -2311,7 +2530,7 @@ def chart_09():
     )
     fig.update_layout(
         height=640,
-        width=1340,
+        width=map_w,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -2336,7 +2555,7 @@ def chart_09():
         "countryNames": {c: _COUNTRY_NAMES.get(c, c) for c in countries},
         "mapTraces": map_traces,
     }
-    return fig, "chart09_investment_map", 1340, 640, None, country_model
+    return fig, "chart09_investment_map", map_w, 640, None, country_model
 
 
 # ================================================================
@@ -2377,21 +2596,25 @@ def chart_10():
 
     per["LG"] = per["TECHNOLOGY"].apply(classify_line_group_raw)
     per = per[per["LG"].notna()]
-    per["Period"] = per["YEAR"].apply(year_to_period)
+    per = per[per["YEAR"].isin(ALL_YEARS)]
 
-    g = per.groupby(["Scenario", "Period", "LG"])["km"].sum().reset_index()
+    # Pivot POR AÑO (nativo-año): km construidos por año. La vista por periodo se
+    # agrega en el navegador; el gráfico 10 ofrece "Total" (suma de km del periodo,
+    # vista por defecto) y "Promedio" (km/año), ver toggle "Eje X" y subtítulo.
+    g = per.groupby(["Scenario", "YEAR", "LG"])["km"].sum().reset_index()
     pivot = g.pivot_table(
-        index=["Scenario", "Period"], columns="LG", values="km", fill_value=0
+        index=["Scenario", "YEAR"], columns="LG", values="km", fill_value=0
     ).reset_index()
     pivot.columns.name = None
     for name, _ in LINE_RAW_CATEGORIES:
         if name not in pivot.columns:
             pivot[name] = 0
 
-    # --- Componentes por país (km por país; sin interconectores en este gráfico) ---
+    # --- Componentes por país-AÑO (km por país; sin interconectores) ---
     per["pais"] = per["TECHNOLOGY"].str[6:9]
-    gcl = per.groupby(["Scenario", "Period", "pais", "LG"])["km"].sum().reset_index()
-    country_long = gcl.rename(columns={"Period": "catlabel", "LG": "series", "km": "val"})[
+    gcl = per.groupby(["Scenario", "YEAR", "pais", "LG"])["km"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    country_long = gcl.rename(columns={"LG": "series", "km": "val"})[
         ["Scenario", "catlabel", "pais", "series", "val"]
     ]
 
@@ -2400,8 +2623,7 @@ def chart_10():
         categories=LINE_RAW_CATEGORIES,
         y_title="Kilómetros de Líneas [km]",
         output_name="chart10_line_km",
-        x_col="Period",
-        x_order=PERIOD_ORDER,
+        x_col="YEAR",
         show_total_line=False,
         country_long=country_long,
     )
@@ -2443,9 +2665,8 @@ def chart_11():
         m["CapitalInvestmentAnnualized"] / m["prod_twh"]
         + m["OperatingCost"] / m["prod_twh"]
     )
-    m["Period"] = m["YEAR"].apply(year_to_period)
-    # Promedio anual del ratio dentro de cada periodo (SUM/COUNTD(Year)).
-    g = m.groupby(["Scenario", "Period"])["ratio"].mean().reset_index()
+    # Ratio POR AÑO (nativo-año): la vista por periodo promedia los ratios anuales
+    # del periodo en el navegador (toggle "Eje X"), igual que la versión previa.
 
     # --- Modelo de país (DERIVADO 'ratio'): el ratio NO es aditivo, pero su
     # numerador (costo) y denominador (producción) SÍ lo son por país. Embebemos
@@ -2475,13 +2696,13 @@ def chart_11():
     if "INT" in country_model["countryNames"]:
         country_model["countryNames"]["INT"] = "Interconexión/otros"
 
-    periods = PERIOD_ORDER  # candidatos = todos; default (sin 2023-2024) lo aplica el selector
     fig = go.Figure()
     for sc in SCENARIOS:
-        d = g[g["Scenario"] == sc].set_index("Period").reindex(periods).reset_index()
+        d = m[m["Scenario"] == sc].sort_values("YEAR")
+        years_str = [str(int(y)) for y in d["YEAR"]]
         fig.add_trace(
             go.Bar(
-                x=d["Period"],
+                x=years_str,
                 y=d["ratio"].values,
                 name=SCENARIO_ALIAS.get(sc, sc),
                 marker_color=COLORS_SCENARIO[sc],
@@ -2492,7 +2713,9 @@ def chart_11():
             )
         )
 
-    y_max = g["ratio"].max()
+    # Rango desde los años >=2025 (2023-2024 se excluye por defecto y tiene picos
+    # por baja producción); el JS reescala al togglear año/periodo o filtrar.
+    y_max = m[m["YEAR"] >= 2025]["ratio"].max()
     # dtick entero: con tickformat ",d" un dtick 2.5 daría marcas irregulares.
     dtick = max(1, round(_nice_dtick(y_max)))
     fig.update_layout(
@@ -2518,7 +2741,7 @@ def chart_11():
         gridcolor="#e0e0e0",
         tickformat=",d",
     )
-    fig.update_xaxes(type="category", tickfont=dict(size=13))
+    fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
     return (fig, "chart11_cost_per_energy", 940, 520,
             [p for p in PERIOD_ORDER if p != "2023-2024"], country_model)
 
@@ -2626,7 +2849,7 @@ def chart_12():
         ann_labels_by_si=ann_labels_by_si, ann_kinds=["securlabel"], dtick=0.0,
     )
 
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
 
     for i, scenario in enumerate(SCENARIOS):
         row = i + 1
@@ -2684,7 +2907,7 @@ def chart_12():
 
     fig.update_layout(
         barmode="stack",
-        height=920,
+        height=_STACK_H,
         width=820,
         template="plotly_white",
         separators=",.",
@@ -2730,11 +2953,9 @@ def chart_12():
 
     # Eje categórico forzado (mismo motivo que en _stacked_share_chart).
     fig.update_xaxes(type="category")
-    fig.update_xaxes(showticklabels=False, row=1, col=1)
-    fig.update_xaxes(showticklabels=False, row=2, col=1)
-    fig.update_xaxes(tickfont=dict(size=13), row=3, col=1)
+    _set_row_xticks(fig, _NSC)
 
-    return (fig, "chart12_energy_security", 820, 920,
+    return (fig, "chart12_energy_security", 820, _STACK_H,
             [str(y) for y in REFERENCE_YEARS], country_model)
 
 
@@ -2864,6 +3085,61 @@ def chart_13():
 
 
 # ================================================================
+# Chart 14 — Costo Total del Sistema con Combustible [MUSD/año]
+# ----------------------------------------------------------------
+# Igual que chart_07 (CAPEX+O&M promedio anual por periodo) pero AÑADE el costo
+# de energía primaria / combustible, que vive en el OperatingCost de las
+# tecnologías de extracción MIN* (y demás no-infraestructura) y que chart_05/07
+# EXCLUYEN al filtrar solo Generación/Transmisión/Almacenamiento. Sin ese bloque,
+# el escenario topado en transmisión parece el más barato; al incluirlo, el orden
+# de costo total se invierte. Categorías apiladas (de base a tope):
+#   CAPEX        : CapitalInvestment de plantas/red/almac. (PWRTRN/RNWTRN ÷1.2)
+#   O&M          : OperatingCost de plantas/red/almac.
+#   Combustible  : OperatingCost del resto (energía primaria, dominado por MIN*)
+# ================================================================
+def chart_14():
+    cols = ["CapitalInvestment", "OperatingCost"]
+    df = load_column(cols)
+    df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]
+
+    # Valor por tech-año en UNA fila (resto NaN por timeslices) -> max ignora NaN.
+    per = (
+        df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])[cols].max().reset_index()
+    )
+    per["TechType"] = per["TECHNOLOGY"].apply(classify_tech_type)
+    is_infra = per["TechType"].notna()  # Generación/Transmisión/Almacenamiento
+
+    capex = per["CapitalInvestment"].fillna(0)
+    adj = per["TECHNOLOGY"].str.startswith(("PWRTRN", "RNWTRN"))
+    capex = capex.where(~adj, capex / 1.2)
+    op = per["OperatingCost"].fillna(0)
+
+    per["CAPEX"] = capex.where(is_infra, 0.0)
+    per["O&M"] = op.where(is_infra, 0.0)
+    per["Combustible"] = op.where(~is_infra, 0.0)
+
+    comp = ["CAPEX", "O&M", "Combustible"]
+    # Pivot POR AÑO (nativo-año); el promedio anual del periodo lo hace el JS.
+    g = per.groupby(["Scenario", "YEAR"])[comp].sum().reset_index()
+
+    categories = [
+        ("CAPEX", "#4e79a7"),          # azul (igual que Generación en el dashboard)
+        ("O&M", "#9c9c9c"),            # gris
+        ("Combustible", "#e15759"),    # rojo: el bloque que chart_05/07 no muestran
+    ]
+    fig, name, w, h, cm = _stacked_categories_chart(
+        pivot=g,
+        categories=categories,
+        y_title="Costo Total c/ Combustible<br>[MUSD/año]",
+        output_name="chart14_total_cost_fuel",
+        x_col="YEAR",
+        show_total_line=False,
+        country_long=None,
+    )
+    return fig, name, w, h, [p for p in PERIOD_ORDER if p != "2023-2024"], cm
+
+
+# ================================================================
 # Registro de gráficos
 # ================================================================
 CHARTS = {
@@ -2880,6 +3156,7 @@ CHARTS = {
     "11": ("Costo Anualizado por Energía [MUSD/TWh]", chart_11),
     "12": ("Seguridad Energética — Importado vs Autóctono [%]", chart_12),
     "13": ("Resiliencia — Nº efectivo de fuentes (1/HHI)", chart_13),
+    "14": ("Costo Total del Sistema con Combustible [MUSD/año]", chart_14),
 }
 
 

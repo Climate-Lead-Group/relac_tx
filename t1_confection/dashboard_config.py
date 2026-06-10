@@ -29,9 +29,16 @@ OUTPUT_SUFFIX = ""
 REFERENCE_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
 # Todos los años del horizonte del CSV (candidatos del selector dinámico).
 ALL_YEARS = list(range(2023, 2051))
-SCENARIOS = ["BAU", "INV", "OPT"]
-# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/OPT).
-SCENARIO_ALIAS = {"BAU": "OPTIMO", "OPT": "PLANIFICADO", "INV": "VEGETATIVO"}
+# VGB va justo después de INV para que VEGETATIVO A (INV) y VEGETATIVO B (VGB)
+# queden adyacentes en filas/columnas/líneas de todos los gráficos.
+SCENARIOS = ["BAU", "INV", "VGB", "OPT"]
+# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/VGB/OPT).
+SCENARIO_ALIAS = {
+    "BAU": "OPTIMO",
+    "OPT": "PLANIFICADO",
+    "INV": "VEGETATIVO A",
+    "VGB": "VEGETATIVO B",
+}
 
 # ================================================================
 # Technology Generation Group classification
@@ -91,10 +98,13 @@ COLORS_TECH_GROUP = {
 }
 COLOR_GW_LINE = "#ED7D31"
 
-# Color por escenario (gráficos 8 y 11). Definidos por el usuario.
+# Color por escenario (gráficos 8, 11 y 13). Definidos por el usuario.
+# VGB (VEGETATIVO B) deriva de INV; se le da un violeta distinto para que las
+# líneas/barras por escenario sean legibles junto al rojo de INV.
 COLORS_SCENARIO = {
     "BAU": "#bab0ac",
     "INV": "#e15759",
+    "VGB": "#b07aa1",
     "OPT": "#f28e2b",
 }
 
