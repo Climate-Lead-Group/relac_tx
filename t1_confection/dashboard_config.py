@@ -90,6 +90,47 @@ def classify_fuel_origin(tech: str) -> str | None:
 
 
 # ================================================================
+# Combustibles fósiles de entrada (gráficos 8A y 8B)
+# ----------------------------------------------------------------
+# El consumo fósil se mide por la actividad (TotalTechnologyAnnualActivity, ya en
+# PJ) de las tecnologías de extracción/importación MIN*. El código de combustible
+# son los chars [3:6] del nombre (MIN<FUEL><PAIS>); se incluyen las importadas
+# (MIN*INT). Se EXCLUYE URN (uranio/nuclear: no es fósil, no emite CO2 de
+# combustión) para que el total sea comparable 1:1 con las emisiones (gráfico 8).
+# ================================================================
+FOSSIL_MIN_FUELS = ["COA", "COG", "GAS", "OIL", "PET", "OTH"]
+
+# Agrupación de las 6 familias en 3 tipos para el desglose del gráfico 8B.
+# Nota: en el lado MIN el gas natural es "GAS"; aguas abajo (generación) es "NGS".
+FOSSIL_FUEL_GROUP = {
+    "COA": "Carbón", "COG": "Carbón",
+    "GAS": "Gas natural",
+    "OIL": "Petróleo/derivados", "PET": "Petróleo/derivados", "OTH": "Petróleo/derivados",
+}
+COLORS_FOSSIL_FUEL = {
+    "Carbón": "#595959",             # gris oscuro / negro carbón
+    "Gas natural": "#6699cc",        # azul gas
+    "Petróleo/derivados": "#b07d3c",  # ámbar/marrón petróleo
+}
+
+
+def classify_min_fossil(tech: str) -> str | None:
+    """Código de combustible fósil (COA/COG/GAS/OIL/PET/OTH) si la tecnología es
+    una MIN* fósil; None en otro caso (incluye MINURN y todo lo no-MIN)."""
+    t = str(tech)
+    if not t.startswith("MIN"):
+        return None
+    fuel = t[3:6]
+    return fuel if fuel in FOSSIL_MIN_FUELS else None
+
+
+def classify_min_fossil_group(tech: str) -> str | None:
+    """Familia agrupada (Carbón / Gas natural / Petróleo/derivados) o None."""
+    fuel = classify_min_fossil(tech)
+    return FOSSIL_FUEL_GROUP[fuel] if fuel else None
+
+
+# ================================================================
 # Color palettes
 # ================================================================
 COLORS_TECH_GROUP = {
@@ -289,6 +330,13 @@ INVESTMENT_CATEGORIES = [
     ("Generación", COLORS_TECH_TYPE["Generación"]),
     ("Transmisión", COLORS_TECH_TYPE["Transmisión"]),
     ("Almacenamiento", COLORS_TECH_TYPE["Almacenamiento"]),
+]
+
+# Categorías (orden de apilado) del gráfico 8B — desglose del consumo fósil.
+FOSSIL_FUEL_CATEGORIES = [
+    ("Carbón", COLORS_FOSSIL_FUEL["Carbón"]),
+    ("Gas natural", COLORS_FOSSIL_FUEL["Gas natural"]),
+    ("Petróleo/derivados", COLORS_FOSSIL_FUEL["Petróleo/derivados"]),
 ]
 
 

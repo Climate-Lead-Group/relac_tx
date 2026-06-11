@@ -1085,6 +1085,20 @@ function updateChart() {{
 
   const orderedTechs = STACK_ORDER.filter(tc => presentTechs.has(tc));
 
+  // El nº de tecnologías varía por país (8 en HTI hasta 15 en MEX). La leyenda
+  // es vertical y vive dentro del área de ploteo (alto = chart - márgenes t/b);
+  // en pantallas bajas los países con muchas tecnologías desbordaban y Plotly
+  // metía scroll/recortaba entradas. Escalamos fuente y marcador al espacio
+  // disponible para que SIEMPRE quepan todas las entradas sin scroll.
+  const CHART_H = window.innerHeight * 0.72;
+  const MARGIN_T = 70, MARGIN_B = 75;
+  const legAvail = CHART_H - MARGIN_T - MARGIN_B;        // alto útil para la leyenda
+  // +2 ranuras: título de la leyenda + holgura; 1.35 ≈ interlineado por entrada.
+  let legFont = Math.floor(legAvail / ((orderedTechs.length + 2) * 1.35));
+  legFont = Math.max(9, Math.min(13, legFont));          // legible pero compacto
+  const legMark = Math.max(8, Math.min(14, legFont));    // cuadro ≈ fuente
+  const legTitleFont = Math.max(10, legFont - 1);
+
   orderedTechs.forEach(tc => {{
     const yValues = TS_ORDER.map(ts => {{
       const val = (regionData[ts] || {{}})[tc] || 0;
@@ -1117,7 +1131,7 @@ function updateChart() {{
       name: TECH_LABELS[tc] || tc,
       type: 'scatter',
       mode: 'markers',
-      marker: {{ size: 14, symbol: 'square',
+      marker: {{ size: legMark, symbol: 'square',
                  color: TECH_COLORS[tc] || '#999',
                  line: {{ width: 0.5, color: '#fff' }} }},
       showlegend: true,
@@ -1167,14 +1181,14 @@ function updateChart() {{
     // Leyenda anclada al BORDE del área de ploteo (x:1.0 en paper) para que el
     // hueco no crezca con el ancho de ventana (x:1.02 dejaba la caja flotando
     // lejos en pantallas anchas). r = ancho fijo suficiente para los nombres.
-    margin: {{ l: 70, r: 210, t: 80, b: 80 }},
-    height: window.innerHeight * 0.72,
+    margin: {{ l: 70, r: 210, t: MARGIN_T, b: MARGIN_B }},
+    height: CHART_H,
     legend: {{
       orientation: 'v', x: 1.0, xanchor: 'left', y: 1, yanchor: 'top',
-      font: {{ size: 13, family: 'Segoe UI', color: '#333' }},
+      font: {{ size: legFont, family: 'Segoe UI', color: '#333' }},
       itemsizing: 'constant',
       bgcolor: '#fff', bordercolor: '#ccc', borderwidth: 1,
-      title: {{ text: '<b>Tecnología</b>', font: {{ size: 12, color: '#555' }} }}
+      title: {{ text: '<b>Tecnología</b>', font: {{ size: legTitleFont, color: '#555' }} }}
     }},
     hovermode: 'x unified'
   }};
@@ -1196,7 +1210,9 @@ function downloadPNG() {{
 // ─── Start ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('resize', () => {{
-  Plotly.relayout('chart', {{ height: window.innerHeight * 0.72 }});
+  // Reconstruir (no solo relayout de altura) para que la leyenda re-escale su
+  // fuente/marcador al nuevo alto disponible.
+  updateChart();
 }});
 </script>
 </body>

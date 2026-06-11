@@ -43,6 +43,8 @@ from dashboard_config import (  # noqa: E402
     classify_tech_type,
     classify_line_group_raw,
     classify_source_family,
+    classify_min_fossil,
+    classify_min_fossil_group,
     SOURCE_FAMILY_NAMES,
     year_to_period,
     YEAR_PERIODS,
@@ -50,6 +52,7 @@ from dashboard_config import (  # noqa: E402
     PERIOD_ORDER,
     TRANSMISSION_CATEGORIES,
     INVESTMENT_CATEGORIES,
+    FOSSIL_FUEL_CATEGORIES,
     LINE_RAW_CATEGORIES,
     COLORS_TECH_GROUP,
     COLORS_ENERGY_ORIGIN,
@@ -991,6 +994,8 @@ CHART_DESC = {
     "06": "Inversión de capital en líneas de transmisión por año, desglosada por grupo de línea.",
     "07": "Costo anual promedio por periodo (capital más operación), apilado por tipo: generación, transmisión y almacenamiento.",
     "08": "Emisiones anuales de CO₂ del sistema eléctrico, una línea por escenario.",
+    "08A": "Consumo anual de combustibles fósiles (carbón, gas natural y petróleo/derivados) del sistema eléctrico, medido como la actividad de las tecnologías de extracción/importación MIN* en PJ (excluye uranio). Una línea por escenario; paralelo al gráfico 8 (emisiones) para verificar si el que más emite consume más fósil.",
+    "08B": "Desglose del consumo fósil por tipo de combustible (carbón = COA+COG, gas natural = GAS, petróleo/derivados = OIL+PET+OTH), barras apiladas por escenario. Explica posibles discrepancias entre PJ y emisiones: un mix cargado a carbón emite más por PJ (~95 kg CO₂/GJ) que uno cargado a gas (~56). El total apilado coincide con la línea del gráfico 8A.",
     "09": "Inversión de capital promedio anual por país (2025–2050), un mapa por escenario.",
     "10": "Kilómetros de líneas de transmisión construidos, desglosados por grupo de línea. Con el toggle «Eje X» puede verse por año o por periodo; en modo periodo, «Total» suma los km construidos en el periodo (vista por defecto) y «Promedio» los divide por el nº de años (km/año).",
     "11": "Costo anualizado (capital más operación) por unidad de energía generada, por periodo y escenario.",
@@ -1061,7 +1066,7 @@ def _extra_tab_htmls() -> list:
 # colapsa los años en periodos fijos (YEAR_PERIODS) en el navegador. Este mapa
 # define qué gráficos arrancan mostrando periodos por defecto (el resto, años).
 CHART_XMODE_NATIVE = {
-    "05": "periods", "07": "periods", "10": "periods",
+    "05": "periods", "07": "periods", "08B": "periods", "10": "periods",
     "11": "periods", "14": "periods",
 }
 # Gráficos cuya agregación de periodo es elegible (1ª opción = por defecto).
@@ -2373,6 +2378,151 @@ def chart_08():
             [str(y) for y in range(2025, 2051)], country_model)
 
 
+# ================================================================
+# Chart 08A — Consumo de Combustibles Fósiles [PJ]
+# Gráfico de LÍNEAS (uno por escenario), paralelo al 08 (Emisiones): x = años
+# (2025-2050), y = consumo fósil anual total = SUM(TotalTechnologyAnnualActivity)
+# sobre las tecnologías de extracción/importación MIN* fósiles (excluye MINURN).
+# Ya viene en PJ. Auto-rango en Y para distinguir trayectorias. Comparable 1:1 con
+# las emisiones del 08 (el que más emite debería consumir más fósil).
+# ================================================================
+def chart_08a():
+    df = load_column(["TotalTechnologyAnnualActivity"])
+    df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
+    df = df[df["YEAR"].isin(ALL_YEARS)]  # candidatos = todos los años; default 2025-2050
+    # Solo tecnologías MIN* fósiles (excluye MINURN y todo lo no-MIN).
+    df = df[df["TECHNOLOGY"].map(classify_min_fossil).notna()]
+
+    # Valor por (tech, año) en UNA fila (resto NaN/repetido) → max, luego sumar.
+    per = (
+        df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])["TotalTechnologyAnnualActivity"]
+        .max()
+        .reset_index()
+    )
+    g = (
+        per.groupby(["Scenario", "YEAR"])["TotalTechnologyAnnualActivity"]
+        .sum()
+        .reset_index()
+    )
+
+    # --- Modelo de país (líneas: re-suma por país; sin etiquetas). INT = importado. ---
+    per["pais"] = per["TECHNOLOGY"].str[6:9]
+    gcl = per.groupby(["Scenario", "YEAR", "pais"])["TotalTechnologyAnnualActivity"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    gcl["series"] = "val"
+    country_long = gcl.rename(columns={"TotalTechnologyAnnualActivity": "val"})[
+        ["Scenario", "catlabel", "pais", "series", "val"]
+    ]
+    country_model = _country_model(
+        country_long,
+        labelKind="lines",
+        series_order=["val"],
+        ann_labels_by_si={},
+        ann_kinds=[],
+        dtick=0.0,
+    )
+
+    fig = go.Figure()
+    for sc in SCENARIOS:
+        d = g[g["Scenario"] == sc].sort_values("YEAR")
+        years_str = [str(int(y)) for y in d["YEAR"]]
+        fig.add_trace(
+            go.Scatter(
+                x=years_str,
+                y=d["TotalTechnologyAnnualActivity"].values,
+                name=SCENARIO_ALIAS.get(sc, sc),
+                mode="lines+markers",
+                line=dict(color=COLORS_SCENARIO[sc], width=2.5),
+                marker=dict(size=4, color=COLORS_SCENARIO[sc]),
+            )
+        )
+
+    fig.update_layout(
+        height=520,
+        width=940,
+        template="plotly_white",
+        separators=",.",
+        font=dict(family="Arial", size=12),
+        legend=dict(
+            orientation="v",
+            x=1.02,
+            y=1.0,
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor="#ddd",
+            borderwidth=1,
+        ),
+        margin=dict(l=90, r=150, t=30, b=60),
+    )
+    # Auto-rango en Y (líneas cercanas): no fijar range desde 0.
+    fig.update_yaxes(
+        title_text="Consumo de Combustibles Fósiles [PJ]",
+        title_font=dict(size=11),
+        gridcolor="#e0e0e0",
+        tickformat=",d",
+    )
+    fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
+    return (fig, "chart08a_fossil_fuel", 940, 520,
+            [str(y) for y in range(2025, 2051)], country_model)
+
+
+# ================================================================
+# Chart 08B — Consumo de Combustible Fósil por tipo [PJ]
+# Barras apiladas por escenario (un panel por escenario), apiladas por familia de
+# combustible (Carbón = COA+COG, Gas natural = GAS, Petróleo/derivados =
+# OIL+PET+OTH). Misma fuente que el 08A (MIN* fósiles). Explica discrepancias entre
+# PJ y emisiones: un mix cargado a carbón sube emisiones aunque baje en PJ. El total
+# apilado por (escenario, año) coincide con la línea del 08A.
+# ================================================================
+def chart_08b():
+    df = load_column(["TotalTechnologyAnnualActivity"])
+    df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
+    df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]  # candidatos = todos los periodos
+    df["FuelGroup"] = df["TECHNOLOGY"].apply(classify_min_fossil_group)
+    df = df[df["FuelGroup"].notna()]
+
+    # max() por (tech, año) y luego suma por familia (mismo gotcha del CSV ancho).
+    per = (
+        df.groupby(["Scenario", "YEAR", "TECHNOLOGY", "FuelGroup"])[
+            "TotalTechnologyAnnualActivity"
+        ]
+        .max()
+        .reset_index()
+    )
+    g = (
+        per.groupby(["Scenario", "YEAR", "FuelGroup"])["TotalTechnologyAnnualActivity"]
+        .sum()
+        .reset_index()
+    )
+    pivot = g.pivot_table(
+        index=["Scenario", "YEAR"], columns="FuelGroup",
+        values="TotalTechnologyAnnualActivity", fill_value=0,
+    ).reset_index()
+    pivot.columns.name = None
+    for cat_name, _ in FOSSIL_FUEL_CATEGORIES:
+        if cat_name not in pivot.columns:
+            pivot[cat_name] = 0
+
+    # --- Componentes por país-AÑO (el JS agrega por periodo). INT = importado. ---
+    per["pais"] = per["TECHNOLOGY"].str[6:9]
+    gcl = per.groupby(["Scenario", "YEAR", "pais", "FuelGroup"])["TotalTechnologyAnnualActivity"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    country_long = gcl.rename(
+        columns={"FuelGroup": "series", "TotalTechnologyAnnualActivity": "val"}
+    )[["Scenario", "catlabel", "pais", "series", "val"]]
+
+    fig, name, w, h, cm = _stacked_categories_chart(
+        pivot=pivot,
+        categories=FOSSIL_FUEL_CATEGORIES,
+        y_title="Consumo de Combustible<br>Fósil por tipo [PJ]",
+        output_name="chart08b_fossil_by_fuel",
+        x_col="YEAR",
+        show_total_line=True,
+        line_name="PJ total",
+        country_long=country_long,
+    )
+    return fig, name, w, h, [p for p in PERIOD_ORDER if p != "2023-2024"], cm
+
+
 # Nombre de país por código ISO-3 (igual que el CASE del Tableau).
 _COUNTRY_NAMES = {
     "ARG": "Argentina", "BOL": "Bolivia", "BRA": "Brasil", "BRB": "Barbados",
@@ -3151,6 +3301,8 @@ CHARTS = {
     "06": ("Inversión en Líneas [MUSD]", chart_06),
     "07": ("Costo Anual Promedio CAPEX+OPEX [MUSD/año]", chart_07),
     "08": ("Emisiones de CO₂ [Mt]", chart_08),
+    "08A": ("Consumo de Combustibles Fósiles [PJ]", chart_08a),
+    "08B": ("Consumo de Combustible Fósil por tipo [PJ]", chart_08b),
     "09": ("Inversión Anual Promedio de Capital por país [MUSD/año]", chart_09),
     "10": ("Kilómetros de Líneas [km]", chart_10),
     "11": ("Costo Anualizado por Energía [MUSD/TWh]", chart_11),
