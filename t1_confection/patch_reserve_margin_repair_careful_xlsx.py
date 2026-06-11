@@ -201,6 +201,13 @@ def parse_args() -> argparse.Namespace:
         help=f"Optional CLI fallback for {FLOW_PARAM}; overrides general workbook values when more specific.",
     )
     parser.add_argument(
+        "--modify-from-year",
+        type=int,
+        default=None,
+        help="If set, only sentinel cap cells in years >= this value are "
+             "replaced; earlier (historical) years are left untouched.",
+    )
+    parser.add_argument(
         "--warnings-file",
         help="Optional file to write warnings to. Warnings are always printed to stderr.",
     )
@@ -248,6 +255,7 @@ def main() -> int:
         [0.0],
         fallback_lookup,
         stock_floors,
+        modify_from_year=args.modify_from_year,
     )
     patched, flow_changed, flow_skipped, flow_warnings = patch_capacity_param(
         patched,
@@ -257,6 +265,7 @@ def main() -> int:
         fallback_lookup,
         flow_floors,
         min_investment_techs,
+        modify_from_year=args.modify_from_year,
     )
     consistency_warnings = stock_flow_warnings(patched, args.target_prefixes)
 

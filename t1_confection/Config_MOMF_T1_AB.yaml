@@ -157,6 +157,13 @@ reserve_margin_xlsx_sentinel_values:
   - 0
   - 9999
 
+# Year cutoff: the patcher only replaces sentinel caps in years >= this value.
+# Historical/observed years (2023-2025) are left exactly as the upstream
+# produced them, so the firm-capacity fallback does not introduce a divergence
+# between scenarios in the early years (mirrors A3's MODIFY_FROM_YEAR=2026).
+# Set to null/unset to patch every year (legacy behaviour).
+reserve_margin_xlsx_modify_from_year: 2026
+
 # Global ReserveMargin value applied to every (REGION, YEAR) tuple.
 # When set, the careful XLSX patcher rewrites the ReserveMargin param block
 # with explicit entries instead of relying on the GMPL default (1.0).

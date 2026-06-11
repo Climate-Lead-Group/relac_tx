@@ -365,6 +365,7 @@ def patch_capacity_param(
     lookup: dict[tuple[str, str, str, str], float],
     floors: dict[tuple[str, str], float] | None = None,
     skip_techs: set[str] | None = None,
+    modify_from_year: int | None = None,
 ) -> tuple[list[str], int, int, list[str]]:
     patched = lines[:]
     floors = floors or {}
@@ -386,6 +387,12 @@ def patch_capacity_param(
             continue
         prefix, cr = split
         year = match.group(4)
+        # Year cutoff: leave historical/observed years untouched. Cells before
+        # modify_from_year keep exactly what the upstream produced, so the
+        # reserve-margin fallback does not introduce a 2023-2025 divergence
+        # across scenarios. Mirrors A3's MODIFY_FROM_YEAR=2026 convention.
+        if modify_from_year is not None and int(year) < modify_from_year:
+            continue
         current = float(match.group(6))
         if not is_sentinel(current, sentinels):
             continue
@@ -507,6 +514,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--default-stock-fallback", type=float)
     parser.add_argument("--default-flow-fallback", type=float)
     parser.add_argument(
+        "--modify-from-year",
+        type=int,
+        default=None,
+        help="If set, only sentinel cap cells in years >= this value are "
+             "replaced; earlier (historical) years are left untouched.",
+    )
+    parser.add_argument(
         "--warnings-file",
         help="Optional file to write warnings to. Warnings are always printed to stderr.",
     )
@@ -559,6 +573,7 @@ def main() -> int:
         [0.0],
         fallback_lookup,
         stock_floors,
+        modify_from_year=args.modify_from_year,
     )
     patched, flow_changed, flow_skipped, flow_warnings = patch_capacity_param(
         patched,
@@ -568,6 +583,7 @@ def main() -> int:
         fallback_lookup,
         flow_floors,
         min_investment_techs,
+        modify_from_year=args.modify_from_year,
     )
     consistency_warnings = stock_flow_warnings(patched, args.target_prefixes)
 

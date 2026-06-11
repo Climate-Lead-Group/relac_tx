@@ -543,6 +543,10 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
     sentinel_values = params.get('reserve_margin_xlsx_sentinel_values', [0, 9999])
     command += ['--sentinel-values'] + [str(value) for value in sentinel_values]
 
+    modify_from_year = params.get('reserve_margin_xlsx_modify_from_year')
+    if modify_from_year is not None:
+        command += ['--modify-from-year', str(modify_from_year)]
+
     if not params.get('reserve_margin_xlsx_patch_backstop', True):
         command.append('--skip-backstop-credit')
     if not params.get('reserve_margin_xlsx_patch_ccs', True):
