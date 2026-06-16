@@ -34,8 +34,8 @@ ALL_YEARS = list(range(2023, 2051))
 SCENARIOS = ["BAU", "INV", "VGB", "OPT"]
 # Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/VGB/OPT).
 SCENARIO_ALIAS = {
-    "BAU": "OPTIMO",
-    "OPT": "PLANIFICADO",
+    "BAU": "REFERENCIA",
+    "OPT": "OPTIMO",
     "INV": "VEGETATIVO A",
     "VGB": "VEGETATIVO B",
 }

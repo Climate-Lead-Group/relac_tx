@@ -46,7 +46,7 @@ YEAR_SPLIT_COL = 'YearSplit'
 # Se muestra el alias en dropdown/título/infoBar/PNG; el value del <option> queda
 # como el código original para no romper las claves de los datos embebidos.
 SCENARIO_ALIAS = {
-    'BAU': 'OPTIMO', 'OPT': 'PLANIFICADO',
+    'BAU': 'REFERENCIA', 'OPT': 'OPTIMO',
     'INV': 'VEGETATIVO A', 'VGB': 'VEGETATIVO B',
 }
 
