@@ -252,10 +252,15 @@ historical_sync_through:
 #     re-impose BAU's flat floor on the non-renewables for 2027-2030.
 #   - TotalAnnualMinCapacityInvestment        : the PEGs, set equal to OPT.
 #     Without protection the sync would snap them back to BAU for 2027-2030.
+#   - TotalAnnualMaxCapacityInvestment        : upper bound; must stay >= the PEGs
+#     or the model is infeasible. Without protection the sync snaps Max back to BAU
+#     (below the protected PEG) for 2027-2030 -> Max < Min (B1b V1). Protecting it
+#     preserves the Max>=Min that A3's B1b sets BEFORE the final sync. (2026-06-16.)
 historical_sync_protect_from_2026:
   VGB:
     - TotalTechnologyAnnualActivityLowerLimit
     - TotalAnnualMinCapacityInvestment
+    - TotalAnnualMaxCapacityInvestment
 
 # 11) Per-scenario transmission sync (2026-06-16):
 # By default sync_historical_from_bau.py PROTECTS transmission MaxCapInv (TRN*)
