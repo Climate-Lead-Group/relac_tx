@@ -1,14 +1,21 @@
 """
 Z_AUX_update_maxcap_inv_from_tool.py
 
-Copia TotalAnnualMaxCapacityInvestment desde la herramienta de calculo
-LAC_maxcap_tool.xlsx (hoja 'Export', tabla "LOGISTIC x HEADROOM ... saturating
-cap") hacia la hoja 'Secondary Techs' de A-O_Parametrization.xlsx de cada
-escenario listado en SCENARIOS (de momento solo BAU).
+Copia TotalAnnualMaxCapacityInvestment hacia la hoja 'Secondary Techs' de
+A-O_Parametrization.xlsx de cada escenario listado en SCENARIOS (de momento solo
+BAU), combinando DOS fuentes:
+
+    A) LAC_maxcap_tool.xlsx, hoja 'Export', tabla "LOGISTIC x HEADROOM ...
+       saturating cap" (12 techs PWRSPV*/PWRWON* de BRA/MEX/CHL/ARG/COL/PER).
+    B) LAC_maxcap_tool_complementary.xlsx, hoja 'Updated' (tabla plana con todas
+       las techs PWR* y su TotalAnnualMaxCapacityInvestment).
+
+Merge: se escriben las techs de A (con sus valores) MAS las techs de B que NO
+estan en A (con valores de B). En las techs presentes en ambas, A tiene
+precedencia (no se sobreescriben con B).
 
 Alcance estricto (NO se toca nada mas):
-    - Solo las tecnologias que aparecen en la tabla LOGISTIC de entrada
-      (12 techs PWRSPV*/PWRWON* de BRA/MEX/CHL/ARG/COL/PER).
+    - Solo las tecnologias presentes en A o en B.
     - Solo el parametro 'TotalAnnualMaxCapacityInvestment'.
     - Solo las celdas de año presentes tanto en la entrada como en la salida.
     - Projection.Mode (col G) se copia desde la fila de entrada SOLO en las
@@ -43,12 +50,14 @@ import openpyxl
 
 HERE = Path(__file__).resolve().parent
 TOOL_XLSX = HERE / 'LAC_maxcap_tool.xlsx'
+TOOL_COMPLEMENTARY_XLSX = HERE / 'LAC_maxcap_tool_complementary.xlsx'
 A1_OUTPUTS = HERE / 'A1_Outputs'
 
 # Escenarios a los que se PUEDE aplicar este script (de momento solo BAU).
 SCENARIOS = ['BAU']
 
-INPUT_SHEET = 'Export'
+INPUT_SHEET = 'Export'              # fuente A (tabla LOGISTIC, apilada con titulo)
+COMPLEMENTARY_SHEET = 'Updated'     # fuente B (tabla plana, header en su 1a fila)
 TARGET_SHEET = 'Secondary Techs'
 PARAM = 'TotalAnnualMaxCapacityInvestment'
 
@@ -159,15 +168,53 @@ def find_logistic_table(ws) -> tuple[int, int]:
     return title_row, header_row
 
 
-def read_input_table(path: Path):
-    """Lee la tabla LOGISTIC de entrada.
+def _read_param_rows(ws, header_row: int, stop_at_blank: bool, source: str):
+    """Lee filas con Parameter == PARAM desde header_row+1. Devuelve (table, year_cols).
 
-    Devuelve (table, title_row, header_row, years) donde
         table = {tech: {'proj_mode': valor_colG, 'years': {año: float}}}
-    Solo filas con Parameter == PARAM; se detiene en la primera fila con Tech
-    vacio. Celdas de año vacias se omiten. Si una celda de año es string
-    (formula no cacheada) -> error.
+
+    stop_at_blank=True  -> corta en la primera fila con Tech vacio (tablas
+                           apiladas; tabla LOGISTIC de la fuente A).
+    stop_at_blank=False -> recorre toda la hoja saltando filas con Tech vacio o
+                           Parameter != PARAM (hoja dedicada de la fuente B).
+    Celdas de año vacias se omiten; una celda de año string (formula no
+    cacheada) -> error.
     """
+    cols = locate_cols(ws, header_row)
+    year_cols = year_cols_from_header(ws, header_row)
+    if not year_cols:
+        raise ValueError(f'[{source}] Sin columnas de año en el header (fila {header_row}).')
+
+    table: dict[str, dict] = {}
+    for r in range(header_row + 1, ws.max_row + 1):
+        raw_tech = ws.cell(r, cols['tech']).value
+        if raw_tech is None or str(raw_tech).strip() == '':
+            if stop_at_blank:
+                break  # primera fila con Tech vacio termina la tabla
+            continue
+        tech = str(raw_tech).strip()
+        param = ws.cell(r, cols['param']).value
+        if param is None or str(param).strip() != PARAM:
+            continue
+        proj_mode = ws.cell(r, cols['proj_mode']).value
+        years: dict[int, float] = {}
+        for y, c in year_cols.items():
+            v = ws.cell(r, c).value
+            if v is None or (isinstance(v, str) and v.strip() == ''):
+                continue  # celda vacia -> no se escribe
+            if isinstance(v, str):
+                raise ValueError(
+                    f'[{source}] Celda de año no cacheada: {tech} {y} = {v!r} (texto '
+                    f'de formula). Abre el archivo en Excel, recalcula y guarda.')
+            years[y] = float(v)
+        if tech in table:
+            raise ValueError(f'[{source}] Tech duplicada: {tech}.')
+        table[tech] = {'proj_mode': proj_mode, 'years': years}
+    return table, year_cols
+
+
+def read_input_table(path: Path):
+    """Fuente A: tabla LOGISTIC de la hoja 'Export'. Devuelve (table, title_row, header_row, years)."""
     if not path.exists():
         raise FileNotFoundError(f'No existe el tool de entrada: {path}')
     wb = openpyxl.load_workbook(path, data_only=True)
@@ -176,40 +223,36 @@ def read_input_table(path: Path):
             raise KeyError(f'Hoja {INPUT_SHEET!r} no encontrada. Hojas: {wb.sheetnames}')
         ws = wb[INPUT_SHEET]
         title_row, header_row = find_logistic_table(ws)
-        cols = locate_cols(ws, header_row)
-        year_cols = year_cols_from_header(ws, header_row)
-        if not year_cols:
-            raise ValueError(f'Sin columnas de año en el header (fila {header_row}) de {INPUT_SHEET!r}.')
-
-        table: dict[str, dict] = {}
-        for r in range(header_row + 1, ws.max_row + 1):
-            raw_tech = ws.cell(r, cols['tech']).value
-            if raw_tech is None or str(raw_tech).strip() == '':
-                break  # primera fila con Tech vacio termina la tabla
-            tech = str(raw_tech).strip()
-            param = ws.cell(r, cols['param']).value
-            if param is None or str(param).strip() != PARAM:
-                continue
-            proj_mode = ws.cell(r, cols['proj_mode']).value
-            years: dict[int, float] = {}
-            for y, c in year_cols.items():
-                v = ws.cell(r, c).value
-                if v is None or (isinstance(v, str) and v.strip() == ''):
-                    continue  # celda vacia -> no se escribe
-                if isinstance(v, str):
-                    raise ValueError(
-                        f'Celda de año no cacheada: {tech} {y} = {v!r} (texto de '
-                        f'formula). Abre {path.name} en Excel, deja que recalcule y '
-                        f'guarda para que existan los valores cacheados.')
-                years[y] = float(v)
-            if tech in table:
-                raise ValueError(f'Tech duplicada en la tabla LOGISTIC de entrada: {tech}.')
-            table[tech] = {'proj_mode': proj_mode, 'years': years}
-
+        table, year_cols = _read_param_rows(ws, header_row, stop_at_blank=True, source='A/LOGISTIC')
         if not table:
-            raise ValueError(
-                f'La tabla LOGISTIC no produjo filas con Parameter == {PARAM!r}.')
+            raise ValueError(f'La tabla LOGISTIC no produjo filas con Parameter == {PARAM!r}.')
         return table, title_row, header_row, sorted(year_cols)
+    finally:
+        wb.close()
+
+
+def find_flat_header_row(ws, max_scan: int = 10) -> int:
+    """Primera fila (<= max_scan) cuya col A == 'Tech.ID' (header de tabla plana)."""
+    for r in range(1, min(max_scan, ws.max_row) + 1):
+        if str(ws.cell(r, 1).value).strip() == 'Tech.ID':
+            return r
+    raise RuntimeError('No se encontro fila de encabezado (col A == "Tech.ID").')
+
+
+def read_complementary_table(path: Path, sheet: str = COMPLEMENTARY_SHEET):
+    """Fuente B: tabla plana de la hoja `sheet`. Devuelve (table, header_row, years)."""
+    if not path.exists():
+        raise FileNotFoundError(f'No existe el complementario: {path}')
+    wb = openpyxl.load_workbook(path, data_only=True)
+    try:
+        if sheet not in wb.sheetnames:
+            raise KeyError(f'Hoja {sheet!r} no encontrada. Hojas: {wb.sheetnames}')
+        ws = wb[sheet]
+        header_row = find_flat_header_row(ws)
+        table, year_cols = _read_param_rows(ws, header_row, stop_at_blank=False, source=f'B/{sheet}')
+        if not table:
+            raise ValueError(f'La hoja {sheet!r} no produjo filas con Parameter == {PARAM!r}.')
+        return table, header_row, sorted(year_cols)
     finally:
         wb.close()
 
@@ -332,7 +375,9 @@ def main() -> None:
     parser.add_argument('--no-backup', action='store_true',
                         help='no crear backup al --apply')
     parser.add_argument('--tool', type=Path, default=None,
-                        help=f'ruta alterna al tool de entrada (default: {TOOL_XLSX.name})')
+                        help=f'ruta alterna al tool A (default: {TOOL_XLSX.name})')
+    parser.add_argument('--complementary', type=Path, default=None,
+                        help=f'ruta alterna al complementario B (default: {TOOL_COMPLEMENTARY_XLSX.name})')
     args = parser.parse_args()
 
     apply_changes = args.apply and not args.dry_run
@@ -344,24 +389,38 @@ def main() -> None:
             f'ERROR: escenario(s) no permitido(s): {unknown}. Permitidos: {SCENARIOS}.')
 
     tool = args.tool if args.tool is not None else TOOL_XLSX
+    complementary = args.complementary if args.complementary is not None else TOOL_COMPLEMENTARY_XLSX
     print(f'Mode: {mode}')
-    print(f'Tool:  {tool}')
+    print(f'Tool A: {tool}')
+    print(f'Tool B: {complementary}')
     print(f'Escenarios: {scenarios}')
 
-    table, title_row, header_row, years = read_input_table(tool)
-    print(f'Tabla LOGISTIC: titulo fila {title_row}, header fila {header_row} | '
-          f'{len(table)} techs | años {years[0]}..{years[-1]}.')
-
-    missing = sorted(set(EXPECTED_TECHS) - set(table))
-    extra = sorted(set(table) - set(EXPECTED_TECHS))
+    # Fuente A (LOGISTIC) -- precedencia en las coincidentes.
+    table_a, title_row, header_row_a, years_a = read_input_table(tool)
+    print(f'Fuente A (LOGISTIC): titulo fila {title_row}, header fila {header_row_a} | '
+          f'{len(table_a)} techs | años {years_a[0]}..{years_a[-1]}.')
+    missing = sorted(set(EXPECTED_TECHS) - set(table_a))
+    extra = sorted(set(table_a) - set(EXPECTED_TECHS))
     if missing:
-        print(f'  [WARN] techs esperadas ausentes en la tabla de entrada: {missing}')
+        print(f'  [WARN] techs esperadas ausentes en la fuente A: {missing}')
     if extra:
-        print(f'  [WARN] techs en la tabla de entrada no listadas como esperadas: {extra}')
+        print(f'  [WARN] techs en la fuente A no listadas como esperadas: {extra}')
+
+    # Fuente B (Updated) -- solo se agregan las techs que NO estan en A.
+    table_b, header_row_b, years_b = read_complementary_table(complementary, COMPLEMENTARY_SHEET)
+    new_from_b = sorted(t for t in table_b if t not in table_a)
+    print(f'Fuente B ({COMPLEMENTARY_SHEET}): header fila {header_row_b} | {len(table_b)} techs | '
+          f'años {years_b[0]}..{years_b[-1]} | nuevas (no en A): {len(new_from_b)}.')
+
+    # Merge: A entero + (B \ A). A prevalece en las coincidentes.
+    merged = dict(table_a)
+    for tech in new_from_b:
+        merged[tech] = table_b[tech]
+    print(f'Total a escribir: {len(merged)} techs ({len(table_a)} de A + {len(new_from_b)} de B).')
 
     total_violations = 0
     for scen in scenarios:
-        _, _, v = write_scenario(scen, table, apply_changes, do_backup=not args.no_backup)
+        _, _, v = write_scenario(scen, merged, apply_changes, do_backup=not args.no_backup)
         total_violations += v
 
     if apply_changes and total_violations:
