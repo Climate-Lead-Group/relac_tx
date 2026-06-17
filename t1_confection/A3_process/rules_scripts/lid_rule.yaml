@@ -206,16 +206,20 @@ lowerlimit_scenarios:
 # Per scenario: the THROUGH year (inclusive). Years 2023..<through> are copied
 # from BAU; the scenario is free to diverge from <through>+1 onward.
 #
-#   OPT -> 2025 : only the historical/observed years are pinned to BAU; OPT's
-#                 optimization is free from 2026 (UNCHANGED behaviour).
+#   OPT -> 2026 : pinned to BAU through 2026 INCLUDING transmission, diverging
+#                 only from 2027. D4 does NOT cap OPT's TX (it rejects
+#                 --scenario OPT), so OPT is listed in historical_sync_tx_follow_bau
+#                 below to switch OFF the built-in TX protection — OPT's TX
+#                 MaxCapInv (TRN*) IS synced to BAU through 2026. (2026-06-16.)
 #   INV -> 2030 : INV mirrors BAU through 2030 for everything EXCEPT transmission.
-#                 D4_load_dsptrn_max_cap_inv.py now caps transmission MaxCapInv
-#                 from 2026 (cap = NewCapacity_BAU * factor; factor 1.0 in
-#                 2026-2030, then 0.99->0.80 over 2031-2050), so TX diverges from
-#                 2026. sync_historical_from_bau.py was modified to skip the TX
-#                 MaxCapInv rows (TRN*) for years >= 2026 so this sync does NOT
-#                 snap them back to BAU; generation and the rest still mirror BAU
-#                 through 2030. (TX-from-2026 change 2026-06-04; original
+#                 D4_load_dsptrn_max_cap_inv.py caps transmission MaxCapInv from
+#                 2027 (cap = NewCapacity_BAU * factor; factor 1.0 in 2027-2030,
+#                 then 0.99->0.80 over 2031-2050), so TX diverges from 2027 — INV
+#                 now EQUALS BAU in TX through 2026 too. The sync skips the TX
+#                 MaxCapInv rows (TRN*) only for years >= 2027 (TX_DIVERGE_YEAR),
+#                 so it does NOT snap D4's caps back to BAU but the 2026 TX IS
+#                 synced. Generation and the rest still mirror BAU through 2030.
+#                 (Equalize-INV/VGB-in-2026 change 2026-06-16; original
 #                 INV-mirrors-BAU-through-2030 CTO request 2026-06-04.)
 #
 # Only year-value cells are copied; Projection.Mode and other key columns are
@@ -225,28 +229,49 @@ lowerlimit_scenarios:
 # --skip-historical-sync.
 historical_sync_through:
   INV: 2030
-  OPT: 2025
+  OPT: 2026
   VGB: 2030   # VEGETATIVO_B mirrors BAU through 2030 like INV, EXCEPT the
               # parameters protected below (LowerLimit + PEGs).
 
-# 10) Per-scenario sync protection (2026-06-08):
+# 10) Per-scenario sync protection (2026-06-08; boundary moved to 2027 2026-06-16):
 # Parameters listed here for a scenario are NOT copied from BAU for years >=
-# 2026 during the historical_sync_through pass (forwarded to
-# sync_historical_from_bau.py as --protect-params). This generalizes the
-# built-in transmission MaxCapInv protection: use it when a scenario
-# deliberately diverges from BAU on a parameter from 2026 onward and that
-# divergence must survive the sync (which otherwise OVERRIDES everything in the
-# synced window because it runs as A3's final step). Historical years (2023-
-# 2025) are ALWAYS synced regardless of this list. A scenario not listed
-# protects nothing.
+# PROTECT_PARAMS_FROM_YEAR (now 2027; see sync_historical_from_bau.py) during the
+# historical_sync_through pass (forwarded as --protect-params). NOTE: the key name
+# keeps "_from_2026" as a stable label, but the EFFECTIVE boundary is 2027 — years
+# <= 2026 are ALWAYS synced to BAU so every scenario equals BAU through 2026; the
+# protected divergence applies only from 2027. This generalizes the built-in
+# transmission MaxCapInv protection: use it when a scenario deliberately diverges
+# from BAU on a parameter from 2027 onward and that divergence must survive the
+# sync (which otherwise OVERRIDES everything in the synced window because it runs
+# as A3's final step). A scenario not listed protects nothing.
 #
-# VGB syncs to BAU through 2030 (like INV) but keeps its own:
+# VGB syncs to BAU through 2030 (like INV) but keeps its own FROM 2027 ONWARD
+# (equals BAU in 2026; the divergence starts 2027):
 #   - TotalTechnologyAnnualActivityLowerLimit : renewable-only floor; non-
-#     renewables cleared 2026+ (matches OPT). Without protection the sync would
-#     re-impose BAU's flat floor on the non-renewables for 2026-2030.
+#     renewables cleared 2027+ (matches OPT). Without protection the sync would
+#     re-impose BAU's flat floor on the non-renewables for 2027-2030.
 #   - TotalAnnualMinCapacityInvestment        : the PEGs, set equal to OPT.
-#     Without protection the sync would snap them back to BAU for 2026-2030.
+#     Without protection the sync would snap them back to BAU for 2027-2030.
 historical_sync_protect_from_2026:
   VGB:
     - TotalTechnologyAnnualActivityLowerLimit
     - TotalAnnualMinCapacityInvestment
+
+# 11) Per-scenario transmission sync (2026-06-16):
+# By default sync_historical_from_bau.py PROTECTS transmission MaxCapInv (TRN*)
+# rows from being snapped back to BAU for years >= TX_DIVERGE_YEAR (now 2027),
+# because D4 caps INV's transmission from 2027 and that divergence must survive
+# the sync. Scenarios listed here OPT OUT of that built-in TX protection
+# (forwarded as --no-protect-tx), so their transmission MaxCapInv is fully synced
+# to BAU across the ENTIRE historical_sync_through window (every year, no 2027
+# boundary). Use only for scenarios that D4 does NOT cap. A scenario not listed
+# keeps the default TX protection (TX synced through 2026, protected from 2027).
+#
+#   OPT: D4 does not cap OPT's transmission (it rejects --scenario OPT), so OPT's
+#        TX must follow BAU across its whole window (2023-2026). INV and VGB are
+#        intentionally NOT listed: with the 2027 boundary they already EQUAL BAU
+#        in TX through 2026 (synced), while their TX from 2027 stays protected —
+#        INV keeps its D4 cap, VGB keeps its inherited TX. Listing them would
+#        wrongly snap their 2027-2030 TX back to BAU.
+historical_sync_tx_follow_bau:
+  - OPT

@@ -55,9 +55,12 @@ each scenario listed under `historical_sync_through` in lid_rule.yaml to BAU for
 years 2023..<through> (inclusive) by invoking sync_historical_from_bau.py
 --apply. Because it runs last, it OVERRIDES anything the lid rule, the lowerlimit
 extension, B1b, or the BAU-only D3 caps left in that window for the target
-scenario. Current map: OPT->2025 (historical only; OPT optimization unchanged),
-INV->2030 (INV mirrors BAU through 2030, diverging only from 2031, exactly where
-D4_load_dsptrn_max_cap_inv.py begins capping). Only year-value cells are copied
+scenario. Current map: OPT->2026 (pinned to BAU through 2026 INCLUDING
+transmission — OPT is in historical_sync_tx_follow_bau, which disables the
+built-in TX protection since D4 does not cap OPT; OPT diverges from 2027),
+INV->2030 (INV mirrors BAU through 2030 for everything EXCEPT transmission,
+whose D4 cap in D4_load_dsptrn_max_cap_inv.py diverges from 2027; INV equals BAU
+in TX through 2026 too). Only year-value cells are copied
 (Projection.Mode is left intact). Disable with --skip-historical-sync.
 
 The pre-stage pipeline that OSTRAM runs (template materialization,
@@ -245,7 +248,7 @@ def load_historical_sync_protect() -> dict[str, set[str]]:
     """Read the per-scenario sync-protection map from lid_rule.yaml.
 
     Returns {scenario: {param_name, ...}}: parameters that must NOT be copied
-    from BAU for years >= 2026 during the historical sync (passed to
+    from BAU for years >= 2027 during the historical sync (passed to
     sync_historical_from_bau.py via --protect-params). Used for scenarios that
     deliberately diverge from BAU on a parameter from 2026 onward and must keep
     that divergence through the sync (e.g. VGB's LowerLimit and PEGs).
@@ -284,6 +287,37 @@ def load_historical_sync_protect() -> dict[str, set[str]]:
             )
         out[name] = {str(p).strip() for p in params if str(p).strip()}
     return out
+
+
+def load_historical_sync_tx_follow_bau() -> set[str]:
+    """Read the set of scenarios whose transmission must follow BAU in the sync.
+
+    Returns the scenario names listed under `historical_sync_tx_follow_bau` in
+    lid_rule.yaml. For those scenarios, run_historical_sync forwards
+    --no-protect-tx, disabling sync_historical_from_bau.py's built-in TX
+    protection so their transmission MaxCapInv (TRN*) IS synced to BAU across the
+    whole window. Used for scenarios D4 does NOT cap (e.g. OPT). A scenario not
+    listed keeps the default TX protection. Returns set() when the file/key is
+    missing or PyYAML is unavailable.
+    """
+    if not LID_RULE_YAML.is_file():
+        return set()
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        return set()
+    with open(LID_RULE_YAML, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+
+    raw = cfg.get("historical_sync_tx_follow_bau")
+    if not raw:
+        return set()
+    if not isinstance(raw, list):
+        sys.exit(
+            f"ERROR: historical_sync_tx_follow_bau in {LID_RULE_YAML.name} must "
+            f"be a list of scenario names, got {type(raw).__name__}."
+        )
+    return {str(s).strip() for s in raw if str(s).strip()}
 
 
 def banner(msg: str) -> None:
@@ -445,7 +479,8 @@ def run_for_scenario(scenario: str, rules_script: str,
 
 
 def run_historical_sync(scenario: str, through_year: int,
-                        protect_params: set[str] | None = None) -> None:
+                        protect_params: set[str] | None = None,
+                        tx_follow_bau: bool = False) -> None:
     """Pin `scenario`'s year columns 2023..through_year to BAU (A3 final step).
 
     Invokes sync_historical_from_bau.py --apply for a single target scenario.
@@ -455,7 +490,11 @@ def run_historical_sync(scenario: str, through_year: int,
 
     `protect_params` (from historical_sync_protect_from_2026) is forwarded as
     --protect-params: those parameters are not snapped back to BAU for years
-    >= 2026, so the scenario's deliberate divergence survives this final step.
+    >= 2027, so the scenario's deliberate divergence survives this final step.
+
+    `tx_follow_bau` (from historical_sync_tx_follow_bau) forwards --no-protect-tx,
+    disabling the built-in transmission protection so this scenario's TX MaxCapInv
+    IS synced to BAU through the window (for scenarios D4 does not cap, e.g. OPT).
     """
     if not SYNC_HIST_SCRIPT.is_file():
         sys.exit(f"ERROR: historical-sync script not found: {SYNC_HIST_SCRIPT}")
@@ -464,8 +503,11 @@ def run_historical_sync(scenario: str, through_year: int,
            "--scenarios", scenario, "--years", years]
     if protect_params:
         cmd += ["--protect-params", ",".join(sorted(protect_params))]
-    prot = f", protect={sorted(protect_params)} (>=2026)" if protect_params else ""
-    print(f"  harmonize     : {scenario} <- BAU for 2023-{through_year}{prot}")
+    if tx_follow_bau:
+        cmd.append("--no-protect-tx")
+    prot = f", protect={sorted(protect_params)} (>=2027)" if protect_params else ""
+    tx = ", TX follows BAU (no-protect-tx)" if tx_follow_bau else ""
+    print(f"  harmonize     : {scenario} <- BAU for 2023-{through_year}{prot}{tx}")
     run_subproc(cmd, label=f"historical_sync ({scenario} <- BAU, 2023-{through_year})")
 
 
@@ -505,6 +547,7 @@ def main() -> int:
 
     hist_sync = {} if args.skip_historical_sync else load_historical_sync_through()
     hist_protect = {} if args.skip_historical_sync else load_historical_sync_protect()
+    hist_tx_follow = set() if args.skip_historical_sync else load_historical_sync_tx_follow_bau()
 
     t_start = time.time()
     banner("A3 workflow — relac_tx")
@@ -520,8 +563,11 @@ def main() -> int:
         print(f"  historical_sync      : "
               f"{ {s: f'2023-{y}' for s, y in hist_sync.items()} or '(none)'}")
         if hist_protect:
-            print(f"  sync_protect (>=2026): "
+            print(f"  sync_protect (>=2027): "
                   f"{ {s: sorted(p) for s, p in hist_protect.items()} }")
+        if hist_tx_follow:
+            print(f"  tx_follow_bau        : {sorted(hist_tx_follow)} "
+                  f"(TX synced to BAU; built-in TX protection OFF)")
 
     for scen in scenarios:
         run_for_scenario(
@@ -545,7 +591,8 @@ def main() -> int:
             print(f"  [NOTE] {SOURCE_SCENARIO} not in this run; harmonizing against "
                   f"the existing {SOURCE_SCENARIO} workbook on disk.")
         for scen in sync_targets:
-            run_historical_sync(scen, hist_sync[scen], hist_protect.get(scen))
+            run_historical_sync(scen, hist_sync[scen], hist_protect.get(scen),
+                                tx_follow_bau=(scen in hist_tx_follow))
 
     elapsed = time.time() - t_start
     banner(f"DONE in {elapsed:.1f}s — {len(scenarios)} scenario(s) processed")

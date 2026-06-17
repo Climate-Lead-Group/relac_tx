@@ -2,15 +2,21 @@
 sync_historical_from_bau.py
 ===========================
 
-Copia los valores de los anos historicos (2023, 2024, 2025) desde el escenario
-BAU hacia los escenarios INV y OPT en A-O_Parametrization.xlsx.
+Copia los valores de los primeros anos desde el escenario BAU hacia los demas
+escenarios (INV, OPT, VGB, ...) en A-O_Parametrization.xlsx. La VENTANA de anos
+a copiar se pasa con --years: A3_process.py la fija POR ESCENARIO segun
+historical_sync_through en lid_rule.yaml (INV->2030, OPT->2026, VGB->2030). Los
+DEFAULT_* de abajo solo aplican a corridas manuales sin --scenarios/--years.
 
 Motivacion
 ----------
-Los anos 2023-2025 son historicos/observados y deben ser identicos en todos los
-escenarios. Solo a partir de 2026 los escenarios divergen (es ahi donde A3 y D4
-aplican sus reglas). Este script garantiza el punto de partida comun: para cada
-hoja con columnas de ano, copia las celdas 2023/2024/2025 de BAU a INV/OPT.
+Los anos historicos/observados (2023-2025) deben ser identicos en todos los
+escenarios, y ademas algunos escenarios deben espejar a BAU mas alla de los
+historicos para no divergir antes de tiempo (OPT hasta 2026; INV/VGB hasta 2030,
+donde D4 empieza a topar la transmision de INV). Este script garantiza ese punto
+de partida comun: para cada hoja con columnas de ano, copia las celdas de BAU a
+cada escenario destino dentro de la ventana indicada. Las divergencias
+deliberadas se preservan con --protect-params y con la proteccion TX (ver abajo).
 
 Alcance
 -------
@@ -18,19 +24,22 @@ Alcance
 - Todas las hojas que tengan columnas de ano (encabezado int 2023 o string
   "2023"). Las hojas sin columnas de ano (p.ej. 'Fixed Horizon Parameters')
   se omiten automaticamente.
-- Solo los anos en --years (default 2023,2024,2025).
+- Solo los anos en --years (default 2023,2024,2025 para corridas manuales; en
+  la cadena, A3 pasa la ventana por escenario segun historical_sync_through).
 - EXCEPCION: en la hoja 'Demand Techs', las filas de
   TotalAnnualMaxCapacityInvestment de tecnologias de transmision (TRN*) NO se
-  copian para anos >= 2026. Ahi manda el tope que escribe
+  copian para anos >= 2027. Ahi manda el tope que escribe
   D4_load_dsptrn_max_cap_inv.py (la Transmision de INV diverge de BAU desde
-  2026). Los anos <= 2025 (historicos) si se copian. OPT solo sincroniza
-  2023-2025, asi que esta excepcion nunca le aplica.
+  2027). Los anos <= 2026 si se copian (todos los escenarios igualan a BAU
+  hasta 2026, incluida la TX). Esta proteccion TX se desactiva por corrida con
+  --no-protect-tx, para escenarios que D4 NO topa y que igualan a BAU en TX en
+  toda su ventana (p.ej. OPT).
 - EXCEPCION GENERICA (--protect-params): los parametros nombrados en
-  --protect-params NO se copian para anos >= 2026 (en cualquier hoja). Sirve
+  --protect-params NO se copian para anos >= 2027 (en cualquier hoja). Sirve
   para escenarios que divergen deliberadamente de BAU en un parametro desde
-  2026 y cuya divergencia debe sobrevivir al sync (que de otro modo lo
-  sobre-escribe en la ventana sincronizada). Los anos <= 2025 (historicos)
-  siempre se copian. Ej.: VGB protege TotalTechnologyAnnualActivityLowerLimit
+  2027 y cuya divergencia debe sobrevivir al sync (que de otro modo lo
+  sobre-escribe en la ventana sincronizada). Los anos <= 2026 si se copian
+  (igualan a BAU). Ej.: VGB protege TotalTechnologyAnnualActivityLowerLimit
   (piso solo en renovables) y TotalAnnualMinCapacityInvestment (PEGs = OPT).
 
 Seguridad
@@ -63,6 +72,10 @@ HERE = Path(__file__).resolve().parent
 A1_OUTPUTS = HERE / "A1_Outputs"
 PARAM_FILENAME = "A-O_Parametrization.xlsx"
 SOURCE_SCENARIO = "BAU"
+# Defaults SOLO para corridas manuales sin --scenarios/--years. En la cadena,
+# A3_process.py invoca este script por escenario con la ventana explicita que
+# define historical_sync_through en lid_rule.yaml (INV->2030, OPT->2026,
+# VGB->2030); esas corridas NO usan estos defaults.
 DEFAULT_TARGET_SCENARIOS = ["INV", "OPT"]
 DEFAULT_YEARS = [2023, 2024, 2025]
 
@@ -71,17 +84,20 @@ DEFAULT_YEARS = [2023, 2024, 2025]
 # NewCapacity_BAU * factor). Esas celdas NO deben volver a BAU por este sync, o
 # INV perderia su tope de transmision. Por eso, para anos >= TX_DIVERGE_YEAR se
 # saltan las filas de transmision (TX_PARAM sobre techs TX_PREFIXES) de la hoja
-# TX_SHEET. Los anos < TX_DIVERGE_YEAR (historicos) siempre se copian. OPT solo
-# sincroniza 2023-2025, asi que esta exclusion nunca le aplica.
-TX_DIVERGE_YEAR = 2026
+# TX_SHEET. Los anos < TX_DIVERGE_YEAR si se copian. Boundary = 2027 (2026-06-16):
+# TODOS los escenarios igualan a BAU hasta 2026 (incluida TX); la TX de INV
+# diverge (tope D4) desde 2027. Debe ir alineado con D4.EQUAL_THROUGH_YEAR=2026.
+# Esta proteccion es el DEFAULT; --no-protect-tx la desactiva para escenarios que
+# D4 NO topa y que igualan a BAU en TX en toda su ventana (p.ej. OPT).
+TX_DIVERGE_YEAR = 2027
 TX_SHEET = "Demand Techs"
 TX_PARAM = "TotalAnnualMaxCapacityInvestment"
 TX_PREFIXES = ("PWRTRN", "TRNNLI", "TRNRPO", "RNWTRN", "RNWRPO", "RNWNLI")
 
 # Generic per-parameter protection (--protect-params). Rows whose 'Parameter'
 # is in the protect set are NOT copied from BAU for years >= this boundary, on
-# ANY sheet. Same divergence boundary as transmission (2026): years <= 2025 are
-# historical and always synced.
+# ANY sheet. Same divergence boundary as transmission (2027): years <= 2026 are
+# pinned to BAU and always synced (VGB PEGs/LowerLimit diverge only from 2027).
 PROTECT_PARAMS_FROM_YEAR = TX_DIVERGE_YEAR
 
 
@@ -130,12 +146,16 @@ def find_tech_col(header: list) -> int | None:
 
 
 def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
-                  apply_changes: bool, protect_params: set[str] | None = None) -> dict:
+                  apply_changes: bool, protect_params: set[str] | None = None,
+                  protect_tx_rows: bool = True) -> dict:
     """Copy year cells from BAU into one target scenario workbook.
 
     `src_ws_map` is {sheet_name: source_worksheet}. `protect_params` is a set of
     Parameter names whose rows are NOT copied for years >= PROTECT_PARAMS_FROM_YEAR
-    (on any sheet); historical years are still synced. Returns a summary dict.
+    (on any sheet); historical years are still synced. `protect_tx_rows` (default
+    True) is the built-in transmission protection: when True, TX MaxCapInv rows
+    are NOT copied for years >= TX_DIVERGE_YEAR; set False (via --no-protect-tx)
+    to fully sync TX to BAU for scenarios D4 does not cap. Returns a summary dict.
     Raises ValueError on any structural mismatch (caller aborts the run).
     """
     protect_params = protect_params or set()
@@ -192,7 +212,7 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
                 # to BAU in 2026+. Only the TX_PARAM rows of TX_PREFIXES techs on
                 # the TX_SHEET are shielded, and only for years >= TX_DIVERGE_YEAR.
                 protect_tx = False
-                if is_tx_sheet and tech_col is not None and param_col is not None:
+                if protect_tx_rows and is_tx_sheet and tech_col is not None and param_col is not None:
                     tv = src_ws.cell(row=row, column=tech_col).value
                     pv = src_ws.cell(row=row, column=param_col).value
                     if (isinstance(tv, str) and tv.strip().startswith(TX_PREFIXES)
@@ -263,6 +283,13 @@ def main() -> int:
              f"anos >= {PROTECT_PARAMS_FROM_YEAR}, en cualquier hoja. Los anos "
              "historicos (<= 2025) siempre se copian.",
     )
+    ap.add_argument(
+        "--no-protect-tx", action="store_true",
+        help="desactiva la proteccion TX incorporada: las filas de "
+             f"{TX_PARAM} de techs de transmision (TRN*) SI se copian desde BAU "
+             f"para anos >= {TX_DIVERGE_YEAR}. Usar para escenarios que D4 NO "
+             "topa y que deben igualar a BAU tambien en transmision (p.ej. OPT).",
+    )
     args = ap.parse_args()
 
     apply_changes = args.apply and not args.dry_run
@@ -270,11 +297,14 @@ def main() -> int:
     targets = [s.strip() for s in args.scenarios.split(",") if s.strip()]
     years = {int(y.strip()) for y in args.years.split(",") if y.strip()}
     protect_params = {p.strip() for p in args.protect_params.split(",") if p.strip()}
+    protect_tx_rows = not args.no_protect_tx
 
     print(f"Mode      : {mode}")
     print(f"Source    : {SOURCE_SCENARIO}")
     print(f"Targets   : {targets}")
     print(f"Years     : {sorted(years)}")
+    print(f"Protect TX: {'ON' if protect_tx_rows else 'OFF (TX synced to BAU)'} "
+          f"(TRN* {TX_PARAM} for years >= {TX_DIVERGE_YEAR})")
     if protect_params:
         print(f"Protect   : {sorted(protect_params)} (not synced for years "
               f">= {PROTECT_PARAMS_FROM_YEAR})")
@@ -293,7 +323,8 @@ def main() -> int:
                 sys.exit(f"ERROR: no existe target {tgt_path}")
             print(f"\n=== {scen} <- {SOURCE_SCENARIO} ===")
             summary = sync_scenario(src_ws_map, src_wb, tgt_path, years,
-                                     apply_changes, protect_params)
+                                     apply_changes, protect_params,
+                                     protect_tx_rows)
             for s in summary["sheets"]:
                 if "skipped" in s:
                     print(f"  [skip] {s['sheet']:28s} ({s['skipped']})")

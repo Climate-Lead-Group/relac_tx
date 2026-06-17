@@ -82,13 +82,14 @@ def param_path(scenario: str) -> Path:
     return A1_OUTPUTS / f'A1_Outputs_{scenario}' / 'A-O_Parametrization.xlsx'
 
 # --- Configuracion comun (todos los escenarios) ----------------------------
-# Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia). Solo los
-# anos historicos/observados (2023-2025); desde 2026 la Transmision se topa.
-EQUAL_THROUGH_YEAR = 2025
+# Bloque "igual a BAU": anos <= este quedan SIN tope (celda vacia). Incluye los
+# historicos (2023-2025) y ahora 2026, para que la TX de INV iguale a BAU en 2026
+# (alineado con TX_DIVERGE_YEAR=2027 del sync); desde 2027 la Transmision se topa.
+EQUAL_THROUGH_YEAR = 2026
 
-# Bloque plano: 2026..FLAT_FACTOR_THROUGH_YEAR usan FLAT_FACTOR (sin descuento
-# => cap = NewCapacity_BAU exacto). Es la ventana donde TX diverge de BAU
-# mientras el resto del escenario sigue = BAU hasta 2030.
+# Bloque plano: (EQUAL_THROUGH_YEAR+1)..FLAT_FACTOR_THROUGH_YEAR usan FLAT_FACTOR
+# (sin descuento => cap = NewCapacity_BAU exacto). Es la ventana (2027-2030) donde
+# TX diverge de BAU mientras el resto del escenario sigue = BAU hasta 2030.
 FLAT_FACTOR_THROUGH_YEAR, FLAT_FACTOR = 2030, 1.0
 
 # Bloque con factor lineal en 2031-2050 (los factores extremos van por escenario).
@@ -122,7 +123,7 @@ BAU_SCENARIO = 'BAU'
 # Familias de transmision que inyectan en el nodo 02 (19 paises c/u = 114 techs).
 TRN_PREFIXES = ('PWRTRN', 'TRNNLI', 'TRNRPO', 'RNWTRN', 'RNWRPO', 'RNWNLI')
 
-# Se recorren todos los anos del horizonte; 2023-2025 se vacian, 2026-2050 se topan.
+# Se recorren todos los anos del horizonte; 2023-2026 se vacian, 2027-2050 se topan.
 YEARS = list(range(2023, 2051))
 # ---------------------------------------------------------------------------
 
@@ -130,7 +131,7 @@ YEARS = list(range(2023, 2051))
 def factor_for_year(year: int, cfg: dict, country: str | None = None) -> float:
     """Factor de tope para los anos topados (2026..2050), segun config `cfg`.
 
-    2026..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
+    2027..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
     2031..2050  -> lineal cfg['cap_start_factor'] -> cfg['cap_end_factor'],
                    SALVO paises exentos (cfg['exempt_countries']): esos usan
                    cfg['exempt_restore_factor'] (1.0) + head-room
@@ -219,7 +220,7 @@ def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> in
     print(f'\n========== ESCENARIO {scenario} ==========')
     print(f'Target:    {pth}')
     print(f'Regla:     2023-{EQUAL_THROUGH_YEAR} sin tope (=BAU); '
-          f'2026-{FLAT_FACTOR_THROUGH_YEAR} cap = NewCapacity_BAU x {FLAT_FACTOR:.2f}; '
+          f'{EQUAL_THROUGH_YEAR + 1}-{FLAT_FACTOR_THROUGH_YEAR} cap = NewCapacity_BAU x {FLAT_FACTOR:.2f}; '
           f'{CAP_START_YEAR}-{CAP_END_YEAR} cap = NewCapacity_BAU x factor '
           f"({cfg['cap_start_factor']:.2f} -> {cfg['cap_end_factor']:.2f})")
     if cfg['exempt_countries']:
@@ -258,7 +259,7 @@ def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> in
     if not_in_xlsx:
         print(f'  [WARN] techs con NewCapacity en BAU pero sin fila {PARAM} en xlsx: {not_in_xlsx}')
 
-    # Escritura: 2023-2025 -> vacio (=BAU); 2026-2050 -> cap = bau * factor(y)
+    # Escritura: 2023-2026 -> vacio (=BAU); 2027-2050 -> cap = bau * factor(y)
     print(f'\n=== WRITES ({PARAM}) ===')
     cells_cleared = 0
     cells_capped = 0
@@ -293,7 +294,7 @@ def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> in
             print(f'  {tech}: sin cuota en 2026-2050 -> todos 0')
 
     print(f'\nTechs tocadas: {techs_touched} | celdas vaciadas (2023-{EQUAL_THROUGH_YEAR}): '
-          f'{cells_cleared} | celdas con tope (2026-{CAP_END_YEAR}): {cells_capped}')
+          f'{cells_cleared} | celdas con tope ({EQUAL_THROUGH_YEAR + 1}-{CAP_END_YEAR}): {cells_capped}')
     print(f'Sanity (bloque con tope): suma cap = {sum_cap:.4f} GW  vs  '
           f'suma NewCapacity BAU = {sum_bau:.4f} GW '
           f'(ratio {sum_cap / sum_bau if sum_bau else 0:.4f})')
