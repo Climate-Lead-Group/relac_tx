@@ -53,8 +53,8 @@ TOOL_XLSX = HERE / 'LAC_maxcap_tool.xlsx'
 TOOL_COMPLEMENTARY_XLSX = HERE / 'LAC_maxcap_tool_complementary.xlsx'
 A1_OUTPUTS = HERE / 'A1_Outputs'
 
-# Escenarios a los que se PUEDE aplicar este script (de momento solo BAU).
-SCENARIOS = ['BAU']
+# Escenarios a los que se PUEDE aplicar este script.
+SCENARIOS = ['BAU', 'INV', 'OPT', 'VGB']
 
 INPUT_SHEET = 'Export'              # fuente A (tabla LOGISTIC, apilada con titulo)
 COMPLEMENTARY_SHEET = 'Updated'     # fuente B (tabla plana, header en su 1a fila)
