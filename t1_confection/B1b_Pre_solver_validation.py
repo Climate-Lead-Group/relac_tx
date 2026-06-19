@@ -45,6 +45,30 @@ from _xlsx_validation_core import (  # noqa: E402
     validate_activity_upper_limit_coverage,
 )
 
+def _ensure_unicode_console():
+    """Allow non-cp1252 glyphs (Σ, ×, ·) in console output on Windows.
+
+    Many validation messages embed math symbols. On a legacy cp1252
+    console, printing them raises UnicodeEncodeError and aborts the run,
+    so switch the standard streams to UTF-8 (falling back to lossy
+    backslash-replacement if a stream can't be reconfigured to UTF-8).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (ValueError, LookupError, OSError):
+            try:
+                reconfigure(errors="backslashreplace")
+            except (ValueError, OSError):
+                pass
+
+
+_ensure_unicode_console()
+
+
 TARGET_SHEETS = ("Secondary Techs", "Demand Techs")
 
 
