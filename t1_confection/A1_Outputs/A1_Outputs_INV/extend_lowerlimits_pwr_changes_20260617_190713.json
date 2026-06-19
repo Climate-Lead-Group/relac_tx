@@ -1,0 +1,29 @@
+{
+  "input_dir": "C:\\Users\\ClimateLeadGroup\\Desktop\\CLG_repositories\\relac_tx\\t1_confection\\A1_Outputs\\A1_Outputs_INV",
+  "paramfile": "C:\\Users\\ClimateLeadGroup\\Desktop\\CLG_repositories\\relac_tx\\t1_confection\\A1_Outputs\\A1_Outputs_INV\\A-O_Parametrization.xlsx",
+  "sheet": "Secondary Techs",
+  "parameter": "TotalTechnologyAnnualActivityLowerLimit",
+  "tech_prefix": "PWR",
+  "base_year": 2024,
+  "end_year": 2050,
+  "modify_from_year": 2026,
+  "start_year": 2026,
+  "force_overwrite": false,
+  "include_types": [
+    "BIO",
+    "CSP",
+    "GEO",
+    "HYD",
+    "SPV",
+    "WAS",
+    "WAV",
+    "WOF",
+    "WON"
+  ],
+  "rows_matched": 380,
+  "rows_touched": 0,
+  "rows_skipped_no_base": 93,
+  "rows_skipped_type": 209,
+  "total_cell_writes": 0,
+  "changes": []
+}

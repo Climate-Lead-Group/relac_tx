@@ -175,10 +175,19 @@ flat_overrides_by_tech:
 #                 TECHNOLOGY[3:6]) is in the named group below.
 #   [T1, T2]   -> extend only the listed 3-char type codes (inline list).
 #
-# OPT uses `renewable` so the floor is imposed on renewable generation only;
-# non-renewable PWR techs in OPT keep the relaxed (sparse, base-year-only)
-# floor produced by reset_lowerlimits_from_base.py. BAU/INV impose the floor on
-# all 18 PWR types.
+# ALL scenarios use `renewable` so the floor is imposed on renewable generation
+# only; non-renewable PWR techs (incl. nuclear URN) get NO floor from 2027
+# onward. The historical/near-term floor through 2026 is preserved (it lives in
+# the 2023-2026 columns and is harmonized to BAU by historical_sync_through).
+#
+# History (2026-06-17): BAU/INV used to impose the floor on `all` PWR types; the
+# CTO decided the floor should apply to renewables only across every scenario.
+# The `all` mode is INTENTIONALLY KEPT (resolved to None by
+# load_lowerlimit_scenarios in A3_process.py) so it can be re-enabled later by
+# setting a scenario back to `all` — no code change required. The pre-existing
+# non-renewable floor that prior `all` runs baked into BAU/INV for 2027-2050 was
+# removed once from the xlsx by t1_confection/clear_lowerlimits_pwr.py (a one-off
+# data cleanup; extend_lowerlimits_pwr.py only adds, never removes).
 #
 # The scenario keys are the suffixes used under A1_Outputs/
 # (A1_Outputs_<scenario>), e.g. BAU, INV, OPT. A plain YAML list (old format)
@@ -189,10 +198,10 @@ lowerlimit_tech_groups:
   renewable: [BIO, GEO, CSP, SPV, HYD, WAS, WAV, WON, WOF]
 
 lowerlimit_scenarios:
-  BAU: all
-  INV: all
+  BAU: renewable  # floor on renewables only (was `all`; non-renewables no longer floored 2027+)
+  INV: renewable  # floor on renewables only (was `all`; non-renewables no longer floored 2027+)
   OPT: renewable
-  VGB: renewable  # VEGETATIVO_B: same partial scope as OPT (floor on renewables only)
+  VGB: renewable  # VEGETATIVO_B: same scope as the rest (floor on renewables only)
 
 # 9) Near-term harmonization with BAU (2026-06-04):
 # As its FINAL step, A3_process.py forces the early-year columns of each listed
@@ -247,9 +256,11 @@ historical_sync_through:
 #
 # VGB syncs to BAU through 2030 (like INV) but keeps its own FROM 2027 ONWARD
 # (equals BAU in 2026; the divergence starts 2027):
-#   - TotalTechnologyAnnualActivityLowerLimit : renewable-only floor; non-
-#     renewables cleared 2027+ (matches OPT). Without protection the sync would
-#     re-impose BAU's flat floor on the non-renewables for 2027-2030.
+#   - TotalTechnologyAnnualActivityLowerLimit : renewable-only floor. Keeps VGB's
+#     own renewable floor from 2027 instead of snapping it to BAU's. (Since BAU is
+#     now also renewable-only, the old rationale of "stop BAU re-imposing a flat
+#     non-renewable floor here" no longer applies — non-renewables have no floor
+#     2027+ in any scenario — but protecting the renewable floor is still correct.)
 #   - TotalAnnualMinCapacityInvestment        : the PEGs, set equal to OPT.
 #     Without protection the sync would snap them back to BAU for 2027-2030.
 #   - TotalAnnualMaxCapacityInvestment        : upper bound; must stay >= the PEGs
