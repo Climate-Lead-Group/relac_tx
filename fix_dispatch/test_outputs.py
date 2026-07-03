@@ -34,7 +34,8 @@ should PASS.
 
 --gate  run the FLOOR-FIX GATE instead of the four diagnostic checks above:
   a pass/fail acceptance gate (6 checks, forced-capacity basis, scoped to
-  scenarios actually present in the outputs) plus a Tier-2 informational
+  scenarios actually present in the outputs and to candidate rows with
+  floor_applied == "yes") plus a Tier-2 informational
   residual diagnostic that does not affect the gate verdict. Exit code 0 if
   the gate passes, 1 otherwise.
 
@@ -134,7 +135,7 @@ def check_cf_targets(cand: pd.DataFrame, out: dict, basis: str = "forced") -> pd
         cap = float(r.forced_GW) if basis == "forced" else out["cap"].get((scen, tech, year))
         act = activity_or_zero(out, scen, tech, year)
         realized_cf = (act / (cap * C2A)) if (cap and act is not None) else None
-        target = float(r.contracted_CF)
+        target = float(r.CF)
         threshold = target * CF_TOLERANCE
         if realized_cf is None:
             status = "MISSING"
@@ -257,7 +258,12 @@ def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
     if not_solved:
         print(f"NOT SOLVED (excluded from the gate, not a fail): {not_solved}")
 
-    cand = cand_all[cand_all.Scenario.isin(present) & (cand_all.forced_GW > 0)].copy()
+    cand = cand_all[cand_all.Scenario.isin(present) & (cand_all.forced_GW > 0)
+                    & (cand_all.floor_applied == "yes")].copy()
+    n_skipped = int((cand_all.Scenario.isin(present) & (cand_all.forced_GW > 0)
+                     & (cand_all.floor_applied != "yes")).sum())
+    if n_skipped:
+        print(f"Scoped to floor_applied=yes rows: {len(cand)} checked, {n_skipped} skipped (floor never written)")
     results = {}
 
     print()
