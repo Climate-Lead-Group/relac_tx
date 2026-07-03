@@ -1,24 +1,24 @@
 tier,country,n_techs,n_rows,total_forced_GW,total_floor_PJ_2050,year_min,year_max,cf_stated_pct,cf_derived_pct,cf_proxy_pct,filtered_available,scenario_source
-FILTERED,BRA,5,124,9.1,111.67,2025,2050,0.0,80.0,20.0,True,2 scenario sources
+FILTERED,BRA,5,124,9.1,41.57,2025,2050,0.0,80.0,20.0,True,2 scenario sources
 FILTERED,CHL,1,26,4.16,0.0,2025,2050,0.0,0.0,0.0,True,strict-committed research (Step 5a)
-FILTERED,COL,3,74,12.886,85.86,2025,2050,0.0,100.0,0.0,True,"Escenario de referencia (reference/base scenario, Demanda Media case)"
+FILTERED,COL,3,74,12.886,0.0,2025,2050,0.0,100.0,0.0,True,"Escenario de referencia (reference/base scenario, Demanda Media case)"
 FILTERED,DOM,1,25,1.6,42.89,2026,2050,0.0,0.0,100.0,True,strict-committed research (Step 5a)
-FILTERED,HND,2,50,0.119,0.35,2026,2050,50.0,0.0,0.0,True,"Escenario de Expansion V (seleccionado como el PIEG 2026-2035 mediante criterio de minimo arrepentimiento / minimax regret sobre costos de inversion y operacion; ver Tabla 1, Tabla 3 y Tabla 4, paginas 11-12)"
-FILTERED,MEX,9,227,74.957,801.27,2025,2050,0.0,0.0,88.9,True,"PVIRCE 2025-2039 (national, summed across 8 GCR regions, Adicion rows only)"
-FULL,ARG,6,168,54.699,794.57,2023,2050,0.0,0.0,83.3,False,2 scenario sources
-FULL,BOL,4,87,2.372,25.94,2026,2050,0.0,0.0,100.0,False,"Plan de Expansion de Generacion (PER 2035, caso base OPTGEN/SDDP)"
-FULL,BRA,7,167,84.638,813.03,2025,2050,0.0,71.4,14.3,True,2 scenario sources
-FULL,CHL,7,189,104.982,839.96,2023,2050,0.0,0.0,71.4,True,2 scenario sources
-FULL,COL,3,74,12.886,85.86,2025,2050,0.0,100.0,0.0,True,"Escenario de referencia (reference/base scenario, Demanda Media case)"
-FULL,CRI,7,174,4.117,40.06,2024,2050,0.0,85.7,0.0,False,Plan Recomendado (escenario de demanda media / Plan Base)
-FULL,DOM,3,81,6.512,116.14,2023,2050,66.7,0.0,33.3,True,3 scenario sources
-FULL,ECU,4,110,3.568,51.86,2023,2050,50.0,0.0,50.0,False,2 scenario sources
-FULL,GTM,4,98,1.057,16.46,2024,2050,0.0,0.0,100.0,False,EEB6-MMB
-FULL,HND,7,159,3.981,51.29,2026,2050,85.7,0.0,0.0,True,"Escenario de Expansion V (seleccionado como el PIEG 2026-2035 mediante criterio de minimo arrepentimiento / minimax regret sobre costos de inversion y operacion; ver Tabla 1, Tabla 3 y Tabla 4, paginas 11-12)"
-FULL,MEX,9,227,80.927,856.72,2025,2050,0.0,0.0,88.9,True,2 scenario sources
-FULL,NIC,4,92,0.662,7.39,2023,2050,0.0,100.0,0.0,False,"Plan Indicativo (escenario optimo seleccionado, OPTGEN/SDDP)"
-FULL,PAN,4,95,3.021,33.77,2025,2050,0.0,0.0,100.0,False,Escenario Referencia A1
-FULL,PER,2,50,22.02,205.87,2026,2050,0.0,0.0,100.0,False,epo_approved_all
-FULL,PRY,3,74,14.069,63.47,2025,2050,0.0,0.0,66.7,False,Alternativa A
-FULL,SLV,5,119,1.834,22.59,2024,2050,0.0,0.0,100.0,False,3 scenario sources
-FULL,URY,3,63,4.081,58.92,2025,2050,100.0,0.0,0.0,False,"Caso B (Incondicional +50MW, BASE)"
+FILTERED,HND,2,50,0.119,0.0,2026,2050,50.0,0.0,0.0,True,"Escenario de Expansion V (seleccionado como el PIEG 2026-2035 mediante criterio de minimo arrepentimiento / minimax regret sobre costos de inversion y operacion; ver Tabla 1, Tabla 3 y Tabla 4, paginas 11-12)"
+FILTERED,MEX,9,227,74.957,332.78,2025,2050,0.0,0.0,88.9,True,"PVIRCE 2025-2039 (national, summed across 8 GCR regions, Adicion rows only)"
+FULL,ARG,6,168,54.699,236.55,2023,2050,0.0,0.0,83.3,False,2 scenario sources
+FULL,BOL,4,87,2.372,2.57,2026,2050,0.0,0.0,100.0,False,"Plan de Expansion de Generacion (PER 2035, caso base OPTGEN/SDDP)"
+FULL,BRA,7,167,84.638,167.94,2025,2050,0.0,71.4,14.3,True,2 scenario sources
+FULL,CHL,7,189,104.982,24.33,2023,2050,0.0,0.0,71.4,True,2 scenario sources
+FULL,COL,3,74,12.886,0.0,2025,2050,0.0,100.0,0.0,True,"Escenario de referencia (reference/base scenario, Demanda Media case)"
+FULL,CRI,7,174,4.117,8.84,2024,2050,0.0,85.7,0.0,False,Plan Recomendado (escenario de demanda media / Plan Base)
+FULL,DOM,3,81,6.512,85.78,2023,2050,66.7,0.0,33.3,True,3 scenario sources
+FULL,ECU,4,110,3.568,3.51,2023,2050,50.0,0.0,50.0,False,2 scenario sources
+FULL,GTM,4,98,1.057,3.44,2024,2050,0.0,0.0,100.0,False,EEB6-MMB
+FULL,HND,7,159,3.981,33.09,2026,2050,85.7,0.0,0.0,True,"Escenario de Expansion V (seleccionado como el PIEG 2026-2035 mediante criterio de minimo arrepentimiento / minimax regret sobre costos de inversion y operacion; ver Tabla 1, Tabla 3 y Tabla 4, paginas 11-12)"
+FULL,MEX,9,227,80.927,332.78,2025,2050,0.0,0.0,88.9,True,2 scenario sources
+FULL,NIC,4,92,0.662,0.41,2023,2050,0.0,100.0,0.0,False,"Plan Indicativo (escenario optimo seleccionado, OPTGEN/SDDP)"
+FULL,PAN,4,95,3.021,15.61,2025,2050,0.0,0.0,100.0,False,Escenario Referencia A1
+FULL,PER,2,50,22.02,0.0,2026,2050,0.0,0.0,100.0,False,epo_approved_all
+FULL,PRY,3,74,14.069,0.0,2025,2050,0.0,0.0,66.7,False,Alternativa A
+FULL,SLV,5,119,1.834,16.18,2024,2050,0.0,0.0,100.0,False,3 scenario sources
+FULL,URY,3,63,4.081,17.63,2025,2050,100.0,0.0,0.0,False,"Caso B (Incondicional +50MW, BASE)"
