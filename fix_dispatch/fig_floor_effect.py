@@ -153,7 +153,9 @@ def panel_c_data(baseline_act: pd.DataFrame, floored_act: pd.DataFrame, cand: pd
         forced_gw = float(crow["forced_GW"])
         if forced_gw <= 0:
             continue
-        contracted_cf = float(crow["CF"])
+        # make_candidates.py (full-fleet version) names the column contracted_CF;
+        # older candidate_floors.csv snapshots used plain CF.
+        contracted_cf = float(crow["contracted_CF"] if "contracted_CF" in crow.index else crow["CF"])
         country, fuel = crow["country"], crow["fuel"]
 
         act_before = base_lookup.get((tech, snapshot_year), 0.0)
