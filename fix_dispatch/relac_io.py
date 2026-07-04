@@ -48,10 +48,22 @@ NUCLEAR_CODES = {"URN"}
 RENEWABLE_CODES = {"SPV", "WON", "WOF", "HYD", "BIO", "GEO", "CSP", "WAV"}
 STORAGE_CODES = {"LDS", "SDS"}
 
+# Fuels that receive a dispatch floor: fossil combustion techs only. Nuclear
+# (URN) is deliberately excluded -- it is dispatched freely on economics
+# (PI decision, 2026-07-03). GAS/COG are listed for completeness; the current
+# model has zero techs on those two fuel codes.
+FLOOR_FUELS = {"COA", "NGS", "OIL", "PET", "GAS", "COG"}
+
 COUNTRIES = ["ARG", "BOL", "BRA", "BRB", "CHL", "COL", "CRI", "DOM", "ECU",
              "GTM", "HND", "HTI", "MEX", "NIC", "PAN", "PER", "PRY", "SLV", "URY"]
 
-# The forced-fossil-unfloored working set (from the session brief).
+# DEPRECATED (2026-07-03): superseded by nonren_floor_techs(scenario), which
+# floors the full fossil fleet instead of this 11-tech hand-picked subset.
+# WORKING_SET undercounted the fleet: techs with a legacy 2023-2026 floor
+# (e.g. BRA/MEX/ARG gas) were excluded from this list precisely because they
+# already had a floor -- but that floor stops at 2026, so the entire residual
+# fleet behind those legacy floors went unfloored from 2027 on. Kept here only
+# so any script that still imports it does not break; do not add new uses.
 WORKING_SET = [
     "PWRNGSMEXXX", "PWRPETECUXX", "PWRNGSPERXX", "PWRNGSPANXX", "PWRNGSSLVXX",
     "PWROILCRIXX", "PWRNGSGTMXX", "PWRNGSDOMXX", "PWROILHNDXX", "PWROILSLVXX",
@@ -191,6 +203,33 @@ def load_otoole(scenario: str, param: str) -> pd.DataFrame:
     if "YEAR" in df.columns:
         df["YEAR"] = pd.to_numeric(df["YEAR"], errors="coerce").astype("Int64")
     return df
+
+
+# --------------------------------------------------------------------------- #
+# Fossil-fleet enumeration -- floor universe
+# --------------------------------------------------------------------------- #
+def nonren_floor_techs(scenario: str) -> list[str]:
+    """All fossil techs (fuel in FLOOR_FUELS) that carry any residual
+    capacity, any forced build (TotalAnnualMinCapacityInvestment), or any
+    existing dispatch floor (TotalTechnologyAnnualActivityLowerLimit) in this
+    scenario. This is the full flooring universe, replacing WORKING_SET."""
+    techs: set[str] = set()
+
+    resid = load_otoole(scenario, "ResidualCapacity")
+    if len(resid):
+        for t, v in zip(resid["TECHNOLOGY"], resid["VALUE"]):
+            if float(v) > 0 and parse_tech(t)["fuel"] in FLOOR_FUELS:
+                techs.add(t)
+
+    mp = parse_mathprog(scenario, ["TotalAnnualMinCapacityInvestment",
+                                    "TotalTechnologyAnnualActivityLowerLimit"])
+    for df in mp.values():
+        if len(df):
+            for t, v in zip(df["TECHNOLOGY"], df["VALUE"]):
+                if float(v) > 0 and parse_tech(t)["fuel"] in FLOOR_FUELS:
+                    techs.add(t)
+
+    return sorted(techs)
 
 
 # --------------------------------------------------------------------------- #

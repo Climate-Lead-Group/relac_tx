@@ -13,19 +13,20 @@ floors in candidate_floors.csv. Four checks, run in this order:
                          count of active (CF>5%) dispatchable techs -- BAU vs OPT
   4. IDLE CAPACITY       CF<5% after 2026, basis controlled by --cf-basis.
 
---cf-basis {forced,total}  (default forced)
-  forced: CF = activity / (forced_GW * C2A), where forced_GW is the cumulative
-          MinCapacityInvestment build (from candidate_floors.csv). This is the
-          basis that actually reflects whether the FLOOR achieved its target --
-          it only ever applies where a floor exists. Checks 2 and 4 are scoped
-          to candidate_floors.csv rows under this basis.
+--cf-basis {fleet,total}  (default fleet)
+  fleet:  CF = activity / (fleet_GW * C2A), where fleet_GW is the
+          residual+forced capacity candidate_floors.csv actually floored
+          (Feasibility.total_available_capacity). This is the basis that
+          reflects whether the FLOOR achieved its target -- it only ever
+          applies where a floor exists. Checks 2 and 4 are scoped to
+          candidate_floors.csv rows under this basis.
   total:  CF = activity / (TotalCapacityAnnual * C2A), i.e. the plant's whole
-          fleet including any residual/legacy capacity the floor does not
-          control. A plant can read as idle here even when its forced sliver
-          is running exactly at the contracted CF, if a large unfloored
-          residual fleet sits behind it. Check 4 under this basis is a
-          NODE-LEVEL idle check (includes residual fleet), not a floor-
-          performance check -- do not read it as "the floor failed."
+          reported fleet in the model output. Usually close to fleet_GW now
+          that floors cover the residual+forced fleet directly; can still
+          differ where the model's own capacity accounting diverges from the
+          otoole ResidualCapacity feasibility reads from. Check 4 under this
+          basis is a NODE-LEVEL idle check, not a floor-performance check --
+          do not read it as "the floor failed."
 
 Pointed at the BASELINE (pre-fix) combined CSV, check 1 is EXPECTED TO FAIL for
 post-2026 rows -- that confirms the bug (forced-no-floor) this whole pipeline
@@ -33,9 +34,8 @@ exists to fix. Pointed at a new solve of the FLOORED.txt copies, those rows
 should PASS.
 
 --gate  run the FLOOR-FIX GATE instead of the four diagnostic checks above:
-  a pass/fail acceptance gate (6 checks, forced-capacity basis, scoped to
-  scenarios actually present in the outputs and to candidate rows with
-  floor_applied == "yes") plus a Tier-2 informational
+  a pass/fail acceptance gate (6 checks, fleet-capacity basis, scoped to
+  scenarios actually present in the outputs) plus a Tier-2 informational
   residual diagnostic that does not affect the gate verdict. Exit code 0 if
   the gate passes, 1 otherwise.
 
@@ -126,16 +126,18 @@ def check_floor_compliance(cand: pd.DataFrame, out: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def check_cf_targets(cand: pd.DataFrame, out: dict, basis: str = "forced") -> pd.DataFrame:
-    """basis='forced': CF = activity / (forced_GW * C2A) -- floor-performance basis.
-    basis='total':  CF = activity / (TotalCapacityAnnual * C2A) -- includes residual fleet."""
+def check_cf_targets(cand: pd.DataFrame, out: dict, basis: str = "fleet") -> pd.DataFrame:
+    """basis='fleet': CF = activity / (fleet_GW * C2A) -- the floor's own
+    capacity basis (residual+forced), i.e. floor-performance basis.
+    basis='total':  CF = activity / (TotalCapacityAnnual * C2A) -- the model's
+    own reported fleet capacity."""
     rows = []
     for r in cand.itertuples(index=False):
         scen, tech, year = r.Scenario, r.TECHNOLOGY, int(r.YEAR)
-        cap = float(r.forced_GW) if basis == "forced" else out["cap"].get((scen, tech, year))
+        cap = float(r.fleet_GW) if basis == "fleet" else out["cap"].get((scen, tech, year))
         act = activity_or_zero(out, scen, tech, year)
         realized_cf = (act / (cap * C2A)) if (cap and act is not None) else None
-        target = float(r.CF)
+        target = float(r.contracted_CF)
         threshold = target * CF_TOLERANCE
         if realized_cf is None:
             status = "MISSING"
@@ -149,20 +151,21 @@ def check_cf_targets(cand: pd.DataFrame, out: dict, basis: str = "forced") -> pd
     return pd.DataFrame(rows)
 
 
-def check_idle_capacity(cand: pd.DataFrame, out: dict, basis: str = "forced") -> pd.DataFrame:
-    """basis='forced': scoped to candidate_floors.csv rows (years a floor exists),
-    cap = forced_GW. This is the floor-performance idle check.
+def check_idle_capacity(cand: pd.DataFrame, out: dict, basis: str = "fleet") -> pd.DataFrame:
+    """basis='fleet': scoped to candidate_floors.csv rows (years a floor exists),
+    cap = fleet_GW (residual+forced, the floor's own capacity basis). This is
+    the floor-performance idle check.
     basis='total': scans EVERY year the tech has output capacity (floored or not),
     cap = TotalCapacityAnnual. This is a node-level idle check that includes
-    whatever residual/legacy fleet the floor does not control -- it is not a
+    whatever fleet the floor does not control -- it is not a
     floor-performance measure and can flag years before any floor applies."""
     rows = []
-    if basis == "forced":
+    if basis == "fleet":
         for r in cand.itertuples(index=False):
             scen, tech, year = r.Scenario, r.TECHNOLOGY, int(r.YEAR)
             if year <= AFTER:
                 continue
-            cap = float(r.forced_GW)
+            cap = float(r.fleet_GW)
             act = activity_or_zero(out, scen, tech, year)
             cf = (act / (cap * C2A)) if (cap and act is not None) else None
             if cf is not None and cf < IDLE_CF:
@@ -230,14 +233,15 @@ def check_no_backstop(out: dict, present: list[str]) -> dict:
 
 def residual_idle_gw_years(out: dict, cand_all: pd.DataFrame, present: list[str]) -> float:
     """Sum of residual (non-forced) capacity, in GW-years, that sits at an
-    implied CF < 5% across working-set node-years after AFTER. Mirrors the
+    implied CF < 5% across floor-universe node-years after AFTER. Mirrors the
     Step-3 residual quantification from the artifact-verification session:
     the floor (if any) is assumed served first, residual takes the rest."""
     floor_lookup = {(r.Scenario, r.TECHNOLOGY, int(r.YEAR)): float(r.floor_PJ)
                     for r in cand_all.itertuples(index=False)}
+    floor_techs = {s: set(io.nonren_floor_techs(s)) for s in present}
     total = 0.0
     for (s, t, y), total_gw in out["cap"].items():
-        if s not in present or t not in io.WORKING_SET or y <= AFTER:
+        if s not in present or t not in floor_techs.get(s, set()) or y <= AFTER:
             continue
         residual_gw = out["resid"].get((s, t, y), 0.0)
         if residual_gw <= 0:
@@ -258,12 +262,7 @@ def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
     if not_solved:
         print(f"NOT SOLVED (excluded from the gate, not a fail): {not_solved}")
 
-    cand = cand_all[cand_all.Scenario.isin(present) & (cand_all.forced_GW > 0)
-                    & (cand_all.floor_applied == "yes")].copy()
-    n_skipped = int((cand_all.Scenario.isin(present) & (cand_all.forced_GW > 0)
-                     & (cand_all.floor_applied != "yes")).sum())
-    if n_skipped:
-        print(f"Scoped to floor_applied=yes rows: {len(cand)} checked, {n_skipped} skipped (floor never written)")
+    cand = cand_all[cand_all.Scenario.isin(present) & (cand_all.fleet_GW > 0)].copy()
     results = {}
 
     print()
@@ -286,11 +285,11 @@ def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
     print(f"2. Floors respected (activity >= floor_PJ): {'PASS' if results['2'] else 'FAIL'}"
           f"  ({n_fail2} FAIL/MISSING of {len(fc)})")
 
-    # 3. CF target, forced-capacity basis.
-    cf = check_cf_targets(cand, out, basis="forced")
+    # 3. CF target, fleet-capacity basis.
+    cf = check_cf_targets(cand, out, basis="fleet")
     n_below3 = int((cf.status == "BELOW_TARGET").sum())
     results["3"] = n_below3 == 0
-    print(f"3. CF target (forced basis >= 0.9x contracted_CF): {'PASS' if results['3'] else 'FAIL'}"
+    print(f"3. CF target (fleet basis >= 0.9x contracted_CF): {'PASS' if results['3'] else 'FAIL'}"
           f"  ({n_below3} BELOW_TARGET of {len(cf)})")
 
     # 4. No backstop dispatch.
@@ -318,10 +317,10 @@ def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
         results["5"] = False
         print("5. Scenario separation: FAIL (need both BAU and OPT solved to compare)")
 
-    # 6. No floored plant idle, forced-capacity basis.
-    idle = check_idle_capacity(cand, out, basis="forced")
+    # 6. No floored plant idle, fleet-capacity basis.
+    idle = check_idle_capacity(cand, out, basis="fleet")
     results["6"] = len(idle) == 0
-    print(f"6. No floored plant idle (forced CF >= {IDLE_CF:.0%}): {'PASS' if results['6'] else 'FAIL'}"
+    print(f"6. No floored plant idle (fleet CF >= {IDLE_CF:.0%}): {'PASS' if results['6'] else 'FAIL'}"
           f"  ({len(idle)} idle rows)")
 
     n_pass = sum(results.values())
@@ -342,9 +341,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", type=str, default=None,
                     help="Combined inputs+outputs CSV (default: baseline found in repo root)")
-    ap.add_argument("--cf-basis", choices=["forced", "total"], default="forced",
-                    help="CF denominator for checks 2 and 4: 'forced' (floor performance, "
-                         "default) or 'total' (node-level, includes residual fleet)")
+    ap.add_argument("--cf-basis", choices=["fleet", "total"], default="fleet",
+                    help="CF denominator for checks 2 and 4: 'fleet' (floor performance, "
+                         "default) or 'total' (node-level, model's own reported capacity)")
     ap.add_argument("--gate", action="store_true",
                     help="Run the FLOOR-FIX GATE (6 pass/fail checks) instead of the four "
                          "diagnostic checks. Exit code 0 on PASS, 1 on FAIL.")
@@ -414,19 +413,19 @@ def main():
             print(f"    {col}: BAU={_fmt(bv)}  OPT={_fmt(ov)}  delta={_fmt(ov-bv)} ({pct:+.1f}%)")
 
     print("\n" + "=" * 78)
-    if args.cf_basis == "forced":
-        print(f"CHECK 4: IDLE CAPACITY (forced basis -- floor performance), "
+    if args.cf_basis == "fleet":
+        print(f"CHECK 4: IDLE CAPACITY (fleet basis -- floor performance), "
               f"CF < {IDLE_CF:.0%} after {AFTER}")
     else:
-        print(f"CHECK 4: NODE-LEVEL IDLE (total basis -- includes residual fleet), "
+        print(f"CHECK 4: NODE-LEVEL IDLE (total basis -- model's own reported capacity), "
               f"CF < {IDLE_CF:.0%} after {AFTER}")
     print("=" * 78)
     idle = check_idle_capacity(cand, out, basis=args.cf_basis)
     idle.to_csv(HERE / "test_idle_capacity.csv", index=False)
     if len(idle) == 0:
-        print("  OK: no working-set plant is idle (CF < 5%) after 2026 in this run.")
+        print("  OK: no floored plant is idle (CF < 5%) after 2026 in this run.")
     else:
-        print(f"  {len(idle)} idle (tech, year) rows remain among working-set plants (post-2026):")
+        print(f"  {len(idle)} idle (tech, year) rows remain among floored plants (post-2026):")
         by_tech = idle.groupby(["scenario", "tech"]).size()
         print(by_tech.to_string())
 

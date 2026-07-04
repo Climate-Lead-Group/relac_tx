@@ -144,7 +144,7 @@ def process_scenario(scenario: str, cand: pd.DataFrame, dry_run: bool) -> dict:
 
         rec = dict(tech=tech, year=year, country=io.tech_country(tech), fuel=io.tech_fuel(tech),
                    existing_floor_PJ=existing_val, candidate_floor_PJ=cand_floor, final_floor_PJ=final,
-                   forced_GW=getattr(row, "forced_GW", None), contracted_CF=getattr(row, "CF", None),
+                   forced_GW=getattr(row, "forced_GW", None), contracted_CF=getattr(row, "contracted_CF", None),
                    feasible=verdict.feasible, binding=verdict.binding, ceiling_PJ=verdict.ceiling_PJ,
                    headroom_frac=verdict.headroom_frac)
 

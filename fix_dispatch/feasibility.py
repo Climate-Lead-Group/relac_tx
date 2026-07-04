@@ -147,6 +147,12 @@ class Feasibility:
             total += float(v)
         return total
 
+    def total_available_capacity(self, tech: str, year: int, apply_life: bool = True) -> float:
+        """Residual + cumulative forced capacity, in GW: the whole fleet a
+        fleet-basis dispatch floor multiplies against, as opposed to the
+        forced-only tranche."""
+        return self.residual(tech, year) + self.cumulative_forced_capacity(tech, year, apply_life)
+
     # -- the check -----------------------------------------------------------
     def feasible_floor(self, tech: str, year: int, floor_PJ: float) -> FloorVerdict:
         c2a = self.c2a_of(tech)
