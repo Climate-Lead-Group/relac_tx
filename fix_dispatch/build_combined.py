@@ -1,6 +1,9 @@
 """
 build_combined.py  --  Paso 2 de INSTRUCCIONES_SOLVE.md: armar el CSV combinado
-(inputs+outputs) para las corridas FLOORED de BAU y OPT.
+(inputs+outputs) para las corridas FLOORED. Los escenarios NO estan fijos:
+se procesan todos los de relac_io.SCENARIOS que tengan outputs otoole del
+Paso 1 en solved_FLOORED/<ESC>/Outputs/ (hoy BAU y OPT; INV/VGB entran solos
+cuando se resuelvan).
 
 Produce fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
 con el MISMO formato (89 columnas) que el CSV base de t1_confection, reutilizando
@@ -44,7 +47,6 @@ SOLVED = HERE / "solved_FLOORED"
 STAGING = SOLVED / "staging"
 CONCAT_SCRIPT = REPO / "concatenate_files" / "concatenate_relac.py"
 LOWER = "TotalTechnologyAnnualActivityLowerLimit"
-SCENARIOS = ["BAU", "OPT"]
 
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(T1))
@@ -52,6 +54,19 @@ sys.path.insert(0, str(T1))
 import relac_io as io                            # noqa: E402
 from write_floors import find_lower_limit_block  # noqa: E402
 import B2_Executing_OG_Model as b2               # noqa: E402
+
+
+def discover_scenarios() -> list[str]:
+    """Escenarios con el Paso 1 resuelto: solved_FLOORED/<ESC>/Outputs con CSVs.
+
+    Se recorre relac_io.SCENARIOS (y no los subdirectorios de solved_FLOORED)
+    para conservar el orden canonico y no confundir carpetas auxiliares como
+    staging/ con un escenario."""
+    scens = [s for s in io.SCENARIOS if any((SOLVED / s / "Outputs").glob("*.csv"))]
+    if not scens:
+        raise SystemExit(f"ningun escenario tiene Outputs/*.csv bajo {SOLVED}; "
+                         "corre el Paso 1 primero")
+    return scens
 
 
 def parse_floored_lower_limit(scenario: str) -> pd.DataFrame:
@@ -160,11 +175,13 @@ def annualize(path_comb: Path) -> None:
 
 
 def main() -> None:
+    scenarios = discover_scenarios()
+    print(f"escenarios detectados (con Paso 1 resuelto): {scenarios}")
     print("== Paso 2a: consolidar outputs otoole por escenario ==")
-    for scen in SCENARIOS:
+    for scen in scenarios:
         stage_outputs(scen)
     print("== Paso 2b: inputs por escenario con pisos FLOORED ==")
-    for scen in SCENARIOS:
+    for scen in scenarios:
         stage_input(scen)
     print("== Paso 2c: combinar escenarios ==")
     path_comb = combine()
