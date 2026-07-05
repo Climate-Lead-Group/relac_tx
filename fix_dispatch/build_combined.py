@@ -12,13 +12,17 @@ la maquinaria existente del pipeline en vez de reimplementarla:
   2a. concatenate_files/concatenate_relac.py sobre solved_FLOORED/<ESC>/Outputs
       -> staging/<ESC>_0/Pre_processed_<ESC>_0_output.csv (candidato 2 de
       active_output_csv_candidates; el nombre <ESC>_0_Output.csv NUNCA matchea).
-  2b. <ESC>_0_Input.csv reconstruido desde A2_Outputs_Params_otoole/<ESC> con
-      generate_combined_input_file() de B2 (misma generacion 2026-06-25 que el
-      txt que consumio el solver; los Input.csv de Executables son del 06-16 y
-      tienen MaxCapInvest desfasado), y con la columna
-      TotalTechnologyAnnualActivityLowerLimit reemplazada por el bloque homonimo
-      del *_FLOORED.txt (write_floors.py solo toca el datafile txt, nunca los
-      CSVs otoole, asi que los pisos 2027+ solo existen en el txt).
+  2b. <ESC>_0_Input.csv reconstruido SOLO desde el datafile que consumio el
+      solver: Executables/<ESC>_0/Pre_processed_..._FLOORED.txt. Cada bloque
+      `param` del txt se parsea (indices por parametro segun
+      Miscellaneous/conversion_format.yaml, mas EXTRA_PARAM_INDICES para los
+      params que inyectan los patchers, p.ej. StorageBuildAllowed) y se
+      materializa como CSV otoole en staging/<ESC>_0/txt_params/;
+      generate_combined_input_file() de B2 los combina en el Input.csv.
+      A2_Outputs_Params_otoole ya NO participa: todo input (pisos 2027+
+      incluidos) sale del txt, sin injertos. Consecuencia: el txt preprocesado
+      omite las filas con valor default, asi que el Input.csv contiene
+      exactamente lo que el solver vio y nada mas.
   2c. B2_Executing_OG_Model.concatenate_all_scenarios() apuntada al staging via
       params['executables'], con prefix_final_files='RELAC_TX_FLOORED_' y
       HERE=solved_FLOORED para que el combinado caiga donde piden las
@@ -34,6 +38,8 @@ Uso (desde la raiz del repo):
 
 from __future__ import annotations
 
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -52,8 +58,17 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(T1))
 
 import relac_io as io                            # noqa: E402
-from write_floors import find_lower_limit_block  # noqa: E402
 import B2_Executing_OG_Model as b2               # noqa: E402
+
+# Params que los patchers inyectan al txt y no existen en conversion_format.yaml.
+EXTRA_PARAM_INDICES = {
+    "StorageBuildAllowed": ["REGION", "STORAGE", "YEAR"],  # patch StorageDelay
+}
+
+# Dos formas de declaracion en el txt preprocesado:
+#   param default 0 : NombreParam :=      (bloques otoole/preprocesados)
+#   param NombreParam :=                  (bloques inyectados por patchers)
+_PARAM_DECL = re.compile(r"^param\s+(?:default\s+\S+\s*:\s*)?(\w+)\s*:=\s*$")
 
 
 def discover_scenarios() -> list[str]:
@@ -69,21 +84,61 @@ def discover_scenarios() -> list[str]:
     return scens
 
 
-def parse_floored_lower_limit(scenario: str) -> pd.DataFrame:
-    """Rows of the LowerLimit block exactly as the FLOORED solver run consumed them."""
+def load_param_indices() -> dict[str, list[str]]:
+    """Parametro -> nombres de sus indices, del config otoole del pipeline."""
+    import yaml
+
+    with open(T1 / "Miscellaneous" / "conversion_format.yaml", "r") as fh:
+        conv = yaml.safe_load(fh)
+    idx = {name: spec["indices"] for name, spec in conv.items()
+           if isinstance(spec, dict) and spec.get("type") == "param"}
+    idx.update(EXTRA_PARAM_INDICES)
+    return idx
+
+
+def parse_txt_params(scenario: str) -> dict[str, pd.DataFrame]:
+    """TODOS los bloques `param` no vacios del *_FLOORED.txt, como DataFrames.
+
+    Cada bloque del txt preprocesado es formato lista: una fila por registro,
+    tokens = indices + valor. Un param desconocido o una fila con aridad
+    inesperada abortan (mejor que adivinar nombres de indices)."""
     path = io.floored_txt(scenario)
-    lines = path.read_bytes().decode("utf-8").split("\r\n")
-    decl_idx, term_idx, _default = find_lower_limit_block(lines)
-    rows = []
-    for i in range(decl_idx + 1, term_idx):
-        toks = lines[i].split()
-        if len(toks) != 4:
+    indices_map = load_param_indices()
+    lines = path.read_bytes().decode("utf-8").splitlines()
+    out: dict[str, pd.DataFrame] = {}
+    i, n = 0, len(lines)
+    while i < n:
+        m = _PARAM_DECL.match(lines[i])
+        if not m:
+            i += 1
             continue
-        region, tech, year, value = toks
-        rows.append((region, tech, int(float(year)), float(value)))
-    df = pd.DataFrame(rows, columns=["REGION", "TECHNOLOGY", "YEAR", "VALUE"])
-    print(f"  [{scenario}] {LOWER} en {path.name}: {len(df)} filas")
-    return df
+        name = m.group(1)
+        i += 1
+        rows = []
+        while i < n and lines[i].strip() != ";":
+            toks = lines[i].split()
+            if toks:
+                rows.append(toks)
+            i += 1
+        if not rows:
+            continue
+        if name not in indices_map:
+            raise SystemExit(
+                f"[{scenario}] param {name} del txt no esta en conversion_format.yaml "
+                "ni en EXTRA_PARAM_INDICES; agrega sus indices para reconstruirlo")
+        idx_names = indices_map[name]
+        want = len(idx_names) + 1
+        bad = next((r for r in rows if len(r) != want), None)
+        if bad is not None:
+            raise SystemExit(
+                f"[{scenario}] {name}: fila con {len(bad)} tokens, esperaba "
+                f"{want} ({'+'.join(idx_names)}+VALUE); ej: {' '.join(bad[:8])}")
+        df = pd.DataFrame(rows, columns=idx_names + ["VALUE"])
+        if "YEAR" in df.columns:
+            df["YEAR"] = df["YEAR"].astype(float).astype(int)
+        df["VALUE"] = df["VALUE"].astype(float)
+        out[name] = df
+    return out
 
 
 def stage_outputs(scenario: str) -> Path:
@@ -107,41 +162,39 @@ def stage_outputs(scenario: str) -> Path:
 
 
 def stage_input(scenario: str) -> Path:
-    """2b: per-scenario Input.csv with the LowerLimit rows the solver actually saw.
+    """2b: Input.csv reconstruido SOLO desde el *_FLOORED.txt del solver.
 
-    Rebuilt from A2_Outputs_Params_otoole/<ESC> (same 2026-06-25 generation as
-    the solver's txt) instead of copying Executables/<ESC>_0/<ESC>_0_Input.csv,
-    which is a stale 2026-06-16 build (pre "MaxCapInvest Javier y Luis").
+    Cada bloque `param` del txt se materializa como CSV otoole en
+    staging/<ESC>_0/txt_params/ y generate_combined_input_file() (B2) los
+    combina, igual que antes hacia con A2_Outputs_Params_otoole. El Input.csv
+    queda identico a lo que el solver consumio (pisos 2027+ incluidos), asi
+    que el injerto de LowerLimit ya no es necesario.
     """
     dst_dir = STAGING / f"{scenario}_0"
-    dst_dir.mkdir(parents=True, exist_ok=True)
+    params_dir = dst_dir / "txt_params"
+    if params_dir.exists():
+        shutil.rmtree(params_dir)  # no heredar CSVs de una corrida anterior
+    params_dir.mkdir(parents=True)
+
+    parsed = parse_txt_params(scenario)
+    if LOWER not in parsed:
+        raise SystemExit(f"[{scenario}] el txt floored no tiene bloque {LOWER}; "
+                         "corre write_floors.py primero")
+    for name, df in sorted(parsed.items()):
+        df.to_csv(params_dir / f"{name}.csv", index=False)
+    floors = parsed[LOWER]
+    print(f"  [{scenario}] {len(parsed)} params parseados de {io.floored_txt(scenario).name}; "
+          f"{LOWER}: {len(floors)} filas (YEAR {floors.YEAR.min()}-{floors.YEAR.max()})")
+
     src, _head = b2.generate_combined_input_file(
-        input_folder=str(T1 / "A2_Outputs_Params_otoole" / scenario),
+        input_folder=str(params_dir),
         output_folder=str(dst_dir),
         scenario_name=f"{scenario}_0",
     )
     if src is None:
         raise SystemExit(f"generate_combined_input_file no produjo Input.csv para {scenario}")
-    df = pd.read_csv(src, low_memory=False)
-    if LOWER not in df.columns:
-        raise SystemExit(f"{src} no tiene columna {LOWER}")
-    floors = parse_floored_lower_limit(scenario)
-    n_before = int(df[LOWER].notna().sum())
-    df = df[df[LOWER].isna()]
-    new_rows = pd.DataFrame(
-        {
-            "REGION": floors["REGION"],
-            "TECHNOLOGY": floors["TECHNOLOGY"],
-            "YEAR": floors["YEAR"],
-            LOWER: floors["VALUE"],
-        }
-    ).reindex(columns=df.columns)
-    df = pd.concat([df, new_rows], ignore_index=True)
-    dst = STAGING / f"{scenario}_0" / f"{scenario}_0_Input.csv"
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(dst, index=False)
-    print(f"  [{scenario}] {LOWER}: {n_before} filas pre-floor -> {len(floors)} filas FLOORED; "
-          f"escrito {dst.relative_to(REPO)}")
+    dst = Path(src)
+    print(f"  [{scenario}] escrito {dst.relative_to(REPO)}")
     return dst
 
 
