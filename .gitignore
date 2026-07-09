@@ -5,6 +5,7 @@ t1_confection/A2_Output_Params
 t1_confection/Executables/**
 !t1_confection/Executables/*/
 !t1_confection/Executables/*/Pre_processed_*_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt
+!t1_confection/Executables/*/Pre_processed_*_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt
 
 # Excel files
 t1_confection/_GDP_Ref.xlsx
