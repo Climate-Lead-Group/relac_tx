@@ -262,7 +262,7 @@ def write_scenario(name, src, apply_nli, shares, ren_2030):
                 continue
         out.append(ln)
 
-    dst = OUT_DIR / f"Pre_processed_{name}_0_FLOORED__VEGCON.txt"
+    dst = src.parent / f"Pre_processed_{name}_0_FLOORED__VEGCON.txt"
     shutil.copy2(src, dst)
     dst.write_text("".join(out), encoding="utf-8")
     n = {p: len(mod[p]) for p in mod}
@@ -335,7 +335,7 @@ def main():
     # PREFLIGHT: relee los .txt del vegetativo y verifica valor deseado + factibilidad
     print("\n=== PREFLIGHT (lee los .txt del VEGETATIVO, independiente del BAU) ===")
     for name in ("INV", "VGB"):
-        dst = OUT_DIR / f"Pre_processed_{name}_0_FLOORED__VEGCON.txt"
+        dst = SCENARIOS[name][0].parent / f"Pre_processed_{name}_0_FLOORED__VEGCON.txt"
         if not dst.exists():
             continue
         ser, pp, pf = preflight(name, dst)
