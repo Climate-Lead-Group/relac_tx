@@ -13,7 +13,8 @@ la maquinaria existente del pipeline en vez de reimplementarla:
       -> staging/<ESC>_0/Pre_processed_<ESC>_0_output.csv (candidato 2 de
       active_output_csv_candidates; el nombre <ESC>_0_Output.csv NUNCA matchea).
   2b. <ESC>_0_Input.csv reconstruido SOLO desde el datafile que consumio el
-      solver: Executables/<ESC>_0/Pre_processed_..._FLOORED.txt. Cada bloque
+      solver: Executables/<ESC>_0/Pre_processed_..._FLOORED_VEGCON.txt (o
+      .._FLOORED.txt si no hay variante VEGCON; ver relac_io.solver_txt). Cada bloque
       `param` del txt se parsea (indices por parametro segun
       Miscellaneous/conversion_format.yaml, mas EXTRA_PARAM_INDICES para los
       params que inyectan los patchers, p.ej. StorageBuildAllowed) y se
@@ -97,12 +98,12 @@ def load_param_indices() -> dict[str, list[str]]:
 
 
 def parse_txt_params(scenario: str) -> dict[str, pd.DataFrame]:
-    """TODOS los bloques `param` no vacios del *_FLOORED.txt, como DataFrames.
+    """TODOS los bloques `param` no vacios del txt del solver, como DataFrames.
 
     Cada bloque del txt preprocesado es formato lista: una fila por registro,
     tokens = indices + valor. Un param desconocido o una fila con aridad
     inesperada abortan (mejor que adivinar nombres de indices)."""
-    path = io.floored_txt(scenario)
+    path = io.solver_txt(scenario)
     indices_map = load_param_indices()
     lines = path.read_bytes().decode("utf-8").splitlines()
     out: dict[str, pd.DataFrame] = {}
@@ -162,7 +163,7 @@ def stage_outputs(scenario: str) -> Path:
 
 
 def stage_input(scenario: str) -> Path:
-    """2b: Input.csv reconstruido SOLO desde el *_FLOORED.txt del solver.
+    """2b: Input.csv reconstruido SOLO desde el txt que consumio el solver.
 
     Cada bloque `param` del txt se materializa como CSV otoole en
     staging/<ESC>_0/txt_params/ y generate_combined_input_file() (B2) los
@@ -183,7 +184,7 @@ def stage_input(scenario: str) -> Path:
     for name, df in sorted(parsed.items()):
         df.to_csv(params_dir / f"{name}.csv", index=False)
     floors = parsed[LOWER]
-    print(f"  [{scenario}] {len(parsed)} params parseados de {io.floored_txt(scenario).name}; "
+    print(f"  [{scenario}] {len(parsed)} params parseados de {io.solver_txt(scenario).name}; "
           f"{LOWER}: {len(floors)} filas (YEAR {floors.YEAR.min()}-{floors.YEAR.max()})")
 
     src, _head = b2.generate_combined_input_file(

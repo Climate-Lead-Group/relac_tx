@@ -146,6 +146,25 @@ def floored_txt(scenario: str) -> Path:
     return orig.with_name(orig.stem + "_FLOORED.txt")
 
 
+def solver_txt(scenario: str) -> Path:
+    """The txt the solver ACTUALLY consumed: the most-patched variant present.
+
+    Patch chain: original -> _FLOORED (write_floors.py) -> _FLOORED_VEGCON
+    (veg_tx_constraints.py). Each step writes a copy next to its source and the
+    repo may carry only the final variant (intermediates get cleaned up), so
+    this resolves by explicit preference instead of deriving the name from
+    executable_txt() like floored_txt() does."""
+    folder = EXECUTABLES / f"{scenario}_0"
+    base = f"Pre_processed_{scenario}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX"
+    for suffix in ("_FLOORED_VEGCON.txt", "_FLOORED.txt"):
+        cand = folder / (base + suffix)
+        if cand.exists():
+            return cand
+    raise FileNotFoundError(
+        f"[{scenario}] ni {base}_FLOORED_VEGCON.txt ni {base}_FLOORED.txt "
+        f"en {folder}; corre write_floors.py (y veg_tx_constraints.py) primero")
+
+
 def parse_mathprog(scenario: str, wanted: list[str]) -> dict[str, pd.DataFrame]:
     """Parse the requested 'param default X : NAME :=  ... ;' list-blocks.
 
