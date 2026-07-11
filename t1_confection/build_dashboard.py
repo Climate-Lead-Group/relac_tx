@@ -582,16 +582,20 @@ _FILTER_JS_FUNCS = r"""
     // legendgroup (o nombre); si ninguna traza VISIBLE del grupo tiene algún
     // valor != 0, se oculta su entrada. Solo retira entradas, nunca las añade
     // (respeta la regla de rows: la leyenda va en la fila superior visible).
+    // SOLO trazas de BARRAS (categorías apiladas): las LÍNEAS conservan su
+    // leyenda aunque estén en cero — p.ej. el gráfico 15 (Energía no
+    // Suministrada), cuyo estado ideal es todo-cero, quedaría sin leyenda.
     if(mode === 'rows' || mode === 'traces'){
       var groupHasData = {};
       newData.forEach(function(nt){
-        if(nt.visible === false) return;
+        if(nt.type !== 'bar' || nt.visible === false) return;
         var g = nt.legendgroup || nt.name || '';
         var has = (nt.y || []).some(function(v){ return v != null && v !== 0; });
         if(has){ groupHasData[g] = true; }
         else if(!(g in groupHasData)){ groupHasData[g] = false; }
       });
       newData.forEach(function(nt){
+        if(nt.type !== 'bar') return;
         var g = nt.legendgroup || nt.name || '';
         if(!groupHasData[g] && nt.visible !== false){ nt.showlegend = false; }
       });
@@ -1002,9 +1006,10 @@ CHART_DESC = {
     "12": "Indicador de seguridad energética: participación de energía primaria importada (MIN internacional) frente a la producción autóctona (extracción local y fuentes renovables), por año y escenario. La barra inferior (verde) muestra el porcentaje autóctono; el importado se infiere como 100 − x.",
     "13": "Indicador de resiliencia agnóstico a la amenaza (índice Herfindahl-Hirschman). Sobre la generación anual, agrupa las tecnologías en familias de fuente (toda la hidro = una fuente, etc.) y grafica el número efectivo de fuentes = 1/HHI, una línea por escenario. Un valor mayor significa una matriz más diversificada y resiliente: ninguna fuente domina, así que cualquier amenaza alcanza sólo una porción del suministro. Las fuentes correlacionadas se colapsan a una para no sobreestimar la resiliencia.",
     "14": "Costo total del sistema (promedio anual por periodo), apilado en CAPEX, O&M y Combustible. A diferencia de los gráficos 05 y 07 —que solo cuentan capital y operación de plantas, red y almacenamiento—, este incluye el costo de energía primaria/combustible (OperatingCost de las tecnologías de extracción MIN*). Al sumar el combustible, el escenario con la transmisión topada deja de parecer el más barato: su menor inversión se compensa con creces por una mayor factura de combustible (más respaldo fósil).",
+    "15": "Costo de la energía no suministrada: producción de las tecnologías backstop (PWRBCK*, la holgura que el modelo despacha cuando la flota disponible no alcanza a cubrir la demanda) multiplicada por su costo variable de penalización (VariableCost). Una línea por escenario; idealmente la curva es cero en todos. Un valor mayor que cero señala demanda no cubierta, y el filtro de países permite ubicar dónde ocurre.",
 }
 
-# Pestañas extra (15 Mapas de Transmisión, 16 Despacho, 17 Diagrama RES): NO son
+# Pestañas extra (16 Mapas de Transmisión, 17 Despacho, 18 Diagrama RES): NO son
 # chart_NN. Se generan AQUÍ llamando a las funciones de sus scripts (que ahora
 # devuelven el HTML como string y aceptan datos ya cargados) y se incrustan vía
 # <iframe srcdoc=...>, así el dashboard NO depende de archivos hermanos en
@@ -1012,7 +1017,7 @@ CHART_DESC = {
 # internet, igual que antes). CONVENCIÓN: van SIEMPRE al final; al agregar un
 # gráfico nativo nuevo, estas tres suben de número para quedar últimas.
 def _extra_tab_htmls() -> list:
-    """Genera el HTML (string) de las pestañas 15/16/17.
+    """Genera el HTML (string) de las pestañas 16/17/18.
 
     Reutiliza ``load_column`` (con caché en memoria) para NO releer el CSV de
     308 MB por subprocess. Devuelve [(key, title, html), ...]; omite con aviso
@@ -1022,7 +1027,7 @@ def _extra_tab_htmls() -> list:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     centerpoints_path = os.path.join(script_dir, "Miscellaneous", "centerpoints.csv")
 
-    # --- 15 Mapas de Transmisión + 16 Despacho (mismo CSV, una sola carga) ---
+    # --- 16 Mapas de Transmisión + 17 Despacho (mismo CSV, una sola carga) ---
     try:
         import Z_AUX_generate_transmission_maps as tx
         df = load_column(
@@ -1035,18 +1040,18 @@ def _extra_tab_htmls() -> list:
         idf, ys = tx.prepare_interconnection_df(df)
         cap, flow, ratio = tx.prepare_json_data(idf, centerpoints, ys)
         nodes = tx.build_node_list(centerpoints, cap, flow, ratio)
-        out.append(("15", "Mapas de Transmisión",
+        out.append(("16", "Mapas de Transmisión",
                     tx.generate_html(cap, flow, ratio, nodes, None, "Mapas de Transmisión")))
 
         ddf, ys2 = tx.prepare_dispatch_df(df)
         disp = tx.prepare_dispatch_json(ddf, ys2)
         ts_order = tx.build_timeslice_order(ys2)
-        out.append(("16", "Despacho",
+        out.append(("17", "Despacho",
                     tx.generate_dispatch_html(disp, ts_order, None, "Despacho")))
     except Exception as e:  # noqa: BLE001 — degradar con aviso, no romper el build
-        print(f"  [aviso] pestañas 15/16 (transmisión/despacho) omitidas: {e}")
+        print(f"  [aviso] pestañas 16/17 (transmisión/despacho) omitidas: {e}")
 
-    # --- 17 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
+    # --- 18 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
     try:
         import Z_AUX_generate_RES_diagram as res
         xlsx = res.SCRIPT_DIR / "A1_Outputs" / "A1_Outputs_BAU" / "A-O_AR_Model_Base_Year.xlsx"
@@ -1054,9 +1059,9 @@ def _extra_tab_htmls() -> list:
             raise FileNotFoundError(f"falta {xlsx}")
         links = res.load_base_year_data(xlsx)
         regions = res.discover_regions(links)
-        out.append(("17", "Diagrama RES", res.generate_html(links, regions, None)))
+        out.append(("18", "Diagrama RES", res.generate_html(links, regions, None)))
     except Exception as e:  # noqa: BLE001
-        print(f"  [aviso] pestaña 17 (RES) omitida: {e}")
+        print(f"  [aviso] pestaña 18 (RES) omitida: {e}")
 
     return out
 
@@ -3290,6 +3295,126 @@ def chart_14():
 
 
 # ================================================================
+# Chart 15 — Energía no Suministrada [MUSD]
+# ----------------------------------------------------------------
+# Costo de la energía no suministrada: producción de las tecnologías BACKSTOP
+# (PWRBCK*, la holgura que el modelo despacha cuando la flota disponible no
+# alcanza a cubrir la demanda) multiplicada por su VariableCost (la
+# penalización, en MUSD/PJ). Gráfico de LÍNEAS (una por escenario), x = años.
+# Idealmente la curva es CERO en todos los escenarios; un valor > 0 delata
+# demanda no cubierta (y dónde, vía el filtro de países).
+# OJO datos: el CSV combinado puede traer el VariableCost de las BCK en las
+# filas de UN solo escenario (input compartido), así que el costo unitario se
+# resuelve por (tecnología, año) con fallback al máximo entre escenarios. La
+# malla Escenario×Año×Tech se completa con 0 para que las líneas existan (y el
+# filtro de países liste los 19 países) aunque no haya producción BCK.
+# ================================================================
+def chart_15():
+    df = load_column(["ProductionByTechnology", "VariableCost"])
+    df = df[df["YEAR"].isin(ALL_YEARS)]
+    df = df[df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
+
+    # Producción anual por tech: SUMA de timeslices/fuels (igual que chart_02).
+    prod = (
+        df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])["ProductionByTechnology"]
+        .sum()
+        .reset_index()
+    )
+    # Costo unitario por (tech, año): propio del escenario si existe; si no, el
+    # máximo entre escenarios (input compartido entre BAU/INV/VGB/OPT).
+    vc_sc = (
+        df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])["VariableCost"]
+        .max()
+        .rename("vc_sc")
+        .reset_index()
+    )
+    vc_ty = (
+        df.groupby(["YEAR", "TECHNOLOGY"])["VariableCost"]
+        .max()
+        .rename("vc_ty")
+        .reset_index()
+    )
+
+    techs = sorted(df["TECHNOLOGY"].dropna().unique())
+    grid = pd.MultiIndex.from_product(
+        [SCENARIOS, ALL_YEARS, techs], names=["Scenario", "YEAR", "TECHNOLOGY"]
+    )
+    per = (
+        prod.set_index(["Scenario", "YEAR", "TECHNOLOGY"])
+        .reindex(grid)
+        .reset_index()
+    )
+    per["ProductionByTechnology"] = per["ProductionByTechnology"].fillna(0.0)
+    per = per.merge(vc_sc, on=["Scenario", "YEAR", "TECHNOLOGY"], how="left")
+    per = per.merge(vc_ty, on=["YEAR", "TECHNOLOGY"], how="left")
+    per["vc"] = per["vc_sc"].fillna(per["vc_ty"]).fillna(0.0)
+    per["val"] = per["ProductionByTechnology"] * per["vc"]
+
+    g = per.groupby(["Scenario", "YEAR"])["val"].sum().reset_index()
+
+    # --- Modelo de país (líneas: re-suma del costo por país; sin etiquetas) ---
+    per["pais"] = per["TECHNOLOGY"].str[6:9]
+    gcl = per.groupby(["Scenario", "YEAR", "pais"])["val"].sum().reset_index()
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    gcl["series"] = "val"
+    country_long = gcl[["Scenario", "catlabel", "pais", "series", "val"]]
+    country_model = _country_model(
+        country_long,
+        labelKind="lines",
+        series_order=["val"],
+        ann_labels_by_si={},
+        ann_kinds=[],
+        dtick=0.0,
+    )
+
+    fig = go.Figure()
+    for sc in SCENARIOS:
+        d = g[g["Scenario"] == sc].sort_values("YEAR")
+        years_str = [str(int(y)) for y in d["YEAR"]]
+        fig.add_trace(
+            go.Scatter(
+                x=years_str,
+                y=d["val"].values,
+                name=SCENARIO_ALIAS.get(sc, sc),
+                mode="lines+markers",
+                line=dict(color=COLORS_SCENARIO[sc], width=2.5),
+                marker=dict(size=4, color=COLORS_SCENARIO[sc]),
+            )
+        )
+
+    fig.update_layout(
+        height=520,
+        width=940,
+        template="plotly_white",
+        separators=",.",
+        font=dict(family="Arial", size=12),
+        legend=dict(
+            orientation="v",
+            x=1.02,
+            y=1.0,
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor="#ddd",
+            borderwidth=1,
+        ),
+        margin=dict(l=90, r=150, t=30, b=60),
+    )
+    fig.update_yaxes(
+        title_text="Costo de Energía No Suministrada [MUSD]",
+        title_font=dict(size=11),
+        gridcolor="#e0e0e0",
+        tickformat=",d",
+        rangemode="tozero",
+    )
+    # Estado ideal (todo cero): rango fijo con ticks enteros. Con auto-rango
+    # plotly elige [0,1] fraccionario y ",d" redondea los ticks a 0/1 duplicados.
+    if g["val"].max() <= 0:
+        fig.update_yaxes(range=[0, 5], dtick=1)
+    fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
+    return (fig, "chart15_unserved_energy", 940, 520,
+            [str(y) for y in range(2025, 2051)], country_model)
+
+
+# ================================================================
 # Registro de gráficos
 # ================================================================
 CHARTS = {
@@ -3309,6 +3434,7 @@ CHARTS = {
     "12": ("Seguridad Energética — Importado vs Autóctono [%]", chart_12),
     "13": ("Resiliencia — Nº efectivo de fuentes (1/HHI)", chart_13),
     "14": ("Costo Total del Sistema con Combustible [MUSD/año]", chart_14),
+    "15": ("Energía no Suministrada [MUSD]", chart_15),
 }
 
 

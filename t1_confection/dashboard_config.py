@@ -67,7 +67,7 @@ def classify_tech_generation(tech: str) -> str | None:
 
 
 # ================================================================
-# Origen del combustible (gráfico 15 — Seguridad Energética)
+# Origen del combustible (gráfico 12 — Seguridad Energética)
 # ----------------------------------------------------------------
 # Indicador de seguridad energética: energía primaria importada vs autóctona.
 #   Importado : MIN*INT*  (extracción "minera" de fuente internacional)
