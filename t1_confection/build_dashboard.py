@@ -64,10 +64,54 @@ from dashboard_config import (  # noqa: E402
 
 
 # Nº de escenarios y alto del lienzo de los gráficos de filas apiladas (una fila
-# por escenario): el alto escala con el nº de escenarios para que cada subplot
-# conserve su tamaño (920 px estaba calibrado a 3 escenarios).
+# por escenario). MODELO DE TAMAÑO POR PÍXELES (fuente única, compartida con el
+# JS del dashboard vía window.STACK_SIZING): cada fila-escenario reserva un alto
+# FIJO en píxeles (_PANE_PX) y un separador fijo (_GAP_PX); el alto total del
+# lienzo = f(nº de filas VISIBLES). Así una sola fila no se agiganta y con
+# muchas cada panel conserva un tamaño legible (el lienzo crece / hace scroll
+# vertical). El JS reproduce EXACTAMENTE estos dominios al filtrar, de modo que
+# no hay "salto" entre el render estático de Python y la primera pasada del JS.
+# (Antes: alto fijo 920·NSC/3 con vertical_spacing=0.07 en fracción de papel →
+# con pocos escenarios los paneles se agigantaban y con muchos el separador se
+# comía el espacio; ver memoria dashboard-scenarios-and-open-items.)
 _NSC = len(SCENARIOS)
-_STACK_H = int(round(920 * _NSC / 3))
+_PANE_PX = 260   # alto del área de trazado por fila-escenario
+_GAP_PX = 40     # separación vertical entre filas-escenario
+_MARGIN_T = 25   # margen superior del lienzo (coincide con update_layout)
+_MARGIN_B = 50   # margen inferior (deja sitio a las etiquetas del eje X abajo)
+
+
+def _stack_height(m: int) -> int:
+    """Alto en px del lienzo apilado para ``m`` filas-escenario visibles."""
+    m = max(int(m), 1)
+    return _MARGIN_T + _MARGIN_B + m * _PANE_PX + (m - 1) * _GAP_PX
+
+
+def _stack_vspacing(m: int) -> float:
+    """vertical_spacing (fracción de papel) equivalente al modelo de píxeles."""
+    m = max(int(m), 1)
+    paper = m * _PANE_PX + (m - 1) * _GAP_PX
+    return (_GAP_PX / paper) if paper > 0 else 0.0
+
+
+_STACK_H = _stack_height(_NSC)
+_STACK_VSPACING = _stack_vspacing(_NSC)
+
+# Modelo de ancho horizontal (item 2): mínimo de px por categoría del eje X. Si
+# nº de categorías seleccionadas × px/categoría supera el ancho disponible, el
+# lienzo del gráfico crece a ese ancho y su contenedor hace scroll horizontal
+# (en vez de comprimir las barras). Grouped: px por BARRA × barras/slot + pad.
+_CAT_STACK_PX = 58   # px por año/periodo en barras apiladas (1 barra por slot).
+                     # ~58 hace que ~24+ años activen scroll en una ventana de
+                     # ~1660 px (el caso "apretado" del gráfico 6): da aire a las
+                     # etiquetas de año y separa las barras en vez de comprimirlas.
+_CAT_GROUP_BAR_PX = 22   # px por barra en barras agrupadas
+_CAT_GROUP_PAD = 16      # separación por slot en barras agrupadas
+_STACK_SIZING = {
+    "pane": _PANE_PX, "gap": _GAP_PX, "mt": _MARGIN_T, "mb": _MARGIN_B,
+    "catStack": _CAT_STACK_PX, "catGroupBar": _CAT_GROUP_BAR_PX,
+    "catGroupPad": _CAT_GROUP_PAD,
+}
 
 
 def _set_row_xticks(fig, n_rows: int) -> None:
@@ -144,7 +188,7 @@ def _html_to_png(html_path: str, png_path: str, width: int, height: int) -> bool
 _PLOTLY_CONFIG = {
     "displaylogo": False,
     "edits": {"annotationPosition": True, "annotationTail": True},
-    "responsive": False,
+    "responsive": True,
 }
 
 
@@ -181,6 +225,7 @@ def save_png(fig: go.Figure, name: str, width: int, height: int,
             "var SC=" + json.dumps(sc_aliases) + ";"
             "window.CHART_PERIODYEARS=" + json.dumps(period_years) + ";"
             "window.CHART_PERIODORDER=" + json.dumps(PERIOD_ORDER) + ";"
+            "window.STACK_SIZING=" + json.dumps(_STACK_SIZING) + ";"
             "function go(){var gd=document.querySelector('.plotly-graph-div');"
             "if(!gd||!gd._fullLayout){return setTimeout(go,100);}"
             "snapshotData(gd); gd._scAliases=SC;"
@@ -225,6 +270,16 @@ _DASHBOARD_CSS = """
   .navbtn.active{background:#23978E;color:#fff;border-color:#23978E;}
   .chartwrap{display:none;padding:14px 16px;}
   .chartwrap.active{display:block;}
+  /* Contenedor con scroll horizontal: cuando hay muchos años el lienzo interior
+     (.chartsizer) se ensancha a un mínimo de px/categoría y aquí aparece la
+     barra de desplazamiento, en vez de comprimir las barras (item 2). */
+  .chartscroll{width:100%;overflow-x:auto;}
+  /* Lienzo interior: por defecto llena el ancho (responsivo); el JS le fija un
+     ancho en px cuando el nº de categorías lo requiere. */
+  .chartsizer{width:100%;}
+  /* El gráfico Plotly llena el lienzo interior (ancho responsivo; el alto lo
+     fija el JS por nº de filas-escenario visibles, item 1). */
+  .chartwrap .plotly-graph-div{width:100% !important;}
   /* Fila de selectores tipo dropdown (años/periodos, escenarios, países). */
   .selrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin:0 0 12px 2px;}
   .ddbox{position:relative;display:inline-block;}
@@ -272,6 +327,10 @@ _DASHBOARD_PANEL = """
     <input id="labelFont" type="range" min="50" max="300" step="5" value="100" style="vertical-align:middle;">
     <span id="labelFontVal">100</span>%
   </label>
+  <div id="lblBox" style="position:relative;display:inline-block;">
+    <button id="lblBtn" type="button" style="font-size:13px;color:#00414D;background:#fff;border:1px solid #b3bcc2;border-radius:5px;padding:7px 12px;cursor:pointer;">Etiquetas de escenario ▾</button>
+    <div id="lblPop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:40;background:#fff;border:1px solid #b3bcc2;border-radius:6px;box-shadow:0 6px 18px rgba(0,65,77,0.18);padding:10px;min-width:250px;"></div>
+  </div>
   <span style="font-size:12px;color:#5b6e72;">Arrastra los números (GW / %) dentro del gráfico para reposicionarlos.</span>
 </div>
 """
@@ -415,6 +474,7 @@ _FILTER_JS_FUNCS = r"""
     gd._origShow = (gd.data || []).map(function(t){ return t.showlegend !== false; });
     gd._mode = chartMode(gd);
     gd._allCats = catsOf(gd);
+    gd._h0 = (gd.layout && gd.layout.height) || null;  // alto original (para escalar por nº de filas visibles)
     var dl = 0;
     gd._annInfo = (gd.layout.annotations || []).map(function(a){
       if(a.name !== 'datalabel') return null;
@@ -449,6 +509,133 @@ _FILTER_JS_FUNCS = r"""
     if(gd._mode === 'rows'){ var ya = t.yaxis || 'y'; return ya === 'y' ? 0 : parseInt(ya.slice(1)) - 1; }
     if(gd._mode === 'cols'){ var ge = t.geo || 'geo'; return ge === 'geo' ? 0 : parseInt(ge.slice(3)) - 1; }
     return (gd._scAliases || []).indexOf(t.name);  // traces: por nombre (alias)
+  }
+  // ── Modelo de tamaño (compartido con Python vía window.STACK_SIZING). Si no
+  // está definido (contexto legacy), devuelve null y todo el dimensionado
+  // dinámico se desactiva (se conserva el comportamiento de alto/ancho fijo).
+  function stackSizing(){ return (typeof window !== 'undefined' && window.STACK_SIZING) || null; }
+  // .chartsizer = lienzo interior cuyo ancho fija el JS (item 2). OJO: pio.to_html
+  // envuelve el div del gráfico en un <div> propio SIN clase, así que .chartsizer
+  // es el ABUELO (no el padre) → hay que subir por los ancestros. En el PNG
+  // estático no existe ese envoltorio → null (el dimensionado de ancho se omite).
+  function sizerOf(gd){
+    var p = gd && gd.parentElement;
+    for(var i = 0; p && i < 4; i++){
+      if(p.className && /\bchartsizer\b/.test(p.className)) return p;
+      p = p.parentElement;
+    }
+    return null;
+  }
+  // Ancho horizontal (item 2): si nº de categorías × px/categoría supera el
+  // ancho disponible, ensancha el lienzo interior a ese mínimo (→ scroll en
+  // .chartscroll); si cabe, lo deja al 100% (responsivo). Usa gd._sizeInfo,
+  // calculado en applyFilters. Sólo tiene efecto con el gráfico VISIBLE (oculto
+  // → clientWidth 0 → se deja responsivo; se recalcula al mostrarlo).
+  function fitWidth(gd){
+    var sz = gd._sizeInfo, sizer = sizerOf(gd);
+    if(!sz || !sizer) return;
+    var scroll = sizer.parentElement, avail = scroll ? scroll.clientWidth : 0;
+    if(avail > 0 && sz.needW > avail + 1){ sizer.style.width = sz.needW + 'px'; }
+    else { sizer.style.width = ''; }
+  }
+  // Reajusta ancho + fuerza a Plotly a recomputar el área de trazado desde la
+  // caja del contenedor (offsetWidth/Height). Es la vía SEGURA para cambiar de
+  // tamaño con autosize/responsive: recalcula todo el layout, así las barras
+  // apiladas quedan ancladas a y=0 (el intento previo cambiaba layout.height sin
+  // tocar la caja → las barras "flotaban"). Sólo con el gráfico visible/medible.
+  function fitAndResize(gd){
+    if(!gd || gd.offsetParent === null) return;
+    fitWidth(gd);
+    try{ Plotly.Plots.resize(gd); }catch(e){}
+    // Los resizes de nav/ventana también pueden dejar el mis-render de filas
+    // (o revelar uno previo): verificar y reparar en el frame siguiente.
+    if(typeof requestAnimationFrame !== 'undefined'){
+      requestAnimationFrame(function(){
+        if(gd.offsetParent === null) return;
+        try{ repairStack(gd); }catch(e){}
+      });
+    }
+  }
+  // Detector del mis-render de barras apiladas en modo filas (carrera del diff
+  // de Plotly.react durante transiciones: filas sin barra alguna pintada, o
+  // apilados "flotantes" que no llegan a la línea base y=0). Lee el DOM ya
+  // dibujado y lo compara con los datos: barato (una pasada por subplot) y sin
+  // falsos positivos conocidos — una fila sólo se exige si sus datos visibles
+  // tienen un apilado significativo (>0.5% del rango del eje).
+  function stackRenderBroken(gd){
+    try{
+      if(gd._mode !== 'rows') return false;
+      var fl = gd._fullLayout;
+      if(!fl || !fl._size) return false;
+      var svg = gd.querySelector('.main-svg');
+      if(!svg) return false;
+      var svgTop = svg.getBoundingClientRect().top, size = fl._size;
+      // Apilado esperado POR COLUMNA (categoría x) y por eje-fila, desde los
+      // datos visibles. Validar por columna evita el punto ciego del chequeo
+      // agregado: una fila con UNA columna sana anclada a la base pasaba aunque
+      // otras columnas estuvieran vacías o flotando.
+      var sumsByAx = {};
+      (gd._fullData || []).forEach(function(t){
+        if(t.type !== 'bar' || t.visible !== true) return;
+        var ya = t.yaxis || 'y';
+        var s = sumsByAx[ya] || (sumsByAx[ya] = {});
+        var xs = t.x || [], ys = t.y || [];
+        for(var i = 0; i < xs.length; i++){
+          var v = +ys[i];
+          if(v === v && v > 0) s[xs[i]] = (s[xs[i]] || 0) + v;
+        }
+      });
+      var broken = false;
+      gd.querySelectorAll('.subplot').forEach(function(sp){
+        if(broken) return;
+        var cls = null, cl = sp.classList;
+        for(var i = 0; i < cl.length; i++){ if(/^x\d*y\d*$/.test(cl[i])){ cls = cl[i]; break; } }
+        if(!cls) return;
+        var ya = cls.replace(/^x\d*/, '');
+        var yk = ya === 'y' ? 'yaxis' : 'yaxis' + ya.slice(1);
+        var ax = fl[yk];
+        if(!ax || ax.visible === false || !ax.domain) return;
+        var rng = ax.range ? Math.abs(ax.range[1] - ax.range[0]) : 0;
+        var sums = sumsByAx[ya];
+        if(!sums || !(rng > 0)) return;
+        var thr = rng * 0.005, expectCols = 0;
+        for(var xx in sums){ if(sums.hasOwnProperty(xx) && sums[xx] > thr) expectCols++; }
+        if(!expectCols) return;
+        var bandBot = svgTop + size.t + (1 - ax.domain[0]) * size.h;
+        // Agrupar los rects pintados por centro-x (bucket 4px): cada grupo es
+        // una columna apilada; su borde inferior debe anclar en la base (y=0).
+        var paths = sp.querySelectorAll('.barlayer .points path');
+        var colBottom = {};
+        for(var j = 0; j < paths.length; j++){
+          var r = paths[j].getBoundingClientRect();
+          if(!(r.width > 0 && r.height > 0)) continue;
+          var key = Math.round((r.left + r.width / 2) / 4);
+          if(!(key in colBottom) || r.bottom > colBottom[key]) colBottom[key] = r.bottom;
+        }
+        var cols = 0;
+        for(var k in colBottom){
+          if(!colBottom.hasOwnProperty(k)) continue;
+          cols++;
+          if((bandBot - colBottom[k]) > 6){ broken = true; return; }  // columna flotante
+        }
+        if(cols < expectCols) broken = true;   // columnas con datos sin pintar
+      });
+      return broken;
+    }catch(e){ return false; }
+  }
+  // Reparación: si el render de filas está roto, reconstrucción TOTAL con
+  // Plotly.newPlot (inmune al diff de react) + resize para el ancho responsivo.
+  // Sin data/layout explícitos usa los actuales del gd (para los hooks de
+  // nav/ventana, donde no hay un applyFilters en curso). Devuelve true si reparó.
+  function repairStack(gd, data, layout){
+    if(!stackRenderBroken(gd)) return false;
+    gd._repairN = (gd._repairN || 0) + 1;
+    try{
+      Plotly.newPlot(gd, data || gd.data, layout || gd.layout, gd._context || {}).then(function(){
+        try{ Plotly.Plots.resize(gd); }catch(e){}
+      });
+    }catch(e){}
+    return true;
   }
   // Filtra años (categorías del eje X), escenarios (filas/columnas/trazas) Y
   // países (re-suma en JS del desglose embebido) y reconstruye la figura con
@@ -489,6 +676,20 @@ _FILTER_JS_FUNCS = r"""
     var lg = gd._legendGroups || [];
     var seriesActive = !!(seriesSel && lg.length && seriesSel.length < lg.length);
     function seriesVis(g){ return (seriesSel == null) || (seriesSel.indexOf(g) >= 0); }
+    // Serie de LÍNEA de total (GW en 01, TWh en 02, "PJ total" en 08B): el único
+    // grupo de leyenda cuyas trazas son todas scatter (sin barras). Los números
+    // de total (mismo color que la línea) siguen su visibilidad; en gráficos
+    // sin línea de total queda null y los números no se tocan.
+    if(gd._lineGroup === undefined){
+      var _barG = {}, _linG = {};
+      (gd.data || []).forEach(function(t){
+        var g = t.legendgroup || t.name || '';
+        if(lg.indexOf(g) < 0) return;
+        if(t.type === 'bar'){ _barG[g] = 1; } else { _linG[g] = 1; }
+      });
+      var _soloLin = Object.keys(_linG).filter(function(g){ return !_barG[g]; });
+      gd._lineGroup = _soloLin.length === 1 ? _soloLin[0] : null;
+    }
 
     // País: activo sólo si hay modelo y el subconjunto es estrictamente menor que
     // "todos" (así re-seleccionar todos restaura exactamente la vista original).
@@ -560,7 +761,10 @@ _FILTER_JS_FUNCS = r"""
         // Una traza se ve si su escenario Y su serie están activos; al ocultarse
         // por serie desaparece también su entrada de leyenda (visible=false).
         nt.visible = (visIdx.indexOf(sidx) >= 0) && sv;
-        if(mode === 'rows'){ nt.showlegend = (sidx === visIdx[0] && sv) ? gd._origShow[i] : false; }
+        // La leyenda va SIEMPRE en la primera fila de escenario VISIBLE (no sólo
+        // en REFERENCIA): antes usaba gd._origShow[i], que es false en toda fila
+        // != 0, así que al deseleccionar REFERENCIA la leyenda desaparecía.
+        if(mode === 'rows'){ nt.showlegend = (sidx === visIdx[0] && sv); }
       } else if(!sv){ nt.visible = false; }
       // Mapa: restaurar SIEMPRE los arrays completos desde el snapshot (react deja
       // gd.data recortado) y, si el filtro está activo, recortar a los países sel.
@@ -601,6 +805,24 @@ _FILTER_JS_FUNCS = r"""
       });
     }
 
+    // La LÍNEA de total (GW/TWh/PJ total) debe seguir al APILADO VISIBLE: con
+    // alguna serie de barras oculta, sus y se recalculan como la suma de las
+    // barras visibles de su fila (igual que los números naranjas/Σ). Si NO hay
+    // ninguna serie de barras visible (vista "solo la línea"), conserva su
+    // valor original —el total completo— que es el significado útil ahí; sin
+    // filtro de series no se toca (el camino general ya refleja años/país).
+    if(seriesActive && gd._lineGroup && seriesVis(gd._lineGroup)){
+      var _visBarGroups = lg.filter(function(g){ return g !== gd._lineGroup && seriesVis(g); });
+      if(_visBarGroups.length){
+        newData.forEach(function(nt){
+          if(nt.type === 'bar' || nt.visible === false) return;
+          if((nt.legendgroup || nt.name || '') !== gd._lineGroup) return;
+          var ya = nt.yaxis || 'y';
+          nt.y = (nt.x || []).map(function(lab){ return visibleBarsAt(newData, ya, lab).__total; });
+        });
+      }
+    }
+
     var layout = JSON.parse(JSON.stringify(gd.layout));
     // Categorías del eje X según el modo (años o periodos) y la selección temporal.
     if(selCats || isPeriods){
@@ -622,8 +844,28 @@ _FILTER_JS_FUNCS = r"""
     var annCats = selCats || displayCats, annSeen = {};
     (layout.annotations || []).forEach(function(a, i){
       var info = gd._annInfo[i]; if(!info) return;
+      // Ocultar datalabels de filas de escenario NO visibles. Su eje Y queda
+      // visible=false pero CONSERVA su dominio, así que sin esto los números se
+      // "quedan pegados" encima de las filas visibles al deseleccionar un escenario
+      // (yref es 'y'/'y2' en coords de dato, no 'y domain', así que el bloque de
+      // ocultamiento por dominio de más abajo no los alcanza).
+      if(mode === 'rows'){
+        var _yk = info.yaxis || 'y';
+        var _row = _yk === 'y' ? 0 : (parseInt(_yk.slice(1), 10) - 1);
+        if(visIdx.indexOf(_row) < 0){ a.visible = false; return; }
+      }
       var m = (cm && cm.annModel) ? cm.annModel[info.dl] : null;
       var kind = m ? m.kind : 'stackTotal';
+      // El número del TOTAL comparte color/significado con la serie-línea
+      // (GW/TWh/PJ total): si esa serie está deseleccionada, el número se va
+      // con ella. El % blanco (share renovable) sigue a la serie 'Renovable'
+      // (cm.series[0]): sin renovable visible, el % no tiene referente.
+      if((kind === 'total' || kind === 'stackTotal') && gd._lineGroup && !seriesVis(gd._lineGroup)){
+        a.visible = false; return;
+      }
+      if(kind === 'pct' && cm && cm.series && cm.series.length && !seriesVis(cm.series[0])){
+        a.visible = false; return;
+      }
       var disp = isPeriods ? (Y2P[info.label] || info.label) : info.label;
       var pos = annCats.indexOf(disp);
       if(pos < 0){ a.visible = false; return; }
@@ -642,7 +884,9 @@ _FILTER_JS_FUNCS = r"""
         a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = total;
       } else if(kind === 'total'){            // 01/02 — total de la pila (naranja)
         var ren = (cm && bars[cm.series[0]]) || 0;
-        a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = ren * 0.60;
+        // Con 'Renovable' oculto ren=0 dejaría el número pegado a y=0: usar el
+        // centro de la pila visible como respaldo.
+        a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = ren > 0 ? ren * 0.60 : total * 0.55;
       } else if(kind === 'pct'){              // 01/02 — % renovable (blanco)
         var r2 = (cm && bars[cm.series[0]]) || 0;
         a.text = '<b>' + (total > 0 ? Math.round(r2 / total * 100) : 0) + '%</b>'; a.y = r2 * 0.28;
@@ -669,6 +913,16 @@ _FILTER_JS_FUNCS = r"""
           var yk = si === 0 ? 'y' : 'y' + (si + 1);
           rcats.forEach(function(lab){ var b = visibleBarsAt(newData, yk, lab); if(b.__total > mx) mx = b.__total; });
         });
+        // Vista "solo la línea" (todas las barras ocultas): el rango debe
+        // cubrir también la línea de total visible; si no, mx=0 deja el eje
+        // en [0,1] y la línea queda recortada fuera (seleccionada e invisible).
+        if(gd._lineGroup && seriesVis(gd._lineGroup)){
+          newData.forEach(function(nt){
+            if(nt.type === 'bar' || nt.visible === false) return;
+            if((nt.legendgroup || nt.name || '') !== gd._lineGroup) return;
+            (nt.y || []).forEach(function(v){ if(v != null && v > mx) mx = v; });
+          });
+        }
       } else {  // 'traces' (p.ej. ratio): máximo sobre las barras visibles
         newData.forEach(function(nt){
           if(nt.type !== 'bar' || nt.visible === false) return;
@@ -689,27 +943,78 @@ _FILTER_JS_FUNCS = r"""
     }
 
     if(mode === 'rows'){
-      var m = Math.max(visIdx.length, 1), vs = 0.07;
-      var h = (1 - vs * (m - 1)) / m, domByRow = {};
+      // Dominios de las filas-escenario. Con el modelo de píxeles (item 1) el
+      // alto por fila y el separador son FIJOS en px: el alto del lienzo crece
+      // con el nº de filas VISIBLES (m), así una sola fila no se agiganta. Los
+      // dominios siguen sumando 1 en coords de papel (independientes de la
+      // altura); el alto se fija en la CAJA del div (gd.style.height) ANTES del
+      // react. Sin el modelo (legacy) se usa el reparto anterior.
+      var m = Math.max(visIdx.length, 1), SZ = stackSizing(), vs, h;
+      if(SZ){
+        var paper = m * SZ.pane + (m - 1) * SZ.gap;
+        h = SZ.pane / paper; vs = SZ.gap / paper;
+        gd._boxH = SZ.mt + SZ.mb + paper;   // alto del lienzo (px) para esta selección
+        layout.height = gd._boxH;
+        // Fija ya la caja del div para que el react no relayoute con el alto
+        // previo (evita un parpadeo); el resize posterior es la garantía final.
+        gd.style.height = gd._boxH + 'px';
+      } else {
+        vs = 0.07; h = (1 - vs * (m - 1)) / m; gd._boxH = null;
+      }
+      var domByRow = {};
       visIdx.forEach(function(r, k){ var top = 1 - k * (h + vs); domByRow[r] = [Math.max(0, top - h), top]; });
       for(var r = 0; r < allSc.length; r++){
         var yk = r === 0 ? 'yaxis' : 'yaxis' + (r + 1);
         layout[yk] = layout[yk] || {};
         if(domByRow[r]){ layout[yk].domain = domByRow[r]; layout[yk].visible = true; }
-        else { layout[yk].visible = false; }
+        else {
+          // CAUSA RAÍZ del "desajuste" al filtrar escenarios/series: una fila
+          // oculta solo con visible=false CONSERVA su dominio viejo, que tras
+          // repartir [0,1] entre las filas visibles queda SOLAPADO con ellas.
+          // El eje no se dibuja, pero su SUBPLOT sí: su rect de fondo BLANCO
+          // (plot_bgcolor) se pinta ENCIMA de las barras de las filas visibles
+          // anteriores en el orden de dibujo (y sus drag-rects capturan el
+          // hover de la fila equivocada). Las anotaciones (infolayer) quedan
+          // por encima de todo → "números flotando sin barras". COLAPSAR el
+          // dominio a altura ~0 elimina el área del subplot oculto por
+          // construcción (fondo de ~1px: no tapa; drag de ~1px: no captura).
+          // OJO: plotly exige span de dominio > 1/4096 — con 0.0001 RECHAZA el
+          // valor y cae al default [0,1] (bg a pantalla completa, peor). 0.001
+          // pasa la validación. El eje X del subplot se colapsa igual (abajo),
+          // dejando el fondo reducido a un punto de ~1x1 px.
+          layout[yk].visible = false;
+          layout[yk].domain = [0, 0.001];
+        }
       }
       var rowXax = {};
       gd.data.forEach(function(t){
         var ya = t.yaxis || 'y', ri = ya === 'y' ? 0 : parseInt(ya.slice(1)) - 1;
         var xa = t.xaxis || 'x'; rowXax[ri] = xa === 'x' ? 'xaxis' : 'xaxis' + xa.slice(1);
       });
+      // Colapso del eje X de las filas OCULTAS (ver arriba: el fondo del
+      // subplot = intersección de dominios X×Y → con ambos colapsados queda un
+      // punto de ~1x1 px que no tapa nada). Las VISIBLES restauran el dominio
+      // X original (el colapso persiste en gd.layout entre applies; sin esta
+      // restauración una fila re-mostrada quedaría aplastada horizontalmente).
+      if(!gd._xDomFull){
+        var _fx = gd._fullLayout && gd._fullLayout.xaxis && gd._fullLayout.xaxis.domain;
+        gd._xDomFull = _fx ? _fx.slice() : [0, 1];
+      }
+      for(var rx = 0; rx < allSc.length; rx++){
+        var xk2 = rowXax[rx]; if(!xk2) continue;
+        layout[xk2] = layout[xk2] || {};
+        layout[xk2].domain = domByRow[rx] ? gd._xDomFull.slice() : [0, 0.001];
+      }
       xAxisKeys(gd).forEach(function(k){ layout[k] = layout[k] || {}; layout[k].showticklabels = false; });
       var bottom = visIdx[visIdx.length - 1];
       if(rowXax[bottom]){ layout[rowXax[bottom]] = layout[rowXax[bottom]] || {}; layout[rowXax[bottom]].showticklabels = true; }
       (layout.annotations || []).forEach(function(a){
         if(!a.yref) return;
         var mm = /^y(\d*) domain/.exec(a.yref);
-        if(mm){ var rr = mm[1] === '' ? 0 : parseInt(mm[1]) - 1; if(domByRow[rr] === undefined) a.visible = false; }
+        // Bidireccional: la etiqueta sigue la visibilidad de su fila. (Antes sólo
+        // se ponía visible=false y quedaba oculta para siempre al reactivar el
+        // escenario; gd.layout persiste entre reacts.)
+        if(mm){ var rr = mm[1] === '' ? 0 : parseInt(mm[1]) - 1; a.visible = (domByRow[rr] !== undefined); }
       });
     } else if(mode === 'cols'){
       // Geo no recoloca dominios de forma fiable con react → mantenemos las 3
@@ -728,7 +1033,130 @@ _FILTER_JS_FUNCS = r"""
         if(a.text && allSc.indexOf(a.text) >= 0){ a.visible = (scAliases.indexOf(a.text) >= 0); }
       });
     }
-    Plotly.react(gd, newData, layout);
+    // ── Total de años/periodos SELECCIONADOS por fila de escenario (estilo
+    // Tableau). Suma las barras VISIBLES de newData (que ya refleja años +
+    // escenarios + países + series) sobre las categorías seleccionadas; una
+    // etiqueta por fila de escenario. Se regeneran en cada llamada (se purgan
+    // las previas por name='seltotal' para no acumular al clonar gd.layout).
+    // Solo tipos ADITIVOS de cantidad; se excluyen % / ratio / índice y líneas.
+    layout.annotations = (layout.annotations || []).filter(function(a){ return a.name !== 'seltotal'; });
+    var sumKinds = { stackTotal: 1, single: 1, share2: 1, trans04: 1 };
+    var canSum = (!cm) || !!sumKinds[cm.labelKind];
+    if(canSum && mode === 'rows'){
+      var sumCats = selCats || displayCats;
+      visIdx.forEach(function(si){
+        var yk = si === 0 ? 'y' : 'y' + (si + 1);
+        var ykKey = si === 0 ? 'yaxis' : 'yaxis' + (si + 1);
+        // Saltar ejes de PORCENTAJE (p.ej. Seguridad Energética 0–100%): sumar
+        // porcentajes entre años no tiene sentido. Señal independiente de cm,
+        // así también vale en el PNG estático (que no fija gd._countryModel).
+        var yax = layout[ykKey] || (gd.layout && gd.layout[ykKey]);
+        if(yax && yax.ticksuffix === '%') return;
+        if(!domByRow[si]) return;   // fila de escenario oculta
+        var tot = 0, nb = 0;
+        sumCats.forEach(function(lab){ var b = visibleBarsAt(newData, yk, lab); tot += b.__total; nb += b.__n; });
+        if(nb === 0) return;
+        var fmtd = (cm && cm.labelKind === 'single') ? fmtDec(tot, cm.decimals) : fmtThousand(tot);
+        // Arriba-izquierda del subplot (esquina vacía en curvas crecientes).
+        // yref al DOMINIO de la fila -> se posiciona por subplot sin depender
+        // de márgenes ni del ancho (que ahora es responsivo).
+        layout.annotations.push({
+          name: 'seltotal', xref: 'x domain', x: 0.015, xanchor: 'left',
+          yref: (si === 0 ? 'y' : 'y' + (si + 1)) + ' domain', y: 0.98, yanchor: 'top',
+          text: 'Σ ' + (isPeriods ? 'per.' : 'años') + ' sel: <b>' + fmtd + '</b>',
+          showarrow: false, align: 'left', font: { size: 12, color: '#00414D' },
+          bgcolor: 'rgba(255,255,255,0.82)', bordercolor: '#23978E', borderwidth: 1, borderpad: 3
+        });
+      });
+    }
+
+    // ── Ancho horizontal (item 2). Calcula el ancho MÍNIMO del lienzo según el
+    // nº de categorías del eje X visibles y las barras por "slot" (apiladas = 1;
+    // agrupadas = nº de series de barra visibles). fitWidth ensancha .chartsizer
+    // a ese mínimo si no cabe → scroll horizontal; si cabe, lo deja responsivo.
+    // Se guarda en gd._sizeInfo para recomputar al mostrar/redimensionar sin
+    // repetir el filtrado.
+    var SZ2 = stackSizing();
+    if(SZ2){
+      // Sólo las BARRAS sufren compresión con muchos años; las líneas se leen
+      // bien densas → no se les fuerza scroll (needW pequeño ⇒ responsivo).
+      var gseen2 = {}, hasBars = false;
+      newData.forEach(function(nt){
+        if(nt.type === 'bar' && nt.visible !== false){ hasBars = true; gseen2[nt.legendgroup || nt.name || ''] = 1; }
+      });
+      var mg = layout.margin || (gd.layout && gd.layout.margin) || {};
+      var marginLR = (mg.l || 0) + (mg.r || 0);
+      if(hasBars){
+        var catN = (selCats || displayCats || []).length;
+        var barmode = layout.barmode || (gd.layout && gd.layout.barmode) || 'stack';
+        // Barras/slot: apiladas = 1; agrupadas = nº de series de barra visibles.
+        var barsPerSlot = (barmode === 'group') ? Math.max(Object.keys(gseen2).length, 1) : 1;
+        var perCat = (barmode === 'group')
+          ? (SZ2.catGroupBar * barsPerSlot + SZ2.catGroupPad)
+          : SZ2.catStack;
+        gd._sizeInfo = { needW: Math.round(catN * perCat + marginLR) };
+      } else {
+        gd._sizeInfo = { needW: 0 };   // líneas/mapas: siempre responsivo
+      }
+    }
+
+    // ── PRE-DIMENSIONAR la caja ANTES del react (clave para la estabilidad).
+    // El alto de FILAS ya se fijó en el bloque rows-mode; aquí fijamos el de los
+    // gráficos NO-fila (líneas/mapas) y el ANCHO de .chartsizer. Así el react
+    // dibuja UNA sola vez al tamaño final y no hay que redimensionar encima. El
+    // bug de barras "finas"/inestables y etiquetas que desaparecían venía de
+    // llamar a Plotly.Plots.resize SÍNCRONO justo tras el react, que cortaba el
+    // dibujo de las barras apiladas a medio render.
+    if(SZ2){
+      if(!(gd._mode === 'rows' && gd._boxH != null) && layout.height){
+        gd.style.height = layout.height + 'px';
+      }
+      fitWidth(gd);   // fija el ancho de .chartsizer (SIN resize)
+    }
+
+    // Guard generacional + cancelación: en una ráfaga de toggles sólo el paso
+    // final ejecuta el ajuste diferido; los rAF de pasos supersedidos se
+    // cancelan y no pueden caer a mitad del dibujo del react siguiente.
+    var _gen = (gd._applyGen = (gd._applyGen || 0) + 1);
+    if(gd._finRAF && typeof cancelAnimationFrame !== 'undefined'){
+      cancelAnimationFrame(gd._finRAF); gd._finRAF = 0;
+    }
+    if(gd._verifyTO){ clearTimeout(gd._verifyTO); gd._verifyTO = 0; }
+
+    // MODO FILAS: SIEMPRE Plotly.newPlot (reconstrucción virgen por selección),
+    // NUNCA el diff de Plotly.react. El diff incremental sobre una figura de
+    // subplots apilados demostró una carrera irreparable en el navegador real:
+    // filas sin barras, segmentos flotantes sin base y datalabels desalineados,
+    // dependiendo de qué otros escenarios/series estuvieran seleccionados. La
+    // figura virgen es el mismo camino del render inicial de la página (que
+    // nunca falla): cada selección se ve completa e INDEPENDIENTE del resto.
+    // Líneas/mapas ('traces'/'cols') conservan react: no cambian de subplots y
+    // el diff ahí es estable (y más rápido).
+    var _plot = (gd._mode === 'rows')
+      ? function(){ return Plotly.newPlot(gd, newData, layout, gd._context || {}); }
+      : function(){ return Plotly.react(gd, newData, layout); };
+    // Tras el plot: resize (autosize toma el ancho de .chartsizer para el
+    // scroll horizontal) + verificación/reparación como red de seguridad.
+    _plot().then(function(){
+      if(gd._applyGen !== _gen || gd.offsetParent === null) return;   // supersedido / oculto
+      if(typeof requestAnimationFrame === 'undefined') return;
+      gd._finRAF = requestAnimationFrame(function(){
+        gd._finRAF = 0;
+        if(gd._applyGen !== _gen || gd.offsetParent === null) return;
+        try{
+          if(repairStack(gd, newData, layout)) return;   // roto ya tras el react
+          Plotly.Plots.resize(gd);
+          // Re-verificación DIFERIDA: la rotura puede aparecer DESPUÉS del
+          // resize (o de trabajo async interno de plotly). Un chequeo tardío
+          // barato cierra ese punto ciego; cancelable si llega otro apply.
+          gd._verifyTO = setTimeout(function(){
+            gd._verifyTO = 0;
+            if(gd._applyGen !== _gen || gd.offsetParent === null) return;
+            try{ repairStack(gd, newData, layout); }catch(e){}
+          }, 450);
+        }catch(e){}
+      });
+    });
   }
 """
 
@@ -789,21 +1217,43 @@ _DASHBOARD_SCRIPT = """
   // Control dropdown reutilizable: botón resumen + popover con botones rápidos
   // (Default / Todos) y checklist. items = [{value,label}, ...]. defItems = set
   // por defecto para el botón "Default" (null = todos). Devuelve { checkedVals }.
-  function buildDropdown(box, label, items, isCheckedFn, onChange, defItems){
+  function buildDropdown(box, label, items, isCheckedFn, onChange, defItems, opts){
     box.className = 'ddbox';
     box.innerHTML = '';
+    var TAB = !!(opts && opts.tableau);   // selección tipo Tableau (selector temporal)
+    var lastIdx = -1;                      // ancla para selección por rango (Shift)
     var btn = document.createElement('button'); btn.className = 'ddbtn'; btn.type = 'button';
     var pop = document.createElement('div'); pop.className = 'ddpop';
     var quick = document.createElement('div'); quick.className = 'ddquick';
     var bDef = document.createElement('button'); bDef.type = 'button'; bDef.textContent = 'Default';
     var bAll = document.createElement('button'); bAll.type = 'button'; bAll.textContent = 'Todos';
-    quick.appendChild(bDef); quick.appendChild(bAll);
+    var bNone = document.createElement('button'); bNone.type = 'button'; bNone.textContent = 'Ninguno';
+    quick.appendChild(bDef); quick.appendChild(bAll); quick.appendChild(bNone);
     var list = document.createElement('div'); list.className = 'ddlist';
-    items.forEach(function(it){
+    items.forEach(function(it, idx){
       var w = document.createElement('label');
       var cb = document.createElement('input');
       cb.type = 'checkbox'; cb.value = it.value; cb.checked = isCheckedFn(it.value);
       cb.addEventListener('change', function(){ updateBtn(); onChange(); });
+      if(TAB){
+        // Estilo Tableau: click simple = sólo ese año; Ctrl/Cmd = alternar uno;
+        // Shift = rango desde el ancla (lastIdx). preventDefault frena el toggle
+        // nativo del checkbox para que no pelee con el estado que fijamos a mano;
+        // como setTo/cb.checked no disparan 'change', el onChange() se llama una
+        // sola vez (un solo Plotly.react aunque el rango mueva muchas casillas).
+        w.addEventListener('click', function(e){
+          e.preventDefault();
+          if(e.shiftKey && lastIdx >= 0){
+            var a = Math.min(lastIdx, idx), b = Math.max(lastIdx, idx);
+            setTo(items.slice(a, b + 1).map(function(x){ return x.value; }));
+          } else if(e.ctrlKey || e.metaKey){
+            cb.checked = !cb.checked; lastIdx = idx;
+          } else {
+            setTo([it.value]); lastIdx = idx;
+          }
+          updateBtn(); onChange();
+        });
+      }
       w.appendChild(cb); w.appendChild(document.createTextNode(' ' + it.label));
       list.appendChild(w);
     });
@@ -821,6 +1271,7 @@ _DASHBOARD_SCRIPT = """
     }
     bAll.addEventListener('click', function(e){ e.preventDefault(); setTo(items.map(function(it){ return it.value; })); updateBtn(); onChange(); });
     bDef.addEventListener('click', function(e){ e.preventDefault(); setTo(defItems || items.map(function(it){ return it.value; })); updateBtn(); onChange(); });
+    bNone.addEventListener('click', function(e){ e.preventDefault(); setTo([]); updateBtn(); onChange(); });
     btn.addEventListener('click', function(e){
       e.preventDefault(); e.stopPropagation();
       document.querySelectorAll('.ddbox.open').forEach(function(o){ if(o !== box) o.classList.remove('open'); });
@@ -871,7 +1322,17 @@ _DASHBOARD_SCRIPT = """
       function scens(){ return sctl ? sctl.checkedVals() : gd._scAliases.slice(); }
       function countries(){ return cctl ? cctl.checkedVals() : null; }
       function series(){ return lgctl ? lgctl.checkedVals() : null; }
-      function apply(){ applyFilters(gd, years(), scens(), countries(), series()); }
+      // Coalescing: una ráfaga de clicks (checkboxes rápidos) dispara UN solo
+      // applyFilters con la selección final, en vez de N reacts pesados
+      // apilados (con 9-10 escenarios cada uno bloquea ~1-2 s el hilo).
+      function apply(){
+        if(gd._applyRAF && typeof cancelAnimationFrame !== 'undefined'){ cancelAnimationFrame(gd._applyRAF); }
+        if(typeof requestAnimationFrame === 'undefined'){ applyFilters(gd, years(), scens(), countries(), series()); return; }
+        gd._applyRAF = requestAnimationFrame(function(){
+          gd._applyRAF = 0;
+          applyFilters(gd, years(), scens(), countries(), series());
+        });
+      }
 
       // Eje X (años | periodos): todas las figuras son nativas-año; el modo
       // periodos colapsa en el navegador. El selector temporal (ysel) lista años
@@ -889,7 +1350,7 @@ _DASHBOARD_SCRIPT = """
         var cats = gd._xMode === 'periods' ? PORDER : gd._allCats, def = curDefault();
         var yitems = cats.map(function(c){ return { value: c, label: c }; });
         yctl = buildDropdown(ybox, gd._xMode === 'periods' ? 'Periodos' : 'Años', yitems,
-                 function(c){ return def ? (def.indexOf(c) >= 0) : true; }, apply, def);
+                 function(c){ return def ? (def.indexOf(c) >= 0) : true; }, apply, def, {tableau: true});
       }
       // Selector temporal (oculto si el gráfico no tiene eje categórico).
       if(ybox){
@@ -958,13 +1419,93 @@ _DASHBOARD_SCRIPT = """
     });
   }
 
+  // ---- Etiquetas de escenario editables EN VIVO (sin rebuild) ----
+  // El dashboard usa el ALIAS de cada escenario como texto (trazas, leyenda,
+  // etiqueta por fila, títulos de mapa) Y como clave de filtrado. Renombrar =
+  // reemplazar viejo->nuevo de forma consistente en TODOS esos sitios + el
+  // desplegable de Escenarios, y luego Plotly.react. Se persiste en localStorage.
+  var SCEN_CODES = window.SCEN_CODES || [];
+  var SCEN_LABELS0 = window.SCEN_LABELS0 || [];
+  var LBL_KEY = 'relacScenLabels';
+  function curLabels(){
+    try{ var s = localStorage.getItem(LBL_KEY); if(s){ var a = JSON.parse(s); if(a && a.length === SCEN_CODES.length) return a; } }catch(e){}
+    return SCEN_LABELS0.slice();
+  }
+  function wrapOf(gd){ var w = gd.parentElement; while(w && !/^wrap_/.test(w.id || '')) w = w.parentElement; return w; }
+  function relabelScenarios(newLabels){
+    var old = curLabels(), map = {};
+    for(var i = 0; i < SCEN_CODES.length; i++){ if(old[i] !== newLabels[i]) map[old[i]] = newLabels[i]; }
+    function mv(x){ return (x != null && map.hasOwnProperty(x)) ? map[x] : x; }
+    graphs().forEach(function(gd){
+      (gd.data || []).forEach(function(t){
+        if(t.name != null && map.hasOwnProperty(t.name)) t.name = map[t.name];
+        if(t.legendgroup != null && map.hasOwnProperty(t.legendgroup)) t.legendgroup = map[t.legendgroup];
+      });
+      (((gd.layout || {}).annotations) || []).forEach(function(a){
+        if(a.text == null) return;
+        for(var o in map){ if(!map.hasOwnProperty(o)) continue;
+          if(a.text === '<b>' + o + '</b>'){ a.text = '<b>' + map[o] + '</b>'; break; }
+          if(a.text === o){ a.text = map[o]; break; }
+        }
+      });
+      if(gd._scAliases) gd._scAliases = gd._scAliases.map(mv);
+      if(gd._legendGroups) gd._legendGroups = gd._legendGroups.map(mv);
+      var w = wrapOf(gd);
+      if(w){ var sb = document.getElementById('scsel_' + w.id.replace('wrap_', ''));
+        if(sb){ Array.prototype.slice.call(sb.querySelectorAll('.ddlist input')).forEach(function(cb){
+          if(map.hasOwnProperty(cb.value)){ var nv = map[cb.value]; cb.value = nv;
+            if(cb.nextSibling && cb.nextSibling.nodeType === 3) cb.nextSibling.textContent = ' ' + nv; }
+        }); }
+      }
+      // Rows-mode: reconstrucción virgen (mismo criterio que applyFilters — el
+      // diff de react es inestable en subplots apilados); resto: react normal.
+      if(gd._fullLayout){
+        if(gd._mode === 'rows'){ Plotly.newPlot(gd, gd.data, gd.layout, gd._context || {}); }
+        else { Plotly.react(gd, gd.data, gd.layout); }
+      }
+    });
+    if(window.CHART_SCENARIOS){ Object.keys(window.CHART_SCENARIOS).forEach(function(k){
+      if(window.CHART_SCENARIOS[k] && window.CHART_SCENARIOS[k].map) window.CHART_SCENARIOS[k] = window.CHART_SCENARIOS[k].map(mv); }); }
+    try{ localStorage.setItem(LBL_KEY, JSON.stringify(newLabels)); }catch(e){}
+  }
+  function buildLabelPanel(){
+    var pop = document.getElementById('lblPop'), btn = document.getElementById('lblBtn');
+    if(!pop || !btn || !SCEN_CODES.length) return;
+    var cur = curLabels(), rows = '';
+    for(var i = 0; i < SCEN_CODES.length; i++){
+      var v = String(cur[i]).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      rows += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+        + '<span style="font-size:11px;color:#5b6e72;width:36px;">' + SCEN_CODES[i] + '</span>'
+        + '<input type="text" data-i="' + i + '" value="' + v + '" style="font-size:12px;padding:3px 5px;border:1px solid #b3bcc2;border-radius:4px;width:160px;"></div>';
+    }
+    pop.innerHTML = rows
+      + '<div style="display:flex;gap:6px;margin-top:8px;">'
+      + '<button id="lblApply" type="button" style="font-size:12px;color:#fff;background:#23978E;border:1px solid #23978E;border-radius:4px;padding:5px 11px;cursor:pointer;">Aplicar</button>'
+      + '<button id="lblReset" type="button" style="font-size:12px;color:#00414D;background:#DFE0E6;border:1px solid #b3bcc2;border-radius:4px;padding:5px 11px;cursor:pointer;">Restablecer</button></div>';
+    btn.onclick = function(e){ e.stopPropagation(); pop.style.display = (pop.style.display === 'block') ? 'none' : 'block'; };
+    pop.onclick = function(e){ e.stopPropagation(); };
+    document.getElementById('lblApply').onclick = function(){
+      var vals = SCEN_LABELS0.slice();
+      Array.prototype.slice.call(pop.querySelectorAll('input[data-i]')).forEach(function(inp){
+        var k = +inp.getAttribute('data-i'), t = (inp.value || '').trim(); vals[k] = t || SCEN_LABELS0[k];
+      });
+      relabelScenarios(vals); pop.style.display = 'none';
+    };
+    document.getElementById('lblReset').onclick = function(){ relabelScenarios(SCEN_LABELS0.slice()); pop.style.display = 'none'; buildLabelPanel(); };
+  }
+
   function wire(){
     if(!ready()){ return setTimeout(wire, 150); }
     snapshot();
     buildSelectors();
+    // Aplicar etiquetas de escenario guardadas (si difieren del default) y armar el panel.
+    var _sv = curLabels();
+    if(_sv.some(function(v, i){ return v !== SCEN_LABELS0[i]; })) relabelScenarios(_sv);
+    buildLabelPanel();
     // Cerrar cualquier dropdown abierto al hacer click fuera de su popover.
     document.addEventListener('click', function(){
       document.querySelectorAll('.ddbox.open').forEach(function(o){ o.classList.remove('open'); });
+      var _lp = document.getElementById('lblPop'); if(_lp) _lp.style.display = 'none';
     });
     var af = document.getElementById('axisFont'), afv = document.getElementById('axisFontVal');
     var lf = document.getElementById('labelFont'), lfv = document.getElementById('labelFontVal');
@@ -977,8 +1518,26 @@ _DASHBOARD_SCRIPT = """
         var wrap = document.getElementById(btn.dataset.target);
         wrap.classList.add('active'); btn.classList.add('active');
         var gd = wrap.querySelector('.plotly-graph-div');
-        if(gd){ Plotly.Plots.resize(gd); }
+        // Al mostrar: reajusta alto (ya fijado en el estilo por applyFilters),
+        // ancho (scroll) y fuerza el resize (el gráfico estaba oculto y no era
+        // medible, así que su tamaño real se resuelve aquí).
+        if(gd){ fitAndResize(gd); }
       });
+    });
+    // Ancho responsivo: al redimensionar la ventana reajustar SÓLO el gráfico
+    // visible (offsetParent === null => oculto). fitAndResize recomputa además
+    // si hace falta scroll horizontal según el nuevo ancho disponible.
+    // DEBOUNCED: un toggle de escenario cambia el alto del lienzo (335↔3035 px)
+    // y puede alternar la barra de scroll vertical → 'resize' de ventana; sin
+    // debounce ese fitAndResize SÍNCRONO caía a mitad del dibujo del react
+    // (barras finas). El del nav-click de arriba queda síncrono a propósito
+    // (nunca hay un react en vuelo al hacer click en la barra de navegación).
+    var _winRZ;
+    window.addEventListener('resize', function(){
+      clearTimeout(_winRZ);
+      _winRZ = setTimeout(function(){
+        graphs().forEach(function(gd){ if(gd && gd.offsetParent !== null){ fitAndResize(gd); } });
+      }, 120);
     });
   }
   wire();
@@ -1006,7 +1565,7 @@ CHART_DESC = {
     "12": "Indicador de seguridad energética: participación de energía primaria importada (MIN internacional) frente a la producción autóctona (extracción local y fuentes renovables), por año y escenario. La barra inferior (verde) muestra el porcentaje autóctono; el importado se infiere como 100 − x.",
     "13": "Indicador de resiliencia agnóstico a la amenaza (índice Herfindahl-Hirschman). Sobre la generación anual, agrupa las tecnologías en familias de fuente (toda la hidro = una fuente, etc.) y grafica el número efectivo de fuentes = 1/HHI, una línea por escenario. Un valor mayor significa una matriz más diversificada y resiliente: ninguna fuente domina, así que cualquier amenaza alcanza sólo una porción del suministro. Las fuentes correlacionadas se colapsan a una para no sobreestimar la resiliencia.",
     "14": "Costo total del sistema (promedio anual por periodo), apilado en CAPEX, O&M y Combustible. A diferencia de los gráficos 05 y 07 —que solo cuentan capital y operación de plantas, red y almacenamiento—, este incluye el costo de energía primaria/combustible (OperatingCost de las tecnologías de extracción MIN*). Al sumar el combustible, el escenario con la transmisión topada deja de parecer el más barato: su menor inversión se compensa con creces por una mayor factura de combustible (más respaldo fósil).",
-    "15": "Costo de la energía no suministrada: producción de las tecnologías backstop (PWRBCK*, la holgura que el modelo despacha cuando la flota disponible no alcanza a cubrir la demanda) multiplicada por su costo variable de penalización (VariableCost). Una línea por escenario; idealmente la curva es cero en todos. Un valor mayor que cero señala demanda no cubierta, y el filtro de países permite ubicar dónde ocurre.",
+    "15": "Costo de la energía no suministrada: producción de las tecnologías backstop (PWRBCK*, la holgura que el modelo despacha cuando la flota disponible no alcanza a cubrir la demanda) valorada al VOLL (value of lost load) de $1500/MWh — NO al penalty big-M del modelo. Una línea por escenario; idealmente la curva es cero en todos. Un valor mayor que cero señala demanda no cubierta, y el filtro de países permite ubicar dónde ocurre.",
 }
 
 # Pestañas extra (16 Mapas de Transmisión, 17 Despacho, 18 Diagrama RES): NO son
@@ -1125,7 +1684,9 @@ def build_combined_dashboard(items: list) -> None:
             f'<div class="ddbox" id="scsel_{key}"></div>'
             f'<div class="ddbox" id="ctsel_{key}"></div>'
             f'<div class="ddbox" id="sesel_{key}"></div>'
-            f'</div>{div}</div>'
+            f'</div>'
+            f'<div class="chartscroll"><div class="chartsizer">{div}</div></div>'
+            f'</div>'
         )
 
     # Pestañas extra: se generan aquí (string) y se incrustan con iframe srcdoc
@@ -1169,7 +1730,13 @@ def build_combined_dashboard(items: list) -> None:
         f"window.CHART_COUNTRY = {json.dumps(countries)};"
         f"window.CHART_XMETA = {json.dumps(xmeta)};"
         f"window.CHART_PERIODYEARS = {json.dumps(period_years)};"
-        f"window.CHART_PERIODORDER = {json.dumps(PERIOD_ORDER)};</script>"
+        f"window.CHART_PERIODORDER = {json.dumps(PERIOD_ORDER)};"
+        f"window.SCEN_CODES = {json.dumps(SCENARIOS)};"
+        f"window.STACK_SIZING = {json.dumps(_STACK_SIZING)};"
+        # Sello de build: permite verificar en consola (window.DASH_BUILD) que el
+        # navegador tiene abierta ESTA generación y no una pestaña/copia vieja.
+        f"window.DASH_BUILD = {json.dumps(__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M'))};"
+        f"window.SCEN_LABELS0 = {json.dumps([SCENARIO_ALIAS.get(s, s) for s in SCENARIOS])};</script>"
         "</head><body>"
         + _DASHBOARD_PANEL
         + '<div id="nav">' + "".join(nav) + "</div>"
@@ -1412,7 +1979,7 @@ def _stacked_share_chart(
         dtick=dtick,
     )
 
-    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=_STACK_VSPACING)
 
     y_max = pivot["Total"].max()
     y_axis_max = int(math.ceil(y_max / dtick)) * dtick
@@ -1499,7 +2066,7 @@ def _stacked_share_chart(
     fig.update_layout(
         barmode="stack",
         height=_STACK_H,
-        width=820,
+        autosize=True,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
         font=dict(family="Arial", size=12),
@@ -1534,7 +2101,10 @@ def _stacked_share_chart(
         # Rótulo del escenario, fuera a la izquierda del título del eje Y.
         fig.add_annotation(
             text=f"<b>{SCENARIO_ALIAS.get(scenario, scenario)}</b>",
-            x=-0.30,
+            x=0.0,
+            xanchor="right",
+            xshift=-118,   # px fijo dentro del margen izq (l=150): independiente
+                           # del ancho responsivo (paper-x escalaba y se salía).
             y=0.5,
             textangle=-90,
             xref="paper",
@@ -1639,7 +2209,7 @@ def _single_series_bars(
 
     grouped = df.groupby(["Scenario", "YEAR"])["val"].sum().reset_index()
 
-    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=_STACK_VSPACING)
 
     y_max = grouped["val"].max()
     dtick = _nice_dtick(y_max)
@@ -1703,7 +2273,7 @@ def _single_series_bars(
     fig.update_layout(
         barmode="group",
         height=_STACK_H,
-        width=820,
+        autosize=True,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
         font=dict(family="Arial", size=12),
@@ -1736,7 +2306,10 @@ def _single_series_bars(
         )
         fig.add_annotation(
             text=f"<b>{SCENARIO_ALIAS.get(scenario, scenario)}</b>",
-            x=-0.30,
+            x=0.0,
+            xanchor="right",
+            xshift=-118,   # px fijo dentro del margen izq (l=150): independiente
+                           # del ancho responsivo (paper-x escalaba y se salía).
             y=0.5,
             textangle=-90,
             xref="paper",
@@ -1808,7 +2381,7 @@ def _stacked_categories_chart(
     else:
         pivot["_xpos"] = pivot[x_col]
 
-    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=_STACK_VSPACING)
 
     y_max = pivot["Total"].max()
     dtick = _nice_dtick(y_max)
@@ -1887,7 +2460,7 @@ def _stacked_categories_chart(
     fig.update_layout(
         barmode="stack",
         height=_STACK_H,
-        width=820,
+        autosize=True,
         template="plotly_white",
         separators=",.",  # decimal "," y miles "." (formato español: 40.000)
         font=dict(family="Arial", size=12),
@@ -1921,7 +2494,10 @@ def _stacked_categories_chart(
         )
         fig.add_annotation(
             text=f"<b>{SCENARIO_ALIAS.get(scenario, scenario)}</b>",
-            x=-0.30,
+            x=0.0,
+            xanchor="right",
+            xshift=-118,   # px fijo dentro del margen izq (l=150): independiente
+                           # del ancho responsivo (paper-x escalaba y se salía).
             y=0.5,
             textangle=-90,
             xref="paper",
@@ -2061,6 +2637,11 @@ def chart_04():
 # ================================================================
 def chart_05():
     df = load_column(["CapitalInvestment"])
+    # EXCLUIR BACKSTOP (BCK): su CapitalInvestment/OperatingCost son penalizaciones
+    # big-M artificiales (no inversión/costo real); infla los escenarios con Tx
+    # restringida (ETT-MC/ETT-GP). El backstop se contabiliza como energía NO
+    # suministrada al VOLL en los gráficos 14/15. Ver [[backstop-as-unserved-energy]].
+    df = df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
     df["TechType"] = df["TECHNOLOGY"].apply(classify_tech_type)
     df = df[df["TechType"].notna()]
 
@@ -2158,7 +2739,7 @@ def _stacked_by_scenario_chart(*, pivot, categories, y_title, output_name):
     fig.update_layout(
         barmode="stack",
         height=520,
-        width=720,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -2254,6 +2835,11 @@ def chart_07():
     cols = ["CapitalInvestment", "OperatingCost"]
     df = load_column(cols)
     df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]  # candidatos = todos los periodos
+    # EXCLUIR BACKSTOP (BCK): su OperatingCost es el penalty big-M (~$6300/MWh),
+    # que disparaba este gráfico en los escenarios con Tx restringida. No es costo
+    # real de infraestructura; la energía no suministrada va al VOLL en 14/15.
+    # Ver [[backstop-as-unserved-energy]].
+    df = df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
     df["TechType"] = df["TECHNOLOGY"].apply(classify_tech_type)
     df = df[df["TechType"].notna()]
 
@@ -2357,7 +2943,7 @@ def chart_08():
 
     fig.update_layout(
         height=520,
-        width=940,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -2444,7 +3030,7 @@ def chart_08a():
 
     fig.update_layout(
         height=520,
-        width=940,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -2797,8 +3383,13 @@ def chart_10():
 # sin filtro). Excluye 2023-2024. Mismo gotcha de max() por tech-año en los costos.
 # ================================================================
 def chart_11():
+    # EXCLUIR BACKSTOP (BCK) del costo por energía. Su producción es energía NO
+    # suministrada (no entregada) y su OperatingCost es el penalty big-M
+    # artificial; incluirlo distorsiona el ratio (numerador Y denominador) en los
+    # escenarios con mucha holgura (VEG A/B). El precio queda por energía REAL.
+    _no_bck = lambda df: df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
     # Producción (nivel timeslice → sumar todas las filas) en TWh.
-    prod = load_column(["ProductionByTechnology"])
+    prod = _no_bck(load_column(["ProductionByTechnology"]))
     prod = prod[(prod["YEAR"] >= 2023) & (prod["YEAR"] <= 2050)]
     prod_g = (
         prod.groupby(["Scenario", "YEAR"])["ProductionByTechnology"].sum().reset_index()
@@ -2807,7 +3398,7 @@ def chart_11():
 
     # Costos anuales (valor por tech-año en una fila → max, luego sumar).
     cost_cols = ["CapitalInvestmentAnnualized", "OperatingCost"]
-    costs = load_column(cost_cols)
+    costs = _no_bck(load_column(cost_cols))
     costs = costs[(costs["YEAR"] >= 2023) & (costs["YEAR"] <= 2050)]
     per = (
         costs.groupby(["Scenario", "YEAR", "TECHNOLOGY"])[cost_cols].max().reset_index()
@@ -2876,7 +3467,7 @@ def chart_11():
     fig.update_layout(
         barmode="group",
         height=520,
-        width=940,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -3004,7 +3595,7 @@ def chart_12():
         ann_labels_by_si=ann_labels_by_si, ann_kinds=["securlabel"], dtick=0.0,
     )
 
-    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=0.07)
+    fig = make_subplots(rows=_NSC, cols=1, shared_xaxes=True, vertical_spacing=_STACK_VSPACING)
 
     for i, scenario in enumerate(SCENARIOS):
         row = i + 1
@@ -3063,7 +3654,7 @@ def chart_12():
     fig.update_layout(
         barmode="stack",
         height=_STACK_H,
-        width=820,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -3096,7 +3687,10 @@ def chart_12():
         )
         fig.add_annotation(
             text=f"<b>{SCENARIO_ALIAS.get(scenario, scenario)}</b>",
-            x=-0.30,
+            x=0.0,
+            xanchor="right",
+            xshift=-118,   # px fijo dentro del margen izq (l=150): independiente
+                           # del ancho responsivo (paper-x escalaba y se salía).
             y=0.5,
             textangle=-90,
             xref="paper",
@@ -3214,7 +3808,7 @@ def chart_13():
 
     fig.update_layout(
         height=520,
-        width=940,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
@@ -3262,7 +3856,12 @@ def chart_14():
         df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])[cols].max().reset_index()
     )
     per["TechType"] = per["TECHNOLOGY"].apply(classify_tech_type)
-    is_infra = per["TechType"].notna()  # Generación/Transmisión/Almacenamiento
+    # Backstop (BCK) se clasifica como "Generación" (empieza por PWR) pero su
+    # costo en el modelo es el penalty big-M artificial (inflaba O&M ~1000x en
+    # escenarios con holgura). Se EXCLUYE de CAPEX/O&M/Combustible y se cuenta
+    # aparte como energía no suministrada al VOLL (banda propia, abajo).
+    is_bck = per["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)
+    is_infra = per["TechType"].notna() & ~is_bck  # Gen/Transmisión/Almac. (sin backstop)
 
     capex = per["CapitalInvestment"].fillna(0)
     adj = per["TECHNOLOGY"].str.startswith(("PWRTRN", "RNWTRN"))
@@ -3271,21 +3870,34 @@ def chart_14():
 
     per["CAPEX"] = capex.where(is_infra, 0.0)
     per["O&M"] = op.where(is_infra, 0.0)
-    per["Combustible"] = op.where(~is_infra, 0.0)
+    per["Combustible"] = op.where(~is_infra & ~is_bck, 0.0)
 
     comp = ["CAPEX", "O&M", "Combustible"]
     # Pivot POR AÑO (nativo-año); el promedio anual del periodo lo hace el JS.
     g = per.groupby(["Scenario", "YEAR"])[comp].sum().reset_index()
 
+    # Energía NO suministrada, JUNTO al combustible: producción backstop (PJ) al
+    # VOLL $1500/MWh (= 1500/3.6 MUSD/PJ), NO el penalty big-M del modelo.
+    bck = load_column(["ProductionByTechnology"])
+    bck = bck[(bck["YEAR"] >= 2023) & (bck["YEAR"] <= 2050)]
+    bck = bck[bck["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
+    bck_g = (
+        bck.groupby(["Scenario", "YEAR"])["ProductionByTechnology"].sum()
+        .mul(1500.0 / 3.6).rename("Energía no Suministrada").reset_index()
+    )
+    g = g.merge(bck_g, on=["Scenario", "YEAR"], how="left")
+    g["Energía no Suministrada"] = g["Energía no Suministrada"].fillna(0.0)
+
     categories = [
         ("CAPEX", "#4e79a7"),          # azul (igual que Generación en el dashboard)
         ("O&M", "#9c9c9c"),            # gris
         ("Combustible", "#e15759"),    # rojo: el bloque que chart_05/07 no muestran
+        ("Energía no Suministrada", "#5e3c99"),  # púrpura: demanda no cubierta @ VOLL $1500/MWh
     ]
     fig, name, w, h, cm = _stacked_categories_chart(
         pivot=g,
         categories=categories,
-        y_title="Costo Total c/ Combustible<br>[MUSD/año]",
+        y_title="Costo Total del Sistema<br>[MUSD/año]",
         output_name="chart14_total_cost_fuel",
         x_col="YEAR",
         show_total_line=False,
@@ -3297,20 +3909,18 @@ def chart_14():
 # ================================================================
 # Chart 15 — Energía no Suministrada [MUSD]
 # ----------------------------------------------------------------
-# Costo de la energía no suministrada: producción de las tecnologías BACKSTOP
+# Costo de la energía NO suministrada: producción de las tecnologías BACKSTOP
 # (PWRBCK*, la holgura que el modelo despacha cuando la flota disponible no
-# alcanza a cubrir la demanda) multiplicada por su VariableCost (la
-# penalización, en MUSD/PJ). Gráfico de LÍNEAS (una por escenario), x = años.
-# Idealmente la curva es CERO en todos los escenarios; un valor > 0 delata
-# demanda no cubierta (y dónde, vía el filtro de países).
-# OJO datos: el CSV combinado puede traer el VariableCost de las BCK en las
-# filas de UN solo escenario (input compartido), así que el costo unitario se
-# resuelve por (tecnología, año) con fallback al máximo entre escenarios. La
-# malla Escenario×Año×Tech se completa con 0 para que las líneas existan (y el
-# filtro de países liste los 19 países) aunque no haya producción BCK.
+# alcanza a cubrir la demanda) valorada al VOLL (value of lost load) de
+# $1500/MWh — NO al VariableCost big-M del modelo (~$6300/MWh, penalización
+# artificial que solo existe para repeler al optimizador). Gráfico de LÍNEAS
+# (una por escenario), x = años. Idealmente la curva es CERO en todos los
+# escenarios; un valor > 0 delata demanda no cubierta (y dónde, vía países).
+# La malla Escenario×Año×Tech se completa con 0 para que las líneas existan (y
+# el filtro de países liste los 19 países) aunque no haya producción BCK.
 # ================================================================
 def chart_15():
-    df = load_column(["ProductionByTechnology", "VariableCost"])
+    df = load_column(["ProductionByTechnology"])
     df = df[df["YEAR"].isin(ALL_YEARS)]
     df = df[df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
 
@@ -3318,20 +3928,6 @@ def chart_15():
     prod = (
         df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])["ProductionByTechnology"]
         .sum()
-        .reset_index()
-    )
-    # Costo unitario por (tech, año): propio del escenario si existe; si no, el
-    # máximo entre escenarios (input compartido entre BAU/INV/VGB/OPT).
-    vc_sc = (
-        df.groupby(["Scenario", "YEAR", "TECHNOLOGY"])["VariableCost"]
-        .max()
-        .rename("vc_sc")
-        .reset_index()
-    )
-    vc_ty = (
-        df.groupby(["YEAR", "TECHNOLOGY"])["VariableCost"]
-        .max()
-        .rename("vc_ty")
         .reset_index()
     )
 
@@ -3345,10 +3941,13 @@ def chart_15():
         .reset_index()
     )
     per["ProductionByTechnology"] = per["ProductionByTechnology"].fillna(0.0)
-    per = per.merge(vc_sc, on=["Scenario", "YEAR", "TECHNOLOGY"], how="left")
-    per = per.merge(vc_ty, on=["YEAR", "TECHNOLOGY"], how="left")
-    per["vc"] = per["vc_sc"].fillna(per["vc_ty"]).fillna(0.0)
-    per["val"] = per["ProductionByTechnology"] * per["vc"]
+    # Costo de energía NO suministrada valorada al VOLL (value of lost load),
+    # NO al penalty big-M del modelo (VariableCost del PWRBCK ~$6300/MWh, que
+    # solo existe para repeler al optimizador). La producción backstop = energía
+    # no cubierta; está en PJ (igual que chart_02). $1500/MWh = 1500 MUSD/TWh =
+    # 1500/3.6 MUSD/PJ ≈ 416,7 MUSD/PJ.
+    VOLL_USD_PER_MWH = 1500.0
+    per["val"] = per["ProductionByTechnology"] * (VOLL_USD_PER_MWH / 3.6)
 
     g = per.groupby(["Scenario", "YEAR"])["val"].sum().reset_index()
 
@@ -3384,7 +3983,7 @@ def chart_15():
 
     fig.update_layout(
         height=520,
-        width=940,
+        autosize=True,
         template="plotly_white",
         separators=",.",
         font=dict(family="Arial", size=12),
