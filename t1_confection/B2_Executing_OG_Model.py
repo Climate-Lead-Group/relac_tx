@@ -701,7 +701,7 @@ def run_dispatch_floors_patcher(params, scenario_name, HERE):
         raise RuntimeError(f"write_floors fallo para '{scenario_name}'")
     # Verificar que el output esperado por la cadena existe
     expected = os.path.join(HERE, params['executables'], scenario_name + '_0',
-                            chained_base(params, scenario_name) + '.txt')
+                            chained_base(params, scenario_name, upto=params.get('veg_tx_suffix', 'VEGCON')) + '.txt')
     if not os.path.exists(expected):
         raise RuntimeError(f"write_floors no produjo {expected}")
     print('#------------------------------------------------------------------------------#')
