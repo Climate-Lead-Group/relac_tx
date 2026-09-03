@@ -221,3 +221,13 @@ sync_patched_csvs_params:
   - TotalAnnualMinCapacity
   - TotalAnnualMinCapacityInvestment
   - TotalTechnologyAnnualActivityUpperLimit
+
+########################################################################################
+# === Dispatch floors (fix_dispatch/write_floors.py, pisos fosiles) ===
+dispatch_floors_active: True
+dispatch_floors_suffix: "FLOORED"
+dispatch_floors_script: "../fix_dispatch/write_floors.py"      # relativo a t1_confection
+dispatch_floors_scenarios: ["BAU", "OPT", "INV", "VGB"]        # base; los derivados heredan
+# Gate de separacion (read-only) ANTES de escribir pisos; exit!=0 aborta el pipeline.
+preflight_separation_active: True
+preflight_separation_script: "../fix_dispatch/preflight_separation.py"

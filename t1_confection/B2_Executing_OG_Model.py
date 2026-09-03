@@ -651,6 +651,43 @@ def run_activity_upper_limit_patcher(params, scenario_name):
     print('#------------------------------------------------------------------------------#')
 
 
+def run_preflight_separation_gate(params, HERE):
+    """Gate read-only (1 sola vez). exit!=0 => abortar ANTES de escribir pisos."""
+    if not params.get('preflight_separation_active', False):
+        return
+    script = os.path.normpath(os.path.join(HERE, params['preflight_separation_script']))
+    result = subprocess.run([sys.executable, script], capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+        raise SystemExit("[GATE] preflight_separation FALLO: corrige candidate_floors.csv "
+                         "antes de continuar (ver reporte arriba).")
+
+def run_dispatch_floors_patcher(params, scenario_name, HERE):
+    """Etapa B: pisos de despacho fosil. Llama write_floors.py SIN cambios internos;
+    produce el sibling _FLOORED.txt en Executables/<S>_0/."""
+    if not params.get('dispatch_floors_active', False):
+        return
+    scens = params.get('dispatch_floors_scenarios', [])
+    if scens and scenario_name not in scens:
+        return
+    script = os.path.normpath(os.path.join(HERE, params['dispatch_floors_script']))
+    command = [sys.executable, script, '--scenarios', scenario_name]
+    print(f"Dispatch floors (FLOORED) para '{scenario_name}_0':")
+    print(' '.join(command))
+    result = subprocess.run(command, capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+        raise RuntimeError(f"write_floors fallo para '{scenario_name}'")
+    # Verificar que el output esperado por la cadena existe
+    expected = os.path.join(HERE, params['executables'], scenario_name + '_0',
+                            chained_base(params, scenario_name) + '.txt')
+    if not os.path.exists(expected):
+        raise RuntimeError(f"write_floors no produjo {expected}")
+    print('#------------------------------------------------------------------------------#')
+
+
 def run_sync_patched_csvs(params, scenario_name, base_output_path):
     """
     Overlay parameter values from the final patched .txt datafile onto the
@@ -1299,6 +1336,9 @@ if __name__ == "__main__":
 
     main_scenario_name = params_A2['xtra_scen']['Main_Scenario']
 
+    if params.get('dispatch_floors_active', False):
+        run_preflight_separation_gate(params, HERE)
+
     ###############################################################################################
     # Write txt model
     for scenario_name in scenarios:
@@ -1326,6 +1366,7 @@ if __name__ == "__main__":
                 run_reserve_margin_repair_patcher(params, scenario_name)
                 run_reserve_margin_xlsx_patcher(params, scenario_name)
                 run_activity_upper_limit_patcher(params, scenario_name)
+                run_dispatch_floors_patcher(params, scenario_name, HERE)
             else:
                 print(f"❌ Skipping preprocessing for '{scenario_name}' because otoole conversion failed.")
                 print('#------------------------------------------------------------------------------#')
