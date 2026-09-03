@@ -50,6 +50,8 @@ only_main_scenario: False
 # Paralle scenarios
 parallel: False
 # Number of scenario per run
+# Recomendacion: cplex_threads x max_x_per_iter <= nucleos fisicos de la maquina
+# (cada proceso en paralelo lanza su propia instancia de cplex_threads hilos)
 max_x_per_iter: 4
 
 # Write A2 otoole outputs

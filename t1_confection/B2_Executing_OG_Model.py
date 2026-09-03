@@ -969,7 +969,8 @@ def main_executer(params, scenario_name, HERE):
     # Paths for converting outputs
     file_path_conv_format = os.path.join(HERE, params['Miscellaneous'], params['conv_format'])
     # file_path_template = os.path.join(params['Miscellaneous'], params['templates'])
-    file_path_template = os.path.join(HERE, params['A2_output_otoole'], scenario_name)
+    file_path_template = os.path.join(HERE, params['A2_output_otoole'],
+                                      scenario_base(params, scenario_name))
     file_path_outputs = os.path.join(folder_scenario, params['outputs'])
 
     # Converting outputs from .sol to csv format
