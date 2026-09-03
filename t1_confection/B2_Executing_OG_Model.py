@@ -74,6 +74,25 @@ def chained_base(params, scenario_name, upto=None):
     parts = chain_suffixes(params, scenario_name, upto=upto)
     return f"{base}_{'_'.join(parts)}" if parts else base
 
+def scenario_base(params, scenario_name):
+    """Escenario base cuyo A2 sirve de referencia (sets identicos). Base de si mismo."""
+    return params.get('derived_scenarios', {}).get(scenario_name, scenario_name)
+
+def solve_universe(params, HERE, base_scenarios):
+    """Escenarios a resolver: solve_scenarios del YAML si existe; si no, los base.
+    Valida que cada uno tenga su datafile final en Executables/<S>_0/ (los derivados
+    lo reciben de las etapas VEGCON/transforms; si falta, esas etapas no corrieron)."""
+    universe = list(params.get('solve_scenarios') or base_scenarios)
+    for s in universe:
+        txt = os.path.join(HERE, params['executables'], s + '_0',
+                           chained_base(params, s) + '.txt')
+        if not os.path.exists(txt):
+            hint = ("es derivado: activa veg_tx_active/scenario_transforms"
+                    if s in params.get('derived_scenarios', {}) else
+                    "es base: revisa las etapas A/B (write_txt_model, dispatch_floors)")
+            raise SystemExit(f"[solve_universe] falta {txt} ({hint})")
+    return universe
+
 def process_scenario_folder(base_input_path, template_path, base_output_path, scenario_name):
     """
     Processes a scenario folder: reads its CSV files, aligns with template structure,
@@ -1462,11 +1481,12 @@ if __name__ == "__main__":
         
     ###############################################################################################
     # Execute txt model
+    solve_list = solve_universe(params, HERE, scenarios)
     if params['execute_model'] or params['create_matrix']:
         if params['parallel']:
             print('Entered Parallelization of model execution')
             max_x_per_iter = params['max_x_per_iter'] # FLAG: This is an input
-            scenarios_list_max_per_iter = chunk_scenarios(scenarios, max_x_per_iter)
+            scenarios_list_max_per_iter = chunk_scenarios(solve_list, max_x_per_iter)
             #
             for scens_list in scenarios_list_max_per_iter:
                 processes = []
@@ -1481,12 +1501,12 @@ if __name__ == "__main__":
         # This is for the linear version
         else:
             print('Started Linear Runs')
-            for scenario_num in scenarios:
+            for scenario_num in solve_list:
                 main_executer(params, scenario_num, HERE)
     
     ###############################################################################################
     # Delete files
-    for scenario_name in scenarios:        
+    for scenario_name in solve_list:        
         # Delete Outputs folder with otoole csvs files
         if params['del_files']:
             # Delete Outputs folder with otoole csvs files
