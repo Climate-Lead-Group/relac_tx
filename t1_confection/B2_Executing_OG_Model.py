@@ -46,6 +46,34 @@ def sort_csv_files_in_folder(folder_path):
     print("✅ All files were sort.")
     print('################################################################\n')
 
+# Orden CANONICO de la cadena de patchers. Cada entrada: (flag_active, key_suffix, default).
+CHAIN_ORDER = [
+    ('storage_delay_active',         'storage_delay_suffix',         'StorageDelayN5'),
+    ('strip_storage_active',         'strip_storage_suffix',         'NoStorage'),
+    ('open_pwrbck_active',           'open_pwrbck_suffix',           'OpenBCK'),
+    ('reserve_margin_repair_active', 'reserve_margin_repair_suffix', 'RMRepair'),
+    ('reserve_margin_xlsx_active',   'reserve_margin_xlsx_suffix',   'RMCarefulXLSX'),
+    ('dispatch_floors_active',       'dispatch_floors_suffix',       'FLOORED'),
+    ('veg_tx_active',                'veg_tx_suffix',                'VEGCON'),
+]
+
+def chain_suffixes(params, scenario_name, upto=None):
+    """Sufijos activos en orden canonico. upto=<suffix> corta ANTES de ese eslabon
+    (para que un patcher conozca el nombre de su archivo de ENTRADA)."""
+    out = []
+    for flag, key, default in CHAIN_ORDER:
+        suffix = params.get(key, default)
+        if upto is not None and suffix == upto:
+            break
+        if params.get(flag, False):
+            out.append(suffix)
+    return out
+
+def chained_base(params, scenario_name, upto=None):
+    base = f"{params['preprocess_data_name']}{scenario_name}_0"
+    parts = chain_suffixes(params, scenario_name, upto=upto)
+    return f"{base}_{'_'.join(parts)}" if parts else base
+
 def process_scenario_folder(base_input_path, template_path, base_output_path, scenario_name):
     """
     Processes a scenario folder: reads its CSV files, aligns with template structure,
@@ -357,15 +385,9 @@ def run_open_pwrbck_patcher(params, scenario_name):
         'open_pwrbck_caps.py',
     )
 
-    base = f"{params['preprocess_data_name']}{scenario_name}_0"
     # Input is the previous patcher's output (storage_delay or strip) if active;
     # otherwise the vanilla file.
-    _chain = []
-    if params.get('storage_delay_active', False):
-        _chain.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        _chain.append(params.get('strip_storage_suffix', 'NoStorage'))
-    in_base = f"{base}_{'_'.join(_chain)}" if _chain else base
+    in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
     in_file  = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
@@ -412,16 +434,7 @@ def run_reserve_margin_repair_patcher(params, scenario_name):
         'patch_reserve_margin_repair.py',
     )
 
-    base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    chain_parts = []
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-
-    in_base = f"{base}_{'_'.join(chain_parts)}" if chain_parts else base
+    in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
     in_file = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
@@ -496,18 +509,7 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
     if not os.path.isabs(workbook):
         workbook = os.path.join(here, workbook)
 
-    base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    chain_parts = []
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-    if params.get('reserve_margin_repair_active', False):
-        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-
-    in_base = f"{base}_{'_'.join(chain_parts)}" if chain_parts else base
+    in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
     in_file = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
@@ -591,20 +593,7 @@ def run_activity_upper_limit_patcher(params, scenario_name):
     suffix = params.get('activity_upper_limit_suffix', 'ActUpLim')
     here = os.path.dirname(os.path.abspath(__file__))
 
-    base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    chain_parts = []
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-    if params.get('reserve_margin_repair_active', False):
-        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-    if params.get('reserve_margin_xlsx_active', False):
-        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
-
-    in_base = f"{base}_{'_'.join(chain_parts)}" if chain_parts else base
+    in_base = chained_base(params, scenario_name, upto=params.get('dispatch_floors_suffix', 'FLOORED'))
     out_base = f"{in_base}_{suffix}"
     scenario_exec = os.path.join(params['executables'], scenario_name + '_0')
     in_file = os.path.join(scenario_exec, f"{in_base}.txt")
@@ -678,17 +667,7 @@ def run_sync_patched_csvs(params, scenario_name, base_output_path):
     if not params.get('sync_patched_csvs_active', False):
         return
 
-    chain_parts = []
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-    if params.get('reserve_margin_repair_active', False):
-        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-    if params.get('reserve_margin_xlsx_active', False):
-        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
+    chain_parts = chain_suffixes(params, scenario_name, upto=params.get('dispatch_floors_suffix', 'FLOORED'))
     if params.get('activity_upper_limit_active', False) and (
         not params.get('activity_upper_limit_scenarios')
         or scenario_name in params.get('activity_upper_limit_scenarios', [])
@@ -798,79 +777,10 @@ def main_executer(params, scenario_name, HERE):
     folder_scenario = os.path.join(HERE, params['executables'], scenario_name + '_0')                             
     
     # Constructing paths for the data file and the output file, adapting for file system differences
-    data_file = os.path.join(folder_scenario, params['preprocess_data_name'] + scenario_name + '_0')
-    output_file = os.path.join(folder_scenario, params['preprocess_data_name'] + scenario_name + '_0' + params['output_files'])
+    data_file = os.path.join(folder_scenario, chained_base(params, scenario_name))
+    output_file = data_file + params['output_files']
     this_case = scenario_name + '_0.txt'
-
-    # storage_delay redirect: when active, point solver at the patched sibling file.
-    # Produces e.g. Pre_processed_BAU_0_StorageDelayN5.txt
-    if params.get('storage_delay_active', False):
-        _sd_suffix = params.get('storage_delay_suffix', 'StorageDelayN5')
-        _base = params['preprocess_data_name'] + scenario_name + '_0'
-        data_file = os.path.join(folder_scenario, f"{_base}_{_sd_suffix}")
-        output_file = os.path.join(folder_scenario, f"{_base}_{_sd_suffix}{params['output_files']}")
-        print(f"[storage_delay] redirecting solver to: {data_file}.txt")
-
-    # Strip-storage diagnostic redirect: when active, point solver at the patched sibling file.
-    # Produces e.g. Pre_processed_BAU_0_NoStorage.txt and Pre_processed_BAU_0_NoStorage_output.{lp,sol,cplex.log}
-    if params.get('strip_storage_active', False):
-        _strip_suffix = params.get('strip_storage_suffix', 'NoStorage')
-        _base = params['preprocess_data_name'] + scenario_name + '_0'
-        data_file = os.path.join(folder_scenario, f"{_base}_{_strip_suffix}")
-        output_file = os.path.join(folder_scenario, f"{_base}_{_strip_suffix}{params['output_files']}")
-        print(f"[strip_storage] redirecting solver to: {data_file}.txt")
-
-    # PWRBCK-cap-opening diagnostic redirect: chains OpenBCK suffix on top of
-    # any active storage_delay/strip suffix.
-    if params.get('open_pwrbck_active', False):
-        _bck_suffix = params.get('open_pwrbck_suffix', 'OpenBCK')
-        _base = params['preprocess_data_name'] + scenario_name + '_0'
-        _chain_parts = []
-        if params.get('storage_delay_active', False):
-            _chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-        if params.get('strip_storage_active', False):
-            _chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-        _chain_parts.append(_bck_suffix)
-        _chain = '_'.join(_chain_parts)
-        data_file = os.path.join(folder_scenario, f"{_base}_{_chain}")
-        output_file = os.path.join(folder_scenario, f"{_base}_{_chain}{params['output_files']}")
-        print(f"[open_pwrbck] redirecting solver to: {data_file}.txt")
-
-    # Reserve-margin repair redirect: chains after storage_delay/strip/open-BCK when active.
-    if params.get('reserve_margin_repair_active', False):
-        _rm_suffix = params.get('reserve_margin_repair_suffix', 'RMRepair')
-        _base = params['preprocess_data_name'] + scenario_name + '_0'
-        _chain_parts = []
-        if params.get('storage_delay_active', False):
-            _chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-        if params.get('strip_storage_active', False):
-            _chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-        if params.get('open_pwrbck_active', False):
-            _chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-        _chain_parts.append(_rm_suffix)
-        _chain = '_'.join(_chain_parts)
-        data_file = os.path.join(folder_scenario, f"{_base}_{_chain}")
-        output_file = os.path.join(folder_scenario, f"{_base}_{_chain}{params['output_files']}")
-        print(f"[reserve_margin_repair] redirecting solver to: {data_file}.txt")
-
-    # Careful XLSX reserve-margin repair redirect.
-    if params.get('reserve_margin_xlsx_active', False):
-        _xlsx_suffix = params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX')
-        _base = params['preprocess_data_name'] + scenario_name + '_0'
-        _chain_parts = []
-        if params.get('storage_delay_active', False):
-            _chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-        if params.get('strip_storage_active', False):
-            _chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-        if params.get('open_pwrbck_active', False):
-            _chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-        if params.get('reserve_margin_repair_active', False):
-            _chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-        _chain_parts.append(_xlsx_suffix)
-        _chain = '_'.join(_chain_parts)
-        data_file = os.path.join(folder_scenario, f"{_base}_{_chain}")
-        output_file = os.path.join(folder_scenario, f"{_base}_{_chain}{params['output_files']}")
-        print(f"[reserve_margin_xlsx] redirecting solver to: {data_file}.txt")
+    print(f"[chain] solver data file: {data_file}.txt")
 
     # Determining the solver based on parameters
     solver = params['solver']
@@ -1080,20 +990,7 @@ def export_root_datafile(here, params, scenario_name, export_name=None):
             export_name = 'RELAC_TX_data.txt'
 
     repo_root = Path(here).parent
-    base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    chain_parts = []
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-    if params.get('reserve_margin_repair_active', False):
-        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-    if params.get('reserve_margin_xlsx_active', False):
-        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
-
-    source_name = f"{base}_{'_'.join(chain_parts)}.txt" if chain_parts else f"{base}.txt"
+    source_name = chained_base(params, scenario_name) + '.txt'
     source_path = (
         Path(here)
         / params['executables']
@@ -1125,18 +1022,7 @@ def active_output_csv_candidates(params, scenario_future_name):
     Keep the active chained name first, with legacy fallbacks after it.
     """
     base = f"{params['preprocess_data_name']}{scenario_future_name}"
-    chain_parts = []
-
-    if params.get('storage_delay_active', False):
-        chain_parts.append(params.get('storage_delay_suffix', 'StorageDelayN5'))
-    if params.get('strip_storage_active', False):
-        chain_parts.append(params.get('strip_storage_suffix', 'NoStorage'))
-    if params.get('open_pwrbck_active', False):
-        chain_parts.append(params.get('open_pwrbck_suffix', 'OpenBCK'))
-    if params.get('reserve_margin_repair_active', False):
-        chain_parts.append(params.get('reserve_margin_repair_suffix', 'RMRepair'))
-    if params.get('reserve_margin_xlsx_active', False):
-        chain_parts.append(params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX'))
+    chain_parts = chain_suffixes(params, scenario_future_name)
 
     candidates = []
     if chain_parts:
