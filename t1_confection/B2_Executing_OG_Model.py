@@ -711,6 +711,33 @@ def run_veg_tx_stage(params, HERE, scenarios):
     print('#------------------------------------------------------------------------------#')
 
 
+def run_scenario_transforms(params, HERE):
+    """Etapa D (barrera): transforms ordenados sobre Executables. Cada script se llama
+    con --executables-dir; exit!=0 aborta. Extensible via YAML (scenario_transforms)."""
+    transforms = params.get('scenario_transforms', [])
+    if not transforms:
+        return
+    exe_dir = os.path.join(HERE, params['executables'])
+    for t in transforms:
+        script = os.path.normpath(os.path.join(HERE, t['script']))
+        command = [sys.executable, script, '--executables-dir', exe_dir]
+        print(f"Transform '{t.get('name', os.path.basename(script))}':")
+        print(' '.join(command))
+        result = subprocess.run(command, capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            print(result.stderr)
+            raise SystemExit(f"[transform:{t.get('name')}] self-check FALLO; ver arriba.")
+        # verificar que cada escenario prometido quedo en SU carpeta de Executables
+        for new_scen in (t.get('produces') or {}):
+            fpath = os.path.join(exe_dir, new_scen + '_0',
+                                 f"{params['preprocess_data_name']}{new_scen}_0_"
+                                 f"StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt")
+            if not os.path.exists(fpath):
+                raise SystemExit(f"[transform:{t.get('name')}] no produjo {fpath}")
+    print('#------------------------------------------------------------------------------#')
+
+
 def run_sync_patched_csvs(params, scenario_name, base_output_path):
     """
     Overlay parameter values from the final patched .txt datafile onto the
@@ -1424,6 +1451,8 @@ if __name__ == "__main__":
     ###############################################################################################
 
     run_veg_tx_stage(params, HERE, scenarios)
+
+    run_scenario_transforms(params, HERE)
 
     if params['write_txt_model'] and main_scenario_name in scenarios:
         export_root_datafile(HERE, params, main_scenario_name)

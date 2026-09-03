@@ -242,3 +242,37 @@ veg_tx_active: True
 veg_tx_suffix: "VEGCON"
 veg_tx_script: "../RELAC_Tx_v15_run/veg_tx_constraints_v14.py"
 veg_tx_needs_csv: "../RELAC_Tx_v15_run/outputs_BSR/NewCapacity.csv"   # PIN (ver Riesgos R3)
+
+########################################################################################
+# === Scenario transforms (post-VEGCON, orden = orden de la lista) ===
+# Cada entrada corre UNA vez sobre Executables (via --executables-dir): lee los
+# datafiles de <base>_0/ y escribe los nuevos en <nuevo>_0/ (creando la carpeta).
+#   script:   ruta relativa a t1_confection
+#   produces: {ESCENARIO_NUEVO: ESCENARIO_BASE}  -> crea Executables/<NUEVO>_0/ con su datafile
+#   in_place: [ESCENARIOS]                       -> modifica datafiles existentes
+# Para AGREGAR un escenario/constraint futuro: nueva entrada aqui + (si crea
+# escenarios) su mapeo en derived_scenarios abajo. Nada mas.
+scenario_transforms:
+  - name: cost_sensitivity
+    script: "../RELAC_Tx_v15_run/cost_sensitivity_v11.py"
+    produces: {BSR: BAU, ISR: INV, VSR: VGB, ISRWF: INVWF, VSRWF: VGBWF}
+  - name: nli_sr_recompute
+    script: "../RELAC_Tx_v15_run/nli_sr_recompute_v1.py"
+    in_place: [ISR, VSR, ISRWF, VSRWF]
+
+# Mapa escenario -> escenario base cuyo A2 (sets/templates otoole) se reutiliza.
+# Los transforms solo cambian VALORES, nunca sets, asi que el A2 de la base es
+# referencia valida para otoole results (mismo criterio que postprocess A2_REF).
+derived_scenarios:
+  BAC: BAU
+  OPC: OPT
+  INVWF: INV
+  VGBWF: VGB
+  BSR: BAU
+  ISR: INV
+  VSR: VGB
+  ISRWF: INV
+  VSRWF: VGB
+
+# Universo a RESOLVER (etapa E, paralelizada). Comentar los que no se quieran.
+solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF]
