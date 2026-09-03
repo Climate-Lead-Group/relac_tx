@@ -231,3 +231,14 @@ dispatch_floors_scenarios: ["BAU", "OPT", "INV", "VGB"]        # base; los deriv
 # Gate de separacion (read-only) ANTES de escribir pisos; exit!=0 aborta el pipeline.
 preflight_separation_active: True
 preflight_separation_script: "../fix_dispatch/preflight_separation.py"
+
+########################################################################################
+# === Veg Tx constraints (RELAC_Tx_v15_run/veg_tx_constraints_v14.py) ===
+# Barrera cross-escenario: necesita los _FLOORED.txt de BAU y OPT (y de INV/VGB)
+# SIMULTANEAMENTE (raise del piso, calibracion m, techo planificadas = plan OPT).
+# Corre UNA sola vez despues de la etapa FLOORED de todos los escenarios base.
+# Escribe cada *_VEGCON.txt en Executables/<S>_0/ (crea las carpetas de los derivados).
+veg_tx_active: True
+veg_tx_suffix: "VEGCON"
+veg_tx_script: "../RELAC_Tx_v15_run/veg_tx_constraints_v14.py"
+veg_tx_needs_csv: "../RELAC_Tx_v15_run/outputs_BSR/NewCapacity.csv"   # PIN (ver Riesgos R3)

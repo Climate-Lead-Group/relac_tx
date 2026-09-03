@@ -688,6 +688,29 @@ def run_dispatch_floors_patcher(params, scenario_name, HERE):
     print('#------------------------------------------------------------------------------#')
 
 
+def run_veg_tx_stage(params, HERE, scenarios):
+    """Etapa C (barrera): una sola llamada a veg_tx_constraints. Requiere que TODOS
+    los escenarios base tengan su _FLOORED.txt (etapa B completada)."""
+    if not params.get('veg_tx_active', False):
+        return
+    exe_dir = os.path.join(HERE, params['executables'])
+    for s in params.get('dispatch_floors_scenarios', scenarios):
+        floored = os.path.join(exe_dir, s + '_0', chained_base(params, s, upto=params.get('veg_tx_suffix', 'VEGCON')) + '.txt')
+        if not os.path.exists(floored):
+            raise SystemExit(f"[veg_tx] falta {floored}; la etapa FLOORED no completo para {s}")
+    script = os.path.normpath(os.path.join(HERE, params['veg_tx_script']))
+    needs = os.path.normpath(os.path.join(HERE, params['veg_tx_needs_csv']))
+    command = [sys.executable, script, '--base-dir', exe_dir, '--needs-csv', needs]
+    print('Etapa VEGCON (barrera cross-escenario, salida per-escenario en Executables):')
+    print(' '.join(command))
+    result = subprocess.run(command, capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+        raise SystemExit('[veg_tx] preflight interno FALLO; revisar reporte arriba.')
+    print('#------------------------------------------------------------------------------#')
+
+
 def run_sync_patched_csvs(params, scenario_name, base_output_path):
     """
     Overlay parameter values from the final patched .txt datafile onto the
@@ -1315,6 +1338,15 @@ if __name__ == "__main__":
         print(f"[storage_delay] osemosys_model -> {params['osemosys_model']}")
         print(f"[storage_delay] prefix_final_files -> {params['prefix_final_files']}")
 
+    FROZEN_CHAIN = 'StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED'
+    if params.get('veg_tx_active', False):
+        got = '_'.join(chain_suffixes(params, 'X', upto=params.get('veg_tx_suffix', 'VEGCON')))
+        if got != FROZEN_CHAIN:
+            raise SystemExit(
+                f"[veg_tx] La cadena activa '{got}' != '{FROZEN_CHAIN}'. Los scripts externos "
+                "(veg_tx/cost_sensitivity/nli_sr_recompute/relac_io) llevan esa cadena "
+                "hardcodeada en sus nombres de archivo. Ajusta el YAML o los scripts.")
+
     # Load params from YAML
     with open('Config_MOMF_T1_A.yaml', 'r') as f:
         params_A2 = yaml.safe_load(f)
@@ -1390,6 +1422,8 @@ if __name__ == "__main__":
 
         #
     ###############################################################################################
+
+    run_veg_tx_stage(params, HERE, scenarios)
 
     if params['write_txt_model'] and main_scenario_name in scenarios:
         export_root_datafile(HERE, params, main_scenario_name)
