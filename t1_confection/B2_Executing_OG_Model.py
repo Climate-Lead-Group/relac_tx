@@ -823,6 +823,36 @@ def run_sync_patched_csvs(params, scenario_name, base_output_path):
     print('#------------------------------------------------------------------------------#')
 
 
+def sync_inputs_for_solve(params, HERE, solve_list):
+    """Post-distribucion: para cada escenario a resolver, garantiza una carpeta
+    A2_otoole/<S> cuyos CSVs reflejan el txt FINAL (_FLOORED_VEGCON) que consume
+    el solver. Derivados: copia del A2 de su base + sync. Bases: re-sync in place
+    (la etapa A ya habia sincronizado, pero SIN los cambios FLOORED/VEGCON)."""
+    if not params.get('sync_patched_csvs_active', False):
+        return
+    otoole_root = os.path.join(HERE, params['A2_output_otoole'])
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          'sync_patched_csvs_from_txt.py')
+    for s in solve_list:
+        base = scenario_base(params, s)
+        csv_folder = os.path.join(otoole_root, s)
+        if s != base and not os.path.isdir(csv_folder):
+            shutil.copytree(os.path.join(otoole_root, base), csv_folder)
+        txt = os.path.join(HERE, params['executables'], s + '_0',
+                           chained_base(params, s) + '.txt')
+        command = [sys.executable, script, '--txt', txt, '--csv-folder', csv_folder,
+                   '--params', *params.get('sync_patched_csvs_params', [])]
+        result = subprocess.run(command, capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            print(result.stderr)
+            raise SystemExit(f"[sync_inputs] fallo para {s}")
+        # regenerar el Input.csv del escenario desde los CSVs ya sincronizados
+        generate_combined_input_file(csv_folder,
+                                     os.path.join(HERE, params['executables'], s + '_0'),
+                                     s + '_0')
+
+
 def run_preprocessing_script(params, scenario_name):
     """
     Executes the preprocessing Python script specified in the YAML params file for a given scenario.
@@ -1483,6 +1513,7 @@ if __name__ == "__main__":
     ###############################################################################################
     # Execute txt model
     solve_list = solve_universe(params, HERE, scenarios)
+    sync_inputs_for_solve(params, HERE, solve_list)
     if params['execute_model'] or params['create_matrix']:
         if params['parallel']:
             print('Entered Parallelization of model execution')

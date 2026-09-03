@@ -223,6 +223,8 @@ sync_patched_csvs_params:
   - TotalAnnualMinCapacity
   - TotalAnnualMinCapacityInvestment
   - TotalTechnologyAnnualActivityUpperLimit
+  - TotalTechnologyAnnualActivityLowerLimit   # write_floors (FLOORED)
+  - CapitalCost                                # veg_tx (calibracion m + escalada)
 
 ########################################################################################
 # === Dispatch floors (fix_dispatch/write_floors.py, pisos fosiles) ===
