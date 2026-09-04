@@ -88,6 +88,7 @@ storage_delay_first_n_years: 5
 storage_delay_storage_prefixes:
   - SDS
   - LDS
+  - BDS
 # storage_delay_storages: []          # exact storage names (overrides prefixes if set)
 storage_delay_allowed_value: "-1"     # PWR cap value applied in open years (-1 = unconstrained)
 storage_delay_suffix: "StorageDelayN5"
@@ -279,4 +280,5 @@ derived_scenarios:
   VSRWF: VGB
 
 # Universo a RESOLVER (etapa E, paralelizada). Comentar los que no se quieran.
-solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF]
+solve_scenarios: [VSRWF]
+# solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF]
