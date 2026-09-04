@@ -36,7 +36,7 @@ def LOCAL(s):
     if EXEDIR is None:
         return HERE / FN(s)              # modo legado (plano)
     d = EXEDIR / f"{s}_0"                # modo Executables: BSR_0/, ISR_0/, ... se crean aqui
-    d.mkdir(exist_ok=True)
+    d.mkdir(parents=True, exist_ok=True)
     return d / FN(s)
 
 # new scenario -> (base scenario code, source datafile)

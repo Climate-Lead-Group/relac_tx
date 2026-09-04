@@ -749,9 +749,7 @@ def run_scenario_transforms(params, HERE):
             raise SystemExit(f"[transform:{t.get('name')}] self-check FALLO; ver arriba.")
         # verificar que cada escenario prometido quedo en SU carpeta de Executables
         for new_scen in (t.get('produces') or {}):
-            fpath = os.path.join(exe_dir, new_scen + '_0',
-                                 f"{params['preprocess_data_name']}{new_scen}_0_"
-                                 f"StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt")
+            fpath = os.path.join(exe_dir, new_scen + '_0', chained_base(params, new_scen) + '.txt')
             if not os.path.exists(fpath):
                 raise SystemExit(f"[transform:{t.get('name')}] no produjo {fpath}")
     print('#------------------------------------------------------------------------------#')
@@ -830,14 +828,22 @@ def sync_inputs_for_solve(params, HERE, solve_list):
     (la etapa A ya habia sincronizado, pero SIN los cambios FLOORED/VEGCON)."""
     if not params.get('sync_patched_csvs_active', False):
         return
+    if not params['A2_otoole_outputs'] and params['write_txt_model']:
+        raise SystemExit(
+            "[sync_inputs] A2_otoole_outputs=False junto con write_txt_model=True es inseguro: "
+            "sync_inputs_for_solve escribiria CapitalCost/TotalTechnologyAnnualActivityLowerLimit "
+            "(salida de veg_tx/write_floors) de vuelta en A2_Outputs_Params_otoole/<base>/, que es "
+            "la MISMA fuente que process_scenario_folder leeria como pristina en la proxima corrida "
+            "-- compensacion/escalada acumulativa silenciosa. Activa A2_otoole_outputs o desactiva "
+            "write_txt_model.")
     otoole_root = os.path.join(HERE, params['A2_output_otoole'])
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'sync_patched_csvs_from_txt.py')
     for s in solve_list:
         base = scenario_base(params, s)
         csv_folder = os.path.join(otoole_root, s)
-        if s != base and not os.path.isdir(csv_folder):
-            shutil.copytree(os.path.join(otoole_root, base), csv_folder)
+        if s != base:
+            shutil.copytree(os.path.join(otoole_root, base), csv_folder, dirs_exist_ok=True)
         txt = os.path.join(HERE, params['executables'], s + '_0',
                            chained_base(params, s) + '.txt')
         command = [sys.executable, script, '--txt', txt, '--csv-folder', csv_folder,
@@ -1416,7 +1422,7 @@ if __name__ == "__main__":
         print(f"[storage_delay] prefix_final_files -> {params['prefix_final_files']}")
 
     FROZEN_CHAIN = 'StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED'
-    if params.get('veg_tx_active', False):
+    if params.get('veg_tx_active', False) or params.get('scenario_transforms', []):
         got = '_'.join(chain_suffixes(params, 'X', upto=params.get('veg_tx_suffix', 'VEGCON')))
         if got != FROZEN_CHAIN:
             raise SystemExit(
@@ -1500,12 +1506,13 @@ if __name__ == "__main__":
         #
     ###############################################################################################
 
-    run_veg_tx_stage(params, HERE, scenarios)
+    if params['write_txt_model']:
+        run_veg_tx_stage(params, HERE, scenarios)
 
-    run_scenario_transforms(params, HERE)
+        run_scenario_transforms(params, HERE)
 
-    if params['write_txt_model'] and main_scenario_name in scenarios:
-        export_root_datafile(HERE, params, main_scenario_name)
+        if main_scenario_name in scenarios:
+            export_root_datafile(HERE, params, main_scenario_name)
     ###############################################################################################
         
         

@@ -127,7 +127,7 @@ def executable_txt(scenario: str) -> Path:
         p for p in folder.glob(
             f"Pre_processed_{scenario}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX*.txt")
         if not p.name.endswith(".warnings.txt")
-        and not p.name.endswith("_FLOORED.txt")
+        and "_FLOORED" not in p.name
     )
     if not matches:
         raise FileNotFoundError(f"No preprocessed txt for scenario {scenario} in {folder}")
