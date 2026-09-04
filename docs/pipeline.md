@@ -359,16 +359,35 @@ python -u t1_confection/B2_Executing_OG_Model.py
 
 ### Execution Steps
 
-1. **CSV to datafile conversion** via otoole.
+1. **CSV to datafile conversion** via otoole (per base scenario: BAU, OPT, INV, VGB).
 2. **Preprocessing** -- runs the OSeMOSYS preprocessor.
-3. **Patcher chain** -- rewrites parameter blocks directly in the GMPL `.txt` to apply the reserve-margin and storage features plus feasibility safeguards (DaysInDayType, storage-delay, PWRBCK caps, reserve margin, activity upper limits). See {doc}`solver-patchers` for the full chain.
+3. **Patcher chain** -- rewrites parameter blocks directly in the GMPL `.txt` to apply the reserve-margin and storage features plus feasibility safeguards (DaysInDayType, storage-delay, PWRBCK caps, reserve margin, activity upper limits, dispatch floors). See {doc}`solver-patchers` for the full chain.
 4. **Sync patched CSVs** -- overwrites the affected otoole CSVs in place so the combined input/output files reflect the patched values the solver consumed.
-5. **Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi).
-6. **Result extraction** -- converts solver output back to CSV.
-7. **Post-processing** -- capital annualization, scenario concatenation.
+5. **Tx chain (FLOORED → VEGCON → scenario transforms)** -- see subsection below; produces the derived scenarios (BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF, plus INVWF/VGBWF) that the rest of the pipeline treats like any other scenario.
+6. **Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi) over the configured `solve_scenarios` universe (base + derived).
+7. **Result extraction** -- converts solver output back to CSV, using each derived scenario's base A2 as the otoole-results reference (derived scenarios share sets with their base; only values differ).
+8. **Post-processing** -- input re-sync from the final `.txt` (fixes stale-input bug for derived scenarios), capital annualization, scenario concatenation.
 
 :::{note}
 When `storage_delay_active: True` (the shipped default), the run is redirected to a parallel set of artifacts prefixed `RELAC_TX_StorageDelay_` so the baseline `RELAC_TX_*` files are not overwritten. See {doc}`solver-patchers` for details.
+:::
+
+### Tx Chain Integration (FLOORED → VEGCON → scenario transforms)
+
+B2 orchestrates four previously-manual scripts as subprocesses, with their internal logic untouched (only CLI path arguments were added). The canonical suffix chain is `StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON`; B2 asserts this at startup and aborts with a clear message if the YAML's active flags would produce a different chain (the four scripts below have it hardcoded in their file-matching logic).
+
+| Etapa | What runs | Script (unmodified logic) | Output |
+|---|---|---|---|
+| B (per-scenario) | `preflight_separation` gate once, then `write_floors.py --scenarios <S>` per base scenario | `fix_dispatch/write_floors.py` | `Executables/<S>_0/..._FLOORED.txt` |
+| C (barrier, 1 call) | `veg_tx_constraints_v14.py --base-dir Executables --needs-csv <pin>` | `RELAC_Tx_v15_run/veg_tx_constraints_v14.py` | `..._FLOORED_VEGCON.txt` for BAU, OPT, INV, VGB, BAC, OPC, INVWF, VGBWF (creates the derived scenarios' `<S>_0/` folders) |
+| D (barrier, registry) | `cost_sensitivity_v11.py` then `nli_sr_recompute_v1.py`, both `--executables-dir Executables` | `RELAC_Tx_v15_run/cost_sensitivity_v11.py`, `nli_sr_recompute_v1.py` | BSR, ISR, VSR, ISRWF, VSRWF (new scenarios); ISR/VSR/ISRWF/VSRWF edited in place |
+
+Extensibility: a new constraint script or derived scenario is added entirely in `Config_MOMF_T1_AB.yaml` -- a `scenario_transforms` entry (script + `produces`/`in_place`) plus a `derived_scenarios` mapping and, if it should be solved, an entry in `solve_scenarios`. No B2 code change is needed.
+
+Solve universe: `solve_universe()` resolves `solve_scenarios` from the YAML (defaulting to the base scenarios) and validates each has its final datafile before the solver stage runs; `scenario_base()` maps a derived scenario back to the base whose A2/sets it reuses for otoole results.
+
+:::{note}
+Validated end-to-end (golden run, 2026-09-03): all 13 scenarios (11 in `solve_scenarios` + INVWF/VGBWF) reach VEGCON with `preflight_separation` PASS and `veg_tx` PASS=35/FAIL=0; a 2-scenario solver smoke test (BAC, ISR, parallel) both reached CPLEX optimal. See the plan's own validation log for the two issues this surfaced and fixed: a chain-suffix `upto=` omission in `run_dispatch_floors_patcher`, and the `outputs_BSR/NewCapacity.csv` revealed-need pin (documented as Risk R3) needing to exist before the VEGCON barrier can process the derived scenarios.
 :::
 
 ### Solver Configuration
@@ -394,8 +413,8 @@ max_x_per_iter: 4  # Max scenarios per batch
 
 | Directory/File | Content |
 |----------------|---------|
-| `A2_Outputs_Params_otoole/{scenario}/` | otoole-format CSVs (one per parameter) |
-| `Executables/` | Compiled solver data files |
+| `A2_Outputs_Params_otoole/{scenario}/` | otoole-format CSVs (one per parameter); for derived scenarios (BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF) this is a copy of the base scenario's folder, re-synced from that derived scenario's own final `.txt` |
+| `Executables/{scenario}_0/` | Compiled solver data files -- one folder per scenario, base or derived; derived scenarios' folders are created by the Tx chain (etapas C/D), not by A1/A2 |
 | `RELAC_TX_Inputs.csv` | Combined inputs (all scenarios) |
 | `RELAC_TX_Outputs.csv` | Combined outputs (all scenarios) |
 | `RELAC_TX_Combined_Inputs_Outputs.csv` | Merged inputs and outputs |
