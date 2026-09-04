@@ -1,6 +1,3 @@
-# folders
-t1_confection/A2_Output_Params
-
 # Executables: ignore everything except the RMCarefulXLSX pre-processed file per scenario
 t1_confection/Executables/**
 !t1_confection/Executables/*/
@@ -58,6 +55,9 @@ t1_confection/A1_Outputs/secondary_techs_update_log_*.txt
 *backup*
 *Backup*
 *BACKUP*
+# Excepcion: A2_Output_Params se versiona completo (sus CSV "Technology*" caen en *log* por core.ignorecase)
+!t1_confection/A2_Output_Params/**
+!t1_confection/A2_Outputs_Params_otoole/**
 
 # All files containing "_audit" in their name
 *_audit*

@@ -1,0 +1,13 @@
+PARAMETER,Scenario,REGION,TECHNOLOGY,FUEL,EMISSION,MODE_OF_OPERATION,YEAR,TIMESLICE,SEASON,DAYTYPE,DAILYTIMEBRACKET,STORAGE,Value
+Conversionld,BAU,,,,,,,S1D1,,1,,,1
+Conversionld,BAU,,,,,,,S1D2,,1,,,1
+Conversionld,BAU,,,,,,,S1D3,,1,,,1
+Conversionld,BAU,,,,,,,S2D1,,1,,,1
+Conversionld,BAU,,,,,,,S2D2,,1,,,1
+Conversionld,BAU,,,,,,,S2D3,,1,,,1
+Conversionld,BAU,,,,,,,S3D1,,1,,,1
+Conversionld,BAU,,,,,,,S3D2,,1,,,1
+Conversionld,BAU,,,,,,,S3D3,,1,,,1
+Conversionld,BAU,,,,,,,S4D1,,1,,,1
+Conversionld,BAU,,,,,,,S4D2,,1,,,1
+Conversionld,BAU,,,,,,,S4D3,,1,,,1
