@@ -47,7 +47,7 @@ implica el piso 2023-2026 existente de esa misma tecnologia) -> un
 `fuel_fallback` regional por tipo de combustible si no hay ninguna de las dos
 anteriores. Como PERMISSIVE nunca supera a su propio ancla, BAU/INV nunca
 puede superar a OPT/VGB en ningun ano ni tecnologia: esto se verifica con
-`fix_dispatch/preflight_separation.py` antes de resolver (ver seccion 4).
+`scripts/fix_dispatch/preflight_separation.py` antes de resolver (ver seccion 4).
 
 Los valores de CF ya NO son provisionales genericos por combustible (la
 version anterior de este documento usaba NGS = 0.40, OIL/PET = 0.10 para
@@ -58,22 +58,22 @@ material lo permite, un CF propio calculado del plan nacional correspondiente
 El piso solo se AUMENTA, nunca se reduce: si ya existia un piso legitimo
 (p.ej. el piso 2023-2026 de la flota historica de MEX, ~830 PJ), ese piso se
 preserva tal cual. Cada piso nuevo o aumentado pasa por una prueba de
-factibilidad (`fix_dispatch/feasibility.py`) antes de escribirse: ningun piso
+factibilidad (`scripts/fix_dispatch/feasibility.py`) antes de escribirse: ningun piso
 puede exceder la capacidad maxima, la disponibilidad, o el
 `TotalTechnologyAnnualActivityUpperLimit` de la planta. Ningun piso
 infactible se escribe.
 
 ## 2. Archivos modificados
 
-**Ningun archivo original se edita.** El script `fix_dispatch/write_floors.py`
+**Ningun archivo original se edita.** El script `scripts/fix_dispatch/write_floors.py`
 produce COPIAS junto a los originales, una por cada uno de los 4 escenarios:
 
 | Escenario | Original (sin tocar) | Copia con piso |
 |---|---|---|
-| BAU | `t1_confection/Executables/BAU_0/Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `t1_confection/Executables/BAU_0/Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
-| INV | `t1_confection/Executables/INV_0/Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `t1_confection/Executables/INV_0/Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
-| OPT | `t1_confection/Executables/OPT_0/Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `t1_confection/Executables/OPT_0/Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
-| VGB | `t1_confection/Executables/VGB_0/Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `t1_confection/Executables/VGB_0/Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
+| BAU | `outputs/Executables/BAU_0/Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `outputs/Executables/BAU_0/Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
+| INV | `outputs/Executables/INV_0/Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `outputs/Executables/INV_0/Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
+| OPT | `outputs/Executables/OPT_0/Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `outputs/Executables/OPT_0/Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
+| VGB | `outputs/Executables/VGB_0/Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX.txt` | `outputs/Executables/VGB_0/Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` |
 
 La copia es byte-identica al original EXCEPTO dentro del bloque
 `TotalTechnologyAnnualActivityLowerLimit`, donde se agregan/aumentan filas
@@ -91,7 +91,7 @@ escenarios.
 **Estado actual:** las cuatro copias
 `Pre_processed_<ESC>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt` YA
 EXISTEN (se generaron al cerrar el rediseno completo). Si vuelves a correr
-`fix_dispatch/make_candidates.py` (por ejemplo porque cambio un CF), debes
+`scripts/fix_dispatch/make_candidates.py` (por ejemplo porque cambio un CF), debes
 volver a correr `write_floors.py` sin `--dry-run` para que las copias
 reflejen el nuevo `candidate_floors.csv` antes de resolver.
 
@@ -104,81 +104,82 @@ normalmente (GLPK/`glpsol` y `cplex` en el PATH).
 ### Paso 0 -- generar (o regenerar) las copias FLOORED.txt
 
 ```
-python fix_dispatch/write_floors.py
+python scripts/fix_dispatch/write_floors.py
 ```
 
-(o `python fix_dispatch/write_floors.py --scenarios BAU OPT` para un
-subconjunto). Esto lee `fix_dispatch/candidate_floors.csv`, corre la prueba
+(o `python scripts/fix_dispatch/write_floors.py --scenarios BAU OPT` para un
+subconjunto). Esto lee `inputs/tx_chain/fix_dispatch/candidate_floors.csv`, corre la prueba
 de factibilidad, y escribe las copias de la tabla anterior. Al final imprime
 un resumen (filas nuevas / aumentadas / sin cambio / rechazadas por
 infactibles). Corre primero con `--dry-run` si quieres revisar el resumen
 sin escribir nada. Si aparece algun `SKIP-INFEASIBLE`, revisa
-`fix_dispatch/upstream_floor_rows.csv` y detente (ver seccion 6).
+`outputs/fix_dispatch/upstream_floor_rows.csv` y detente (ver seccion 6).
 
 ### Paso 1 -- resolver cada escenario (BAU, INV, OPT, VGB)
 
-El pipeline (`t1_confection/B2_Executing_OG_Model.py`, config actual:
+El pipeline (`scripts/pipeline/B2_Executing_OG_Model.py`, config actual:
 `solver: cplex`, `storage_delay_active/open_pwrbck_active/reserve_margin_xlsx_active: True`)
-resuelve asi para el archivo original. Para el FLOORED.txt, corre el mismo
-encadenamiento de comandos sustituyendo el archivo de datos, **desde el
-directorio `t1_confection/`** (`cd t1_confection` una sola vez). Los cuatro
-bloques siguientes son identicos salvo el escenario: copia y pega completo el
-bloque del escenario que vas a resolver (uno a la vez).
+resuelve asi para el archivo original. B2 se corre desde la raiz del repo
+como `python scripts/pipeline/B2_Executing_OG_Model.py`. Para el FLOORED.txt,
+corre el mismo encadenamiento de comandos sustituyendo el archivo de datos,
+**desde la raiz del repo**. Los cuatro bloques siguientes son identicos salvo
+el escenario: copia y pega completo el bloque del escenario que vas a
+resolver (uno a la vez).
 
 **BAU:**
 
 ```
 REM 1) Generar la matriz LP a partir del datafile FLOORED
-glpsol -m osemosys_fast_preprocessed_storage_delay.txt -d Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
+glpsol -m outputs\model\osemosys_fast_preprocessed_storage_delay.txt -d outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
 
 REM 2) Resolver con CPLEX (mismos threads/seed que usa el pipeline: 12 / 12345)
-cplex -c "read Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
+cplex -c "read outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
 
 REM 3) Convertir la solucion a CSVs otoole (crear la carpeta de salida primero)
-mkdir ..\fix_dispatch\solved_FLOORED\BAU\Outputs
-otoole results cplex csv Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol ..\fix_dispatch\solved_FLOORED\BAU\Outputs csv A2_Outputs_Params_otoole\BAU Miscellaneous\conversion_format.yaml 2> Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
+mkdir outputs\fix_dispatch\solved_FLOORED\BAU\Outputs
+otoole results cplex csv outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol outputs\fix_dispatch\solved_FLOORED\BAU\Outputs csv outputs\A2_Outputs_Params_otoole\BAU inputs\Miscellaneous\conversion_format.yaml 2> outputs\Executables\BAU_0\Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
 ```
 
 **INV:**
 
 ```
 REM 1) Generar la matriz LP a partir del datafile FLOORED
-glpsol -m osemosys_fast_preprocessed_storage_delay.txt -d Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
+glpsol -m outputs\model\osemosys_fast_preprocessed_storage_delay.txt -d outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
 
 REM 2) Resolver con CPLEX (mismos threads/seed que usa el pipeline: 12 / 12345)
-cplex -c "read Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
+cplex -c "read outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
 
 REM 3) Convertir la solucion a CSVs otoole (crear la carpeta de salida primero)
-mkdir ..\fix_dispatch\solved_FLOORED\INV\Outputs
-otoole results cplex csv Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol ..\fix_dispatch\solved_FLOORED\INV\Outputs csv A2_Outputs_Params_otoole\INV Miscellaneous\conversion_format.yaml 2> Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
+mkdir outputs\fix_dispatch\solved_FLOORED\INV\Outputs
+otoole results cplex csv outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol outputs\fix_dispatch\solved_FLOORED\INV\Outputs csv outputs\A2_Outputs_Params_otoole\INV inputs\Miscellaneous\conversion_format.yaml 2> outputs\Executables\INV_0\Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
 ```
 
 **OPT:**
 
 ```
 REM 1) Generar la matriz LP a partir del datafile FLOORED
-glpsol -m osemosys_fast_preprocessed_storage_delay.txt -d Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
+glpsol -m outputs\model\osemosys_fast_preprocessed_storage_delay.txt -d outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
 
 REM 2) Resolver con CPLEX (mismos threads/seed que usa el pipeline: 12 / 12345)
-cplex -c "read Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
+cplex -c "read outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
 
 REM 3) Convertir la solucion a CSVs otoole (crear la carpeta de salida primero)
-mkdir ..\fix_dispatch\solved_FLOORED\OPT\Outputs
-otoole results cplex csv Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol ..\fix_dispatch\solved_FLOORED\OPT\Outputs csv A2_Outputs_Params_otoole\OPT Miscellaneous\conversion_format.yaml 2> Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
+mkdir outputs\fix_dispatch\solved_FLOORED\OPT\Outputs
+otoole results cplex csv outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol outputs\fix_dispatch\solved_FLOORED\OPT\Outputs csv outputs\A2_Outputs_Params_otoole\OPT inputs\Miscellaneous\conversion_format.yaml 2> outputs\Executables\OPT_0\Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
 ```
 
 **VGB:**
 
 ```
 REM 1) Generar la matriz LP a partir del datafile FLOORED
-glpsol -m osemosys_fast_preprocessed_storage_delay.txt -d Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
+glpsol -m outputs\model\osemosys_fast_preprocessed_storage_delay.txt -d outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt --wlp outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp --check
 
 REM 2) Resolver con CPLEX (mismos threads/seed que usa el pipeline: 12 / 12345)
-cplex -c "read Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
+cplex -c "read outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.lp" "set threads 12" "set randomseed 12345" "set parallel 1" "optimize" "write outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol"
 
 REM 3) Convertir la solucion a CSVs otoole (crear la carpeta de salida primero)
-mkdir ..\fix_dispatch\solved_FLOORED\VGB\Outputs
-otoole results cplex csv Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol ..\fix_dispatch\solved_FLOORED\VGB\Outputs csv A2_Outputs_Params_otoole\VGB Miscellaneous\conversion_format.yaml 2> Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
+mkdir outputs\fix_dispatch\solved_FLOORED\VGB\Outputs
+otoole results cplex csv outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.sol outputs\fix_dispatch\solved_FLOORED\VGB\Outputs csv outputs\A2_Outputs_Params_otoole\VGB inputs\Miscellaneous\conversion_format.yaml 2> outputs\Executables\VGB_0\Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_output.log
 ```
 
 Notas:
@@ -202,11 +203,11 @@ arma la funcion `concatenate_all_scenarios()` en `B2_Executing_OG_Model.py`
 escenario y les agrega las columnas `Future`/`Scenario`.
 
 Usa tu flujo habitual de concatenacion apuntado a las salidas FLOORED de
-`fix_dispatch/solved_FLOORED/<ESC>/Outputs` (que generaste en el Paso 1) para
+`outputs/fix_dispatch/solved_FLOORED/<ESC>/Outputs` (que generaste en el Paso 1) para
 producir un CSV combinado en el mismo formato que el CSV base. Guardalo como:
 
 ```
-fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
+outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
 ```
 
 Si prefieres, corre primero `concatenate_relac.py` por escenario (asi es como
@@ -214,10 +215,10 @@ se genera cada `<ESC>_Output.csv` normalmente; el script agrega el `.csv` al
 segundo argumento), **desde la raiz del repo**:
 
 ```
-python concatenate_files/concatenate_relac.py fix_dispatch/solved_FLOORED/BAU/Outputs fix_dispatch/solved_FLOORED/BAU/BAU_Output
-python concatenate_files/concatenate_relac.py fix_dispatch/solved_FLOORED/INV/Outputs fix_dispatch/solved_FLOORED/INV/INV_Output
-python concatenate_files/concatenate_relac.py fix_dispatch/solved_FLOORED/OPT/Outputs fix_dispatch/solved_FLOORED/OPT/OPT_Output
-python concatenate_files/concatenate_relac.py fix_dispatch/solved_FLOORED/VGB/Outputs fix_dispatch/solved_FLOORED/VGB/VGB_Output
+python scripts/tools/concatenate_relac.py outputs/fix_dispatch/solved_FLOORED/BAU/Outputs outputs/fix_dispatch/solved_FLOORED/BAU/BAU_Output
+python scripts/tools/concatenate_relac.py outputs/fix_dispatch/solved_FLOORED/INV/Outputs outputs/fix_dispatch/solved_FLOORED/INV/INV_Output
+python scripts/tools/concatenate_relac.py outputs/fix_dispatch/solved_FLOORED/OPT/Outputs outputs/fix_dispatch/solved_FLOORED/OPT/OPT_Output
+python scripts/tools/concatenate_relac.py outputs/fix_dispatch/solved_FLOORED/VGB/Outputs outputs/fix_dispatch/solved_FLOORED/VGB/VGB_Output
 ```
 
 y luego el paso de union de escenarios que ya usas para el dashboard.
@@ -228,7 +229,7 @@ y luego el paso de union de escenarios que ya usas para el dashboard.
 lectura sobre los insumos, no requiere corrida del modelo):
 
 ```
-python fix_dispatch/preflight_separation.py
+python scripts/fix_dispatch/preflight_separation.py
 ```
 
 Compara el piso fosil como porcentaje de la demanda electrica (identica en
@@ -241,7 +242,7 @@ que hayas tocado los CFs.
 **Despues de resolver:**
 
 ```
-python fix_dispatch/test_outputs.py --csv fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
+python scripts/tests/test_outputs.py --csv outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
 ```
 
 El script corre 4 chequeos de solo lectura (no modifica nada):
@@ -325,7 +326,7 @@ ningun dato de plan nacional utilizable en la carpeta de trabajo y dependen
 enteramente de `historical_implied` o `fuel_fallback`.
 
 Cuando lleguen valores calibrados adicionales: se edita
-`PLAN_GROUNDED` en `fix_dispatch/make_candidates.py` y se re-corre ese
+`PLAN_GROUNDED` en `scripts/fix_dispatch/make_candidates.py` y se re-corre ese
 script, se vuelve a correr `preflight_separation.py` para confirmar que
 BAU/INV sigue sin superar a OPT/VGB, y se vuelve a correr `write_floors.py`.
 Nada mas del pipeline cambia.
