@@ -728,3 +728,42 @@ Sin `push` hasta que el usuario lo indique.
 5. `python run.py` en un clon limpio de la rama llega hasta la etapa `executing` sin errores de
    ruta (se puede comprobar con la config de verificación de §9.1, sin solver).
 6. README, guía y docs operativos reflejan las nuevas rutas.
+
+---
+
+## 13. Estado al 2026-09-07 y pasos pendientes
+
+**Implementado y revisado** en la rama `restructure/inputs-scripts-outputs` (Tasks 2–17 del plan):
+commit de `git mv` puro `6731992` (1163 renombres, 0 cambios de contenido), `scripts/common/relac_paths.py`,
+adaptación de rutas en los ~75 scripts, YAML relativos a la raíz, `dvc.yaml`/`dvc.lock`/`.gitignore`/`.dvcignore`,
+documentación, `scripts/tools/migrate_layout_untracked.py`. Revisión final de rama: 0 Critical; los 2 Important
+(orden de negaciones en `.gitignore`; `docs/fix_dispatch/INSTRUCCIONES_SOLVE.md`) corregidos.
+
+**Pendiente** (se hará en otra máquina, sin solver): la verificación byte a byte de §9 (Tasks 1 y 18, opcional 19).
+Herramientas y procedimiento: `scripts/tools/verification/README.md`. Al terminar, anotar aquí el resultado
+(archivos comparados / distintos / diferencias benignas / tiempos). Después: commit de limpieza de código muerto
+(constantes `HERE`/`SCRIPT_DIR` sin uso en ~21 scripts, `here` en B2, `P` sin uso en `patch_activity_upper_limit.py`,
+local `P` en `veg_tx_constraints_v14.py`/`experimental/.../veg_tx_constraints.py`), merge a `main`, y en la máquina
+`kt0031`: `git pull` + `python scripts/tools/migrate_layout_untracked.py --apply`.
+
+**Decisiones tomadas durante la implementación** (detalle en el ledger `.superpowers/sdd/...`, no versionado):
+
+- Se trabajó en el árbol principal sobre la rama (no en worktree): el movimiento de ~1.6 GB de artefactos no
+  versionados solo era posible ahí.
+- Imports cruzados entre subcarpetas de `scripts/` como `from tools.X import` / `from pipeline.X import`
+  (namespace packages, `scripts/` en `sys.path` vía bootstrap). Casos: D2 → `Z_AUX_D1b_set_trn_limits_from_flows`,
+  A3_migrate → `Z_AUX_fix_excel_profiles`, Z_TEMP_add_pwrbck → `A1_Pre_processing_OG_csvs`, build_combined →
+  B2 y `Z_AUX_capital_annualization_script` (vía `sys.path.insert(P.PIPELINE)`).
+- `.gitignore`: se añaden `!scripts/**`, `!inputs/config/**` y `!inputs/Miscellaneous/templates/**` (protegen código,
+  config y plantillas versionadas de los patrones globales `*log*`/`*temp*`/`*copy*`), colocados tras esos patrones;
+  `outputs/RELAC_TX_StorageDelay_*.csv` amplía el ignore a Inputs/Outputs/Combined sin fecha (salidas regeneradas).
+- `dvc status` no queda limpio tras editar `dvc.lock`: el lock ya estaba desfasado antes de la rama (referencia
+  `RELAC_TX_*_2026-02-10.csv` inexistentes y 64 ficheros otoole frente a 448 versionados). Aplica el fallback de
+  §7.2: `dvc repro` lo regenera en la primera corrida real.
+- `scripts/tools/migrate_layout_untracked.py` conserva literales `t1_confection/`, `fix_dispatch/`,
+  `RELAC_Tx_v15_run/` por diseño (es la herramienta que migra desde el layout viejo).
+- Anclajes extra en B2 no enumerados en el plan pero exigidos por el cambio de cwd: `t['script']` de los
+  transforms, el join multilínea de `run_days_in_day_type_patcher`, `base_input_path` de `generate_combined_*`.
+- `build_summary.py` tenía rutas relativas al cwd (`candidate_floors.csv`, salida csv): ancladas a `P`.
+- `A3_process.py` pasa ahora `--yaml <inputs/config/A3_process/lid_rule.yaml>` al rules script (su default también
+  apunta ahí); comportamiento equivalente.

@@ -38,18 +38,18 @@
 | `scripts/common/relac_paths.py` | layout del repo: `REPO_ROOT`, `INPUTS`, `OUTPUTS`, `SCRIPTS` y constantes con nombre | 4 |
 | `scripts/tests/test_relac_paths.py` | verifica que cada constante apunta a algo que existe tras el movimiento | 4 |
 | `scripts/tools/migrate_layout_untracked.py` | mueve artefactos no versionados de rutas viejas a nuevas (idempotente) | 3 |
-| `<scratch>/compare_manifests.py` | manifiesto md5 antes/después y diff | 1, 18 |
-| `<scratch>/verify_config.sh` | aplica la config de verificación a `Config_MOMF_T1_AB.yaml` de un worktree | 1, 18 |
+| `scripts/tools/verification/compare_manifests.py` | manifiesto md5 antes/después y diff | 1, 18 |
+| `scripts/tools/verification/verify_config.sh` | aplica la config de verificación a `Config_MOMF_T1_AB.yaml` de un worktree | 1, 18 |
 
-`<scratch>` = `C:/Users/CLIMAT~1/AppData/Local/Temp/claude/c--Users-ClimateLeadGroup-Desktop-CLG-repositories-relac-tx/4b916f8e-7f5d-481c-8101-f485a8d29c7a/scratchpad`. Nada de ahí se commitea.
+`<scratch>` = cualquier carpeta local FUERA del repo donde guardar manifiestos y logs de la verificación (p. ej. `../relac_tx_verif/`). Nada de ahí se commitea. **Actualización 2026-09-07:** las dos herramientas (`compare_manifests.py`, `verify_config.sh`) se movieron al repo en `scripts/tools/verification/` para poder ejecutar las Tasks 1 y 18 desde otra máquina; el procedimiento resumido está en `scripts/tools/verification/README.md`. Las Tasks 2–17 están completas y revisadas en la rama; solo quedan 1(5-7), 18 y 19.
 
 ---
 
 ### Task 1: Baseline — worktree del layout viejo, herramientas de comparación y corrida de referencia
 
 **Files:**
-- Create: `<scratch>/compare_manifests.py`
-- Create: `<scratch>/verify_config.sh`
+- Create: `scripts/tools/verification/compare_manifests.py`
+- Create: `scripts/tools/verification/verify_config.sh`
 - Worktree: `../relac_tx_baseline` (rama `clean-sirelac`, HEAD `c8f0efc`)
 
 **Interfaces:**
@@ -159,7 +159,7 @@ Esperado al ejecutarlo: las cinco líneas impresas con `False`.
 - [ ] **Step 4: Aplicar la config de verificación en el baseline**
 
 ```bash
-bash "<scratch>/verify_config.sh" ../relac_tx_baseline/t1_confection/Config_MOMF_T1_AB.yaml
+bash scripts/tools/verification/verify_config.sh ../relac_tx_baseline/t1_confection/Config_MOMF_T1_AB.yaml
 ```
 
 - [ ] **Step 5: ⚠️ REQUIERE OK — Correr B1 en el baseline** (~10–20 min)
@@ -184,7 +184,7 @@ Esperado: 13 carpetas (`BAU BAC BSR INV INVWF ISR ISRWF OPC OPT VGB VGBWF VSR VS
 
 ```bash
 cd "C:/Users/ClimateLeadGroup/Desktop/CLG_repositories/relac_tx"
-python "<scratch>/compare_manifests.py" manifest ../relac_tx_baseline old "<scratch>/manifest_baseline.json"
+python scripts/tools/verification/compare_manifests.py manifest ../relac_tx_baseline old "<scratch>/manifest_baseline.json"
 ```
 Esperado: varios miles de archivos; guardar también `baseline_B1.log`/`baseline_B2.log` (se citan en Task 18).
 
@@ -1489,7 +1489,7 @@ git commit -qam "fix(layout): correcciones de rutas detectadas en smoke" || echo
 ```bash
 cd "C:/Users/ClimateLeadGroup/Desktop/CLG_repositories/relac_tx"
 git worktree add ../relac_tx_new restructure/inputs-scripts-outputs
-bash "<scratch>/verify_config.sh" ../relac_tx_new/inputs/config/Config_MOMF_T1_AB.yaml
+bash scripts/tools/verification/verify_config.sh ../relac_tx_new/inputs/config/Config_MOMF_T1_AB.yaml
 ```
 
 - [ ] **Step 2: ⚠️ REQUIERE OK — B1 en el worktree nuevo**
@@ -1515,8 +1515,8 @@ ls outputs/RELAC_TX_data_storage_delay.txt outputs/model/osemosys_fast_preproces
 
 ```bash
 cd "C:/Users/ClimateLeadGroup/Desktop/CLG_repositories/relac_tx"
-python "<scratch>/compare_manifests.py" manifest ../relac_tx_new new "<scratch>/manifest_new.json"
-python "<scratch>/compare_manifests.py" diff "<scratch>/manifest_baseline.json" "<scratch>/manifest_new.json" | tee "<scratch>/diff_result.txt"
+python scripts/tools/verification/compare_manifests.py manifest ../relac_tx_new new "<scratch>/manifest_new.json"
+python scripts/tools/verification/compare_manifests.py diff "<scratch>/manifest_baseline.json" "<scratch>/manifest_new.json" | tee "<scratch>/diff_result.txt"
 ```
 Esperado: `SOLO EN BASELINE: 0`, `SOLO EN NUEVO: 0`, `DISTINTOS: 0`, exit 0.
 
