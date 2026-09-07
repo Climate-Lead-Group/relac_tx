@@ -7,10 +7,10 @@ Author: Climate Lead Group, Andrey Salazar-Vargas
 """
 import yaml
 import unicodedata
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = SCRIPT_DIR / "Config_country_codes.yaml"
+from . import relac_paths as P
+
+CONFIG_PATH = P.CONFIG_COUNTRY_CODES
 
 _cached_config = None
 
