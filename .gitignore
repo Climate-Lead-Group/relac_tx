@@ -54,9 +54,6 @@ inputs/A1_Outputs/secondary_techs_update_log_*.txt
 # Excepcion: A2_Output_Params se versiona completo (sus CSV "Technology*" caen en *log* por core.ignorecase)
 !outputs/A2_Output_Params/**
 !outputs/A2_Outputs_Params_otoole/**
-# Excepcion: el codigo y la config nunca se ignoran por estos patrones
-!scripts/**
-!inputs/config/**
 
 # All files containing "_audit" in their name
 *_audit*
@@ -79,6 +76,9 @@ inputs/A1_Outputs/secondary_techs_update_log_*.txt
 # Excepcion: plantillas otoole versionadas
 !inputs/Miscellaneous/templates/
 !inputs/Miscellaneous/templates/**
+# Excepcion: el codigo y la config nunca se ignoran por estos patrones
+!scripts/**
+!inputs/config/**
 
 # guides
 RELAC_TX_Guia_instalacion_ejecucion.pdf
@@ -87,7 +87,7 @@ RELAC_TX_Guia_instalacion_ejecucion.pdf
 inputs/data/~$Secondary_Techs_Editor.xlsx
 inputs/A1_Outputs/*/A-O_Parametrization_backup_*.xlsx
 inputs/A1_Outputs/*/A-O_Demand_backup_*.xlsx
-inputs/A1_Outputs/*/A-O_AR_Model_Base_Year_backup_*.xlsx
+inputs/A1_Outputs/*/A-O_AR_Model_Base_backup_*.xlsx
 inputs/A1_Outputs/*/A-O_AR_Projections_backup_*.xlsx
 inputs/A1_Outputs/*/A-O_Parametrization.backup*.xlsx
 
