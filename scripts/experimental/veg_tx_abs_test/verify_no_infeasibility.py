@@ -7,7 +7,7 @@ from pathlib import Path
 import importlib.util
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
-from common import relac_paths as P
+from common import relac_paths as RP
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("vtc", HERE / "veg_tx_constraints.py")
@@ -18,7 +18,7 @@ HARD = ("min_inv>max_inv", "min_cap>max_cap", "residual>max_cap",
         "cap_floor_inalcanzable", "act_low>act_up")
 NLI = ("TRNNLI", "RNWNLI")
 
-files = {s: P.REFERENCE / "veg_tx_abs_test" / f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
+files = {s: RP.REFERENCE / "veg_tx_abs_test" / f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
          for s in ("BAU", "OPT", "INV", "VGB")}
 
 print("=" * 72)

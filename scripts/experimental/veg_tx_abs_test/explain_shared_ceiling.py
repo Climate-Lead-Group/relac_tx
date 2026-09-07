@@ -6,10 +6,10 @@ from pathlib import Path
 import importlib.util
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
-from common import relac_paths as P
+from common import relac_paths as RP
 
 HERE = Path(__file__).resolve().parent
-INV = P.REFERENCE / "veg_tx_abs_test" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
+INV = RP.REFERENCE / "veg_tx_abs_test" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
 
 # importar las funciones del script canonico (no corre main())
 spec = importlib.util.spec_from_file_location("vtc", HERE / "veg_tx_constraints.py")

@@ -5,10 +5,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
-from common import relac_paths as P
+from common import relac_paths as RP
 
 HERE = Path(__file__).resolve().parent
-OPT = P.REFERENCE / "veg_tx_abs_test" / "Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
+OPT = RP.REFERENCE / "veg_tx_abs_test" / "Pre_processed_OPT_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
 
 PLAN = ("PWRTRN", "RNWTRN")
 NLI  = ("TRNNLI", "RNWNLI")
