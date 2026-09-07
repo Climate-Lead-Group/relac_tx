@@ -29,7 +29,11 @@ import json
 import os
 import re
 import glob
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1229,16 +1233,14 @@ window.addEventListener('resize', () => {{
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    script_dir = Path(__file__).resolve().parent
-
     # Auto-detect the combined CSV by glob pattern (picks most recent)
-    csv_path = find_combined_csv(script_dir)
+    csv_path = find_combined_csv(P.OUTPUTS)
     if csv_path is None:
         raise FileNotFoundError(
-            f"No *_Combined_Inputs_Outputs.csv found in {script_dir}")
+            f"No *_Combined_Inputs_Outputs.csv found in {P.OUTPUTS}")
 
-    centerpoints_path = script_dir / 'Miscellaneous' / 'centerpoints.csv'
-    output_dir = script_dir / 'Figures'
+    centerpoints_path = P.MISCELLANEOUS / 'centerpoints.csv'
+    output_dir = P.FIGURES
     output_path = output_dir / 'TransmissionMaps.html'
     dispatch_output_path = output_dir / 'DispatchChart.html'
 

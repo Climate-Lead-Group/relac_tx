@@ -5,20 +5,22 @@ tecnología y helpers de carga del CSV combinado.
 """
 
 import os
+import sys
+from pathlib import Path
 
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # ================================================================
 # Paths
 # ================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "RELAC_TX_Combined_Inputs_Outputs.csv")
-FIGURES_DIR = os.path.join(BASE_DIR, "Figures")
+CSV_PATH = str(P.OUTPUTS / "RELAC_TX_Combined_Inputs_Outputs.csv")
+FIGURES_DIR = str(P.FIGURES)
 # Balance energético anual OLADE/sieLAC (cuotas de importación, gráfico 12).
-OLADE_BALANCE_PATH = os.path.join(
-    BASE_DIR, "Matriz Balance energético",
-    "OLADE - Matriz de balance energético - Anual.xlsx",
-)
+OLADE_BALANCE_PATH = str(P.MATRIZ_BALANCE / "OLADE - Matriz de balance energético - Anual.xlsx")
 
 # Sufijo opcional para los nombres de archivo generados (vacío = sin sufijo).
 OUTPUT_SUFFIX = ""

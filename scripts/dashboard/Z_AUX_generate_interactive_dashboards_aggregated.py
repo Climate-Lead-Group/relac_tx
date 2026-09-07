@@ -41,6 +41,11 @@ from datetime import datetime
 import os
 import glob
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # Fuel classification
 RENEWABLE_FUELS = ['BIO', 'WAS', 'CSP', 'SPV', 'GEO', 'HYD', 'WAV', 'WON', 'WOF']
@@ -186,7 +191,7 @@ def generate_interactive_dashboard(df, source_file):
     # Generate filename (with Aggregated suffix)
     base_name = os.path.splitext(os.path.basename(source_file))[0]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"Dashboard_Interactive_Aggregated_{base_name}_{timestamp}.html"
+    output_file = str(P.FIGURES / f"Dashboard_Interactive_Aggregated_{base_name}_{timestamp}.html")
 
     # Create interactive HTML
     print(f"   🔄 Generating interactive HTML...")
@@ -1400,7 +1405,7 @@ def generate_interactive_dashboard(df, source_file):
 
 def find_csv_files():
     """Searches for CSV files in the current directory"""
-    csv_files = glob.glob("*.csv")
+    csv_files = glob.glob(str(P.OUTPUTS / "*.csv"))
     return sorted(csv_files)
 
 

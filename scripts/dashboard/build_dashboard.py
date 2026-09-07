@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -28,6 +29,8 @@ from plotly.offline import get_plotlyjs
 from plotly.subplots import make_subplots
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 from dashboard_config import (  # noqa: E402
     FIGURES_DIR,
     OUTPUT_SUFFIX,
@@ -1583,8 +1586,7 @@ def _extra_tab_htmls() -> list:
     cualquier pestaña cuya generación falle (p.ej. falta el XLSX del RES).
     """
     out = []
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    centerpoints_path = os.path.join(script_dir, "Miscellaneous", "centerpoints.csv")
+    centerpoints_path = str(P.MISCELLANEOUS / "centerpoints.csv")
 
     # --- 16 Mapas de Transmisión + 17 Despacho (mismo CSV, una sola carga) ---
     try:
@@ -1613,7 +1615,7 @@ def _extra_tab_htmls() -> list:
     # --- 18 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
     try:
         import Z_AUX_generate_RES_diagram as res
-        xlsx = res.SCRIPT_DIR / "A1_Outputs" / "A1_Outputs_BAU" / "A-O_AR_Model_Base_Year.xlsx"
+        xlsx = P.scenario_dir("BAU") / "A-O_AR_Model_Base_Year.xlsx"
         if not xlsx.exists():
             raise FileNotFoundError(f"falta {xlsx}")
         links = res.load_base_year_data(xlsx)
@@ -3130,8 +3132,7 @@ def _load_centerpoints() -> dict:
 
     Las regiones son del tipo 'ARGXX' (código país de 3 letras + 'XX').
     """
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "Miscellaneous", "centerpoints.csv")
+    path = str(P.MISCELLANEOUS / "centerpoints.csv")
     cp = pd.read_csv(path)
     out = {}
     for _, r in cp.iterrows():
@@ -3321,8 +3322,7 @@ def chart_10():
     )
     per = per.dropna(subset=["NewCapacity", "Country"])
 
-    cd_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "CapacityAndDistances.xlsx")
+    cd_path = str(P.DATA / "CapacityAndDistances.xlsx")
     cd = pd.read_excel(cd_path)[
         ["Scenario", "Country", "Capacity", "Distance RNW", "Distance NRNW"]
     ]

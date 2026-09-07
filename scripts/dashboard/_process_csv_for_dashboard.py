@@ -2,20 +2,22 @@
 Process Combined_Inputs_Outputs CSVs and update dashboard_capacity_cost.html directly.
 
 Usage:
-    python _process_csv_for_dashboard.py
+    python scripts/dashboard/_process_csv_for_dashboard.py
 """
 import csv
 import os
 import re
 import sys
 from collections import defaultdict
+from pathlib import Path
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # Input files
-RELAC_CSV = os.path.join(SCRIPT_DIR, 'RELAC_TX_Combined_Inputs_Outputs_ReLAC.csv')
-SIELAC_CSV = os.path.join(SCRIPT_DIR, 'RELAC_TX_Combined_Inputs_Outputs_SieLAC.csv')
-DASHBOARD_HTML = os.path.join(SCRIPT_DIR, 'dashboard_capacity_cost.html')
+RELAC_CSV = str(P.OUTPUTS / 'RELAC_TX_Combined_Inputs_Outputs_ReLAC.csv')
+SIELAC_CSV = str(P.OUTPUTS / 'RELAC_TX_Combined_Inputs_Outputs_SieLAC.csv')
+DASHBOARD_HTML = str(P.FIGURES / 'dashboard_capacity_cost.html')
 
 # Technology type code -> Fuente mapping (for Generación)
 TECH_TO_FUENTE = {
