@@ -311,7 +311,7 @@ def run_storage_delay_patcher(params, scenario_name):
         storage_delay_allowed_value:    str   -- PWR cap value in open years (default "-1")
         storage_delay_suffix:           str   -- chained filename suffix (default "StorageDelayN5")
         storage_delay_model_input:      str   -- source OSeMOSYS model file (default params['osemosys_model'])
-        storage_delay_model_output:     str   -- patched model file written next to B2 (default "osemosys_fast_preprocessed_storage_delay.txt")
+        storage_delay_model_output:     str   -- patched model file written under outputs/model/ (default "outputs/model/osemosys_fast_preprocessed_storage_delay.txt")
 
     Mutually exclusive with strip_storage. When storage_delay_active is True,
     main_executer's __main__ already disables strip_storage and switches the
@@ -341,7 +341,7 @@ def run_storage_delay_patcher(params, scenario_name):
         params.get('storage_delay_model_input', params['osemosys_model'])
     )
     model_output = _b2_local_path(
-        params.get('storage_delay_model_output', 'osemosys_fast_preprocessed_storage_delay.txt')
+        params.get('storage_delay_model_output', 'outputs/model/osemosys_fast_preprocessed_storage_delay.txt')
     )
 
     command = [
@@ -1149,7 +1149,7 @@ def export_root_datafile(here, params, scenario_name, export_name=None):
         return None
 
     shutil.copy2(source_path, target_path)
-    print(f"✅ Datafile exported to repository root: {target_path}")
+    print(f"✅ Datafile exported to outputs/: {target_path}")
     print('#------------------------------------------------------------------------------#')
     return target_path
 
@@ -1416,7 +1416,7 @@ if __name__ == "__main__":
             print("[storage_delay] strip_storage_active forced to False (mutually exclusive)")
             params['strip_storage_active'] = False
         params.setdefault('storage_delay_model_input', params['osemosys_model'])
-        params.setdefault('storage_delay_model_output', 'osemosys_fast_preprocessed_storage_delay.txt')
+        params.setdefault('storage_delay_model_output', 'outputs/model/osemosys_fast_preprocessed_storage_delay.txt')
         params['osemosys_model'] = params['storage_delay_model_output']
         if params.get('storage_delay_prefix_final_files'):
             params['prefix_final_files'] = params['storage_delay_prefix_final_files']
