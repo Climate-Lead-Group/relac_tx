@@ -20,6 +20,11 @@ from typing import List, Any
 from pathlib import Path
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+SCRIPT_DIR = Path(__file__).resolve().parent   # scripts/pipeline (patchers hermanos)
+ROOT = str(P.REPO_ROOT)                        # ancla de TODAS las rutas del YAML
+
 ########################################################################################
 def sort_csv_files_in_folder(folder_path):
     if not os.path.isdir(folder_path):
@@ -84,7 +89,7 @@ def solve_universe(params, HERE, base_scenarios):
     lo reciben de las etapas VEGCON/transforms; si falta, esas etapas no corrieron)."""
     universe = list(params.get('solve_scenarios') or base_scenarios)
     for s in universe:
-        txt = os.path.join(HERE, params['executables'], s + '_0',
+        txt = os.path.join(ROOT, params['executables'], s + '_0',
                            chained_base(params, s) + '.txt')
         if not os.path.exists(txt):
             hint = ("es derivado: activa veg_tx_active/scenario_transforms"
@@ -183,9 +188,9 @@ def run_otoole_conversion(base_output_path, scenario_name, params):
     """
     # Step 1: Define paths
     input_folder = os.path.join(base_output_path, scenario_name)
-    scenario_exec_dir = os.path.join(HERE, params['executables'], scenario_name + '_0')
+    scenario_exec_dir = os.path.join(ROOT, params['executables'], scenario_name + '_0')
     output_file = os.path.join(scenario_exec_dir, f"{scenario_name}_0.txt")
-    config_file = os.path.join(HERE, params['Miscellaneous'], params['otoole_config'])
+    config_file = os.path.join(ROOT, params['Miscellaneous'], params['otoole_config'])
 
     # Step 2: Ensure the scenario's executable folder exists
     os.makedirs(scenario_exec_dir, exist_ok=True)
@@ -226,6 +231,7 @@ def run_days_in_day_type_patcher(params, scenario_name):
         'inject_DaysInDayType.py',
     )
     target_file = os.path.join(
+        ROOT,
         params['executables'],
         scenario_name + '_0',
         f"{params['preprocess_data_name']}{scenario_name}_0.txt",
@@ -272,8 +278,8 @@ def run_strip_storage_patcher(params, scenario_name):
     )
 
     base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    in_file = os.path.join(params['executables'], scenario_name + '_0', f"{base}.txt")
-    out_file = os.path.join(params['executables'], scenario_name + '_0', f"{base}_{suffix}.txt")
+    in_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{base}.txt")
+    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{base}_{suffix}.txt")
 
     command = [sys.executable, script_path, in_file, '-o', out_file, '--mode', mode]
     if mode != 'all' and targets:
@@ -321,15 +327,15 @@ def run_storage_delay_patcher(params, scenario_name):
     exact_storages = params.get('storage_delay_storages', [])
 
     here = os.path.dirname(os.path.abspath(__file__))
-    script_path = os.path.join(here, 'patch_storage_delay.py')
+    script_path = os.path.join(SCRIPT_DIR, 'patch_storage_delay.py')
 
     base = f"{params['preprocess_data_name']}{scenario_name}_0"
-    in_file = os.path.join(params['executables'], scenario_name + '_0', f"{base}.txt")
-    out_file = os.path.join(params['executables'], scenario_name + '_0', f"{base}_{suffix}.txt")
+    in_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{base}.txt")
+    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{base}_{suffix}.txt")
 
     def _b2_local_path(value):
         path = Path(value)
-        return str(path if path.is_absolute() else Path(here) / path)
+        return str(path if path.is_absolute() else Path(ROOT) / path)
 
     model_input = _b2_local_path(
         params.get('storage_delay_model_input', params['osemosys_model'])
@@ -409,8 +415,8 @@ def run_open_pwrbck_patcher(params, scenario_name):
     in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
-    in_file  = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
-    out_file = os.path.join(params['executables'], scenario_name + '_0', f"{out_base}.txt")
+    in_file  = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{in_base}.txt")
+    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{out_base}.txt")
 
     command = [sys.executable, script_path, in_file, '-o', out_file,
                '--pattern', pattern, '--value', str(value)]
@@ -456,8 +462,8 @@ def run_reserve_margin_repair_patcher(params, scenario_name):
     in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
-    in_file = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
-    out_file = os.path.join(params['executables'], scenario_name + '_0', f"{out_base}.txt")
+    in_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{in_base}.txt")
+    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{out_base}.txt")
 
     command = [
         sys.executable,
@@ -519,21 +525,21 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
 
     suffix = params.get('reserve_margin_xlsx_suffix', 'RMCarefulXLSX')
     here = os.path.dirname(os.path.abspath(__file__))
-    script_path = os.path.join(here, 'patch_reserve_margin_repair_careful_xlsx.py')
+    script_path = os.path.join(SCRIPT_DIR, 'patch_reserve_margin_repair_careful_xlsx.py')
 
     workbook = params.get(
         'reserve_margin_xlsx_workbook',
         'firm_capacity_fallbacks_by_cr.xlsx',
     )
     if not os.path.isabs(workbook):
-        workbook = os.path.join(here, workbook)
+        workbook = os.path.join(P.DATA, workbook)
 
     in_base = chained_base(params, scenario_name, upto=suffix)
     out_base = f"{in_base}_{suffix}"
 
-    in_file = os.path.join(params['executables'], scenario_name + '_0', f"{in_base}.txt")
-    out_file = os.path.join(params['executables'], scenario_name + '_0', f"{out_base}.txt")
-    warnings_file = os.path.join(params['executables'], scenario_name + '_0', f"{out_base}.warnings.txt")
+    in_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{in_base}.txt")
+    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{out_base}.txt")
+    warnings_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{out_base}.warnings.txt")
 
     command = [
         sys.executable,
@@ -614,14 +620,12 @@ def run_activity_upper_limit_patcher(params, scenario_name):
 
     in_base = chained_base(params, scenario_name, upto=params.get('dispatch_floors_suffix', 'FLOORED'))
     out_base = f"{in_base}_{suffix}"
-    scenario_exec = os.path.join(params['executables'], scenario_name + '_0')
+    scenario_exec = os.path.join(ROOT, params['executables'], scenario_name + '_0')
     in_file = os.path.join(scenario_exec, f"{in_base}.txt")
     out_file = os.path.join(scenario_exec, f"{out_base}.txt")
 
-    xlsx_path = os.path.join(
-        here, 'A1_Outputs', f'A1_Outputs_{scenario_name}', 'A-O_Parametrization.xlsx'
-    )
-    a2_root = os.path.join(here, params.get('A2_output_otoole', 'A2_Outputs_Params_otoole'), scenario_name)
+    xlsx_path = str(P.scenario_dir(scenario_name) / 'A-O_Parametrization.xlsx')
+    a2_root = os.path.join(ROOT, params.get('A2_output_otoole', 'outputs/A2_Outputs_Params_otoole'), scenario_name)
     demand_csv = os.path.join(a2_root, 'SpecifiedAnnualDemand.csv')
     oar_csv = os.path.join(a2_root, 'OutputActivityRatio.csv')
 
@@ -674,7 +678,7 @@ def run_preflight_separation_gate(params, HERE):
     """Gate read-only (1 sola vez). exit!=0 => abortar ANTES de escribir pisos."""
     if not params.get('preflight_separation_active', False):
         return
-    script = os.path.normpath(os.path.join(HERE, params['preflight_separation_script']))
+    script = os.path.normpath(os.path.join(ROOT, params['preflight_separation_script']))
     result = subprocess.run([sys.executable, script], capture_output=True, text=True)
     print(result.stdout)
     if result.returncode != 0:
@@ -690,7 +694,7 @@ def run_dispatch_floors_patcher(params, scenario_name, HERE):
     scens = params.get('dispatch_floors_scenarios', [])
     if scens and scenario_name not in scens:
         return
-    script = os.path.normpath(os.path.join(HERE, params['dispatch_floors_script']))
+    script = os.path.normpath(os.path.join(ROOT, params['dispatch_floors_script']))
     command = [sys.executable, script, '--scenarios', scenario_name]
     print(f"Dispatch floors (FLOORED) para '{scenario_name}_0':")
     print(' '.join(command))
@@ -700,7 +704,7 @@ def run_dispatch_floors_patcher(params, scenario_name, HERE):
         print(result.stderr)
         raise RuntimeError(f"write_floors fallo para '{scenario_name}'")
     # Verificar que el output esperado por la cadena existe
-    expected = os.path.join(HERE, params['executables'], scenario_name + '_0',
+    expected = os.path.join(ROOT, params['executables'], scenario_name + '_0',
                             chained_base(params, scenario_name, upto=params.get('veg_tx_suffix', 'VEGCON')) + '.txt')
     if not os.path.exists(expected):
         raise RuntimeError(f"write_floors no produjo {expected}")
@@ -712,13 +716,13 @@ def run_veg_tx_stage(params, HERE, scenarios):
     los escenarios base tengan su _FLOORED.txt (etapa B completada)."""
     if not params.get('veg_tx_active', False):
         return
-    exe_dir = os.path.join(HERE, params['executables'])
+    exe_dir = os.path.join(ROOT, params['executables'])
     for s in params.get('dispatch_floors_scenarios', scenarios):
         floored = os.path.join(exe_dir, s + '_0', chained_base(params, s, upto=params.get('veg_tx_suffix', 'VEGCON')) + '.txt')
         if not os.path.exists(floored):
             raise SystemExit(f"[veg_tx] falta {floored}; la etapa FLOORED no completo para {s}")
-    script = os.path.normpath(os.path.join(HERE, params['veg_tx_script']))
-    needs = os.path.normpath(os.path.join(HERE, params['veg_tx_needs_csv']))
+    script = os.path.normpath(os.path.join(ROOT, params['veg_tx_script']))
+    needs = os.path.normpath(os.path.join(ROOT, params['veg_tx_needs_csv']))
     command = [sys.executable, script, '--base-dir', exe_dir, '--needs-csv', needs]
     print('Etapa VEGCON (barrera cross-escenario, salida per-escenario en Executables):')
     print(' '.join(command))
@@ -736,9 +740,9 @@ def run_scenario_transforms(params, HERE):
     transforms = params.get('scenario_transforms', [])
     if not transforms:
         return
-    exe_dir = os.path.join(HERE, params['executables'])
+    exe_dir = os.path.join(ROOT, params['executables'])
     for t in transforms:
-        script = os.path.normpath(os.path.join(HERE, t['script']))
+        script = os.path.normpath(os.path.join(ROOT, t['script']))
         command = [sys.executable, script, '--executables-dir', exe_dir]
         print(f"Transform '{t.get('name', os.path.basename(script))}':")
         print(' '.join(command))
@@ -784,7 +788,7 @@ def run_sync_patched_csvs(params, scenario_name, base_output_path):
 
     base = f"{params['preprocess_data_name']}{scenario_name}_0"
     txt_name = f"{base}_{'_'.join(chain_parts)}.txt"
-    txt_path = os.path.join(params['executables'], scenario_name + '_0', txt_name)
+    txt_path = os.path.join(ROOT, params['executables'], scenario_name + '_0', txt_name)
     csv_folder = os.path.join(base_output_path, scenario_name)
 
     sync_params = params.get('sync_patched_csvs_params', [
@@ -836,7 +840,7 @@ def sync_inputs_for_solve(params, HERE, solve_list):
             "la MISMA fuente que process_scenario_folder leeria como pristina en la proxima corrida "
             "-- compensacion/escalada acumulativa silenciosa. Activa A2_otoole_outputs o desactiva "
             "write_txt_model.")
-    otoole_root = os.path.join(HERE, params['A2_output_otoole'])
+    otoole_root = os.path.join(ROOT, params['A2_output_otoole'])
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'sync_patched_csvs_from_txt.py')
     for s in solve_list:
@@ -844,7 +848,7 @@ def sync_inputs_for_solve(params, HERE, solve_list):
         csv_folder = os.path.join(otoole_root, s)
         if s != base:
             shutil.copytree(os.path.join(otoole_root, base), csv_folder, dirs_exist_ok=True)
-        txt = os.path.join(HERE, params['executables'], s + '_0',
+        txt = os.path.join(ROOT, params['executables'], s + '_0',
                            chained_base(params, s) + '.txt')
         command = [sys.executable, script, '--txt', txt, '--csv-folder', csv_folder,
                    '--params', *params.get('sync_patched_csvs_params', [])]
@@ -855,7 +859,7 @@ def sync_inputs_for_solve(params, HERE, solve_list):
             raise SystemExit(f"[sync_inputs] fallo para {s}")
         # regenerar el Input.csv del escenario desde los CSVs ya sincronizados
         generate_combined_input_file(csv_folder,
-                                     os.path.join(HERE, params['executables'], s + '_0'),
+                                     os.path.join(ROOT, params['executables'], s + '_0'),
                                      s + '_0')
 
 
@@ -868,9 +872,9 @@ def run_preprocessing_script(params, scenario_name):
         scenario_name (str): The name of the scenario to preprocess.
     """
     # Step 1: Define paths
-    script_path = os.path.join(params['Miscellaneous'], params['preprocess_data'])
-    input_file = os.path.join(params['executables'], scenario_name + '_0', f"{scenario_name}_0.txt")
-    output_file = os.path.join(params['executables'], scenario_name + '_0', f"{params['preprocess_data_name']}{scenario_name}_0.txt")
+    script_path = os.path.join(SCRIPT_DIR, params['preprocess_data'])
+    input_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{scenario_name}_0.txt")
+    output_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{params['preprocess_data_name']}{scenario_name}_0.txt")
 
     # Step 2: Construct command
     command = [sys.executable, script_path, input_file, output_file]
@@ -910,13 +914,12 @@ def check_enviro_variables(solver_command):
     #
 
 def get_config_main_path(here, base_folder):
-    # Navigate to the repository root (parent of t1_confection)
-    repo_root = Path(here).parent
-    return str(repo_root / base_folder)
+    return os.path.join(ROOT, base_folder)
 
 def main_executer(params, scenario_name, HERE):
     
-    folder_scenario = os.path.join(HERE, params['executables'], scenario_name + '_0')                             
+    model_file = os.path.join(ROOT, params['osemosys_model'])
+    folder_scenario = os.path.join(ROOT, params['executables'], scenario_name + '_0')                             
     
     # Constructing paths for the data file and the output file, adapting for file system differences
     data_file = os.path.join(folder_scenario, chained_base(params, scenario_name))
@@ -935,13 +938,13 @@ def main_executer(params, scenario_name, HERE):
             check_enviro_variables('glpsol')
             
             # Composing the command to solve the model with new options
-            str_solve = f'glpsol -m {params["osemosys_model"]} -d {data_file}.txt --wglp {output_file}.glp --write {output_file}.sol'
+            str_solve = f'glpsol -m {model_file} -d {data_file}.txt --wglp {output_file}.glp --write {output_file}.sol'
             commands.append(str_solve)
         
     else:
         if params['create_matrix']:
             # For LP models
-            str_solve = f'glpsol -m {params["osemosys_model"]} -d {data_file}.txt --wlp {output_file}.lp --check'
+            str_solve = f'glpsol -m {model_file} -d {data_file}.txt --wlp {output_file}.lp --check'
             commands.append(str_solve)
         
         if solver == 'cbc':
@@ -1003,9 +1006,9 @@ def main_executer(params, scenario_name, HERE):
     print('\n#------------------------------------------------------------------------------#')
 
     # Paths for converting outputs
-    file_path_conv_format = os.path.join(HERE, params['Miscellaneous'], params['conv_format'])
+    file_path_conv_format = os.path.join(ROOT, params['Miscellaneous'], params['conv_format'])
     # file_path_template = os.path.join(params['Miscellaneous'], params['templates'])
-    file_path_template = os.path.join(HERE, params['A2_output_otoole'],
+    file_path_template = os.path.join(ROOT, params['A2_output_otoole'],
                                       scenario_base(params, scenario_name))
     file_path_outputs = os.path.join(folder_scenario, params['outputs'])
 
@@ -1119,8 +1122,8 @@ def generate_combined_input_file(input_folder, output_folder, scenario_name):
 
 def export_root_datafile(here, params, scenario_name, export_name=None):
     """
-    Copy the preprocessed main-scenario datafile to the repository root so the
-    user has a single easy-to-find model datafile next to `t1_confection/`.
+    Copy the preprocessed main-scenario datafile to outputs/ so the
+    user has a single easy-to-find model datafile.
 
     When patchers (storage_delay, strip_storage, open_pwrbck, reserve_margin_*)
     are active, exports the final patched sibling — not the vanilla preprocessed
@@ -1132,15 +1135,14 @@ def export_root_datafile(here, params, scenario_name, export_name=None):
         else:
             export_name = 'RELAC_TX_data.txt'
 
-    repo_root = Path(here).parent
     source_name = chained_base(params, scenario_name) + '.txt'
     source_path = (
-        Path(here)
+        Path(ROOT)
         / params['executables']
         / f"{scenario_name}_0"
         / source_name
     )
-    target_path = repo_root / export_name
+    target_path = P.OUTPUTS / export_name
 
     if not source_path.exists():
         print(f"[WARN] Root datafile export skipped because source was not found: {source_path}")
@@ -1204,13 +1206,13 @@ def concatenate_all_scenarios(HERE, params):
     combined_inputs = []
     combined_outputs = []
     combined_inputs_outputs = []
-    base_input_path = params['executables']
+    base_input_path = os.path.join(ROOT, params['executables'])
 
     for scenario_future_name in sorted(os.listdir(base_input_path)):
         if scenario_future_name.lower() in ['default', '__pycache__', 'local_dataset_creator_0.py']:
             continue
 
-        scenario_path = os.path.join(HERE, base_input_path, scenario_future_name)
+        scenario_path = os.path.join(ROOT, base_input_path, scenario_future_name)
         parts = scenario_future_name.rsplit("_", 1)
         scenario = parts[0]
         future = parts[1]
@@ -1262,7 +1264,7 @@ def concatenate_all_scenarios(HERE, params):
         sort_cols = [c for c in ['Future', 'Scenario', 'REGION', 'TECHNOLOGY', 'YEAR'] if c in df_inputs_all.columns]
         if sort_cols:
             df_inputs_all = df_inputs_all.sort_values(by=sort_cols).reset_index(drop=True)
-        path_in = os.path.join(HERE,params['prefix_final_files'] + params['inputs_file'])
+        path_in = os.path.join(P.OUTPUTS,params['prefix_final_files'] + params['inputs_file'])
         df_inputs_all.to_csv(path_in, index=False)
         dated = path_in.replace('.csv', f'_{today}.csv')
         df_inputs_all.to_csv(dated, index=False)
@@ -1276,7 +1278,7 @@ def concatenate_all_scenarios(HERE, params):
         sort_cols = [c for c in ['Future', 'Scenario', 'REGION', 'TECHNOLOGY', 'YEAR'] if c in df_outputs_all.columns]
         if sort_cols:
             df_outputs_all = df_outputs_all.sort_values(by=sort_cols).reset_index(drop=True)
-        path_out = os.path.join(HERE,params['prefix_final_files'] + params['outputs_file'])
+        path_out = os.path.join(P.OUTPUTS,params['prefix_final_files'] + params['outputs_file'])
         df_outputs_all.to_csv(path_out, index=False)
         dated = path_out.replace('.csv', f'_{today}.csv')
         df_outputs_all.to_csv(dated, index=False)
@@ -1332,7 +1334,7 @@ def concatenate_all_scenarios(HERE, params):
         #########################################################################################
         
         
-        path_comb = os.path.join(HERE,params['prefix_final_files'] + combined_name)
+        path_comb = os.path.join(P.OUTPUTS,params['prefix_final_files'] + combined_name)
         df_combined.to_csv(path_comb, index=False)
         # Note: dated copy with annualized data will be created after annualization (if enabled)
     else:
@@ -1396,13 +1398,13 @@ if __name__ == "__main__":
     HERE = get_here()
     
     
-    # (Optional) Change CWD to the script's folder
-    if Path.cwd() != HERE:
-        os.chdir(HERE)
-        print(f"[INFO] Working dir -> {HERE}")
-        
+    # CWD -> outputs/logs so solver logs land there
+    P.ensure_output_dirs()
+    os.chdir(P.LOGS)          # cplex.log / clone*.log / gurobi.log caen en outputs/logs/
+    print(f"[INFO] Working dir -> {P.LOGS}")
+
     # Load params from YAML
-    with open('Config_MOMF_T1_AB.yaml', 'r') as f:
+    with open(P.CONFIG_AB, 'r') as f:
         params = yaml.safe_load(f)
 
     # storage_delay precedence: when this patcher is active it is mutually
@@ -1431,13 +1433,13 @@ if __name__ == "__main__":
                 "hardcodeada en sus nombres de archivo. Ajusta el YAML o los scripts.")
 
     # Load params from YAML
-    with open('Config_MOMF_T1_A.yaml', 'r') as f:
+    with open(P.CONFIG_A, 'r') as f:
         params_A2 = yaml.safe_load(f)
 
     # Define source and destination base paths
-    base_input_path = os.path.join(HERE, params['A2_output'])
-    template_path = os.path.join(HERE, params['Miscellaneous'], params['templates'])
-    base_output_path = os.path.join(HERE, params['A2_output_otoole'])
+    base_input_path = os.path.join(ROOT, params['A2_output'])
+    template_path = os.path.join(ROOT, params['Miscellaneous'], params['templates'])
+    base_output_path = os.path.join(ROOT, params['A2_output_otoole'])
 
     scenarios=sorted(os.listdir(base_input_path))
     try:
@@ -1493,8 +1495,8 @@ if __name__ == "__main__":
         # the patched values the solver actually consumed.
         run_sync_patched_csvs(params, scenario_name, base_output_path)
 
-        input_folder = os.path.join(HERE, base_output_path, scenario_name)
-        output_folder = os.path.join(HERE, params['executables'], scenario_name + '_0')
+        input_folder = os.path.join(ROOT, base_output_path, scenario_name)
+        output_folder = os.path.join(ROOT, params['executables'], scenario_name + '_0')
 
         # List any available files for preview (just to verify setup)
         os.makedirs(input_folder, exist_ok=True)
@@ -1549,10 +1551,10 @@ if __name__ == "__main__":
         # Delete Outputs folder with otoole csvs files
         if params['del_files']:
             # Delete Outputs folder with otoole csvs files
-            folder_scenario = os.path.join(HERE, params['executables'], scenario_name + '_0') 
-            outputs_otoole_csvs = os.path.join(HERE, folder_scenario, params['outputs'])
-            data_file = os.path.join(HERE, folder_scenario, scenario_name + '_0' + '.txt')
-            sol_file = os.path.join(HERE, folder_scenario, params['preprocess_data_name'] + scenario_name + '_0' + params['output_files'] + '.sol')
+            folder_scenario = os.path.join(ROOT, params['executables'], scenario_name + '_0') 
+            outputs_otoole_csvs = os.path.join(ROOT, folder_scenario, params['outputs'])
+            data_file = os.path.join(ROOT, folder_scenario, scenario_name + '_0' + '.txt')
+            sol_file = os.path.join(ROOT, folder_scenario, params['preprocess_data_name'] + scenario_name + '_0' + params['output_files'] + '.sol')
             if os.path.exists(outputs_otoole_csvs):
                 shutil.rmtree(outputs_otoole_csvs)
         
@@ -1592,7 +1594,7 @@ if __name__ == "__main__":
             from Z_AUX_capital_annualization_script import annualize_capital_investment
 
             # Define the path to the combined file
-            combined_file_path = os.path.join(HERE, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
+            combined_file_path = os.path.join(P.OUTPUTS, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
 
             # Check if file exists
             if os.path.exists(combined_file_path):
@@ -1625,7 +1627,7 @@ if __name__ == "__main__":
             print('#'*80)
     else:
         # If annualization is disabled, still create dated copy of combined file
-        combined_file_path = os.path.join(HERE, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
+        combined_file_path = os.path.join(P.OUTPUTS, params['prefix_final_files'] + 'Combined_Inputs_Outputs.csv')
         if os.path.exists(combined_file_path):
             today = date.today().isoformat()  # 'YYYY-MM-DD'
             dated_combined = combined_file_path.replace('.csv', f'_{today}.csv')

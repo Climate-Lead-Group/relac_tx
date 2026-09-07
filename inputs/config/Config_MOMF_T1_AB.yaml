@@ -1,18 +1,18 @@
     # Model external dependencies: Directories, Files, sheets and columns
 ########################################################################################
 # Directories
-A2_output: 'A2_Output_Params'
-A2_output_otoole: 'A2_Outputs_Params_otoole'
-Miscellaneous: 'Miscellaneous'
+A2_output: 'outputs/A2_Output_Params'
+A2_output_otoole: 'outputs/A2_Outputs_Params_otoole'
+Miscellaneous: 'inputs/Miscellaneous'
 templates: 'templates'
-executables: 'Executables'
+executables: 'outputs/Executables'
 outputs: 'Outputs'
-concatenate_folder: 'concatenate_files'
+concatenate_folder: 'scripts/tools'
 
 # Files
 otoole_config: 'conversion_format.yaml'
 preprocess_data: 'preprocess_data.py'
-osemosys_model: 'osemosys_fast_preprocessed.txt'
+osemosys_model: 'inputs/model/osemosys_fast_preprocessed.txt'
 conv_format: 'conversion_format.yaml'
 concat_csvs: 'concatenate_relac.py'
 inputs_file: 'Inputs.csv'
@@ -92,7 +92,7 @@ storage_delay_storage_prefixes:
 # storage_delay_storages: []          # exact storage names (overrides prefixes if set)
 storage_delay_allowed_value: "-1"     # PWR cap value applied in open years (-1 = unconstrained)
 storage_delay_suffix: "StorageDelayN5"
-storage_delay_model_output: "osemosys_fast_preprocessed_storage_delay.txt"
+storage_delay_model_output: "outputs/model/osemosys_fast_preprocessed_storage_delay.txt"
 storage_delay_prefix_final_files: "RELAC_TX_StorageDelay_"
 storage_delay_root_datafile: "RELAC_TX_data_storage_delay.txt"
 
@@ -231,11 +231,11 @@ sync_patched_csvs_params:
 # === Dispatch floors (fix_dispatch/write_floors.py, pisos fosiles) ===
 dispatch_floors_active: True
 dispatch_floors_suffix: "FLOORED"
-dispatch_floors_script: "../fix_dispatch/write_floors.py"      # relativo a t1_confection
+dispatch_floors_script: "scripts/fix_dispatch/write_floors.py"      # relativo a t1_confection
 dispatch_floors_scenarios: ["BAU", "OPT", "INV", "VGB"]        # base; los derivados heredan
 # Gate de separacion (read-only) ANTES de escribir pisos; exit!=0 aborta el pipeline.
 preflight_separation_active: True
-preflight_separation_script: "../fix_dispatch/preflight_separation.py"
+preflight_separation_script: "scripts/fix_dispatch/preflight_separation.py"
 
 ########################################################################################
 # === Veg Tx constraints (RELAC_Tx_v15_run/veg_tx_constraints_v14.py) ===
@@ -245,8 +245,8 @@ preflight_separation_script: "../fix_dispatch/preflight_separation.py"
 # Escribe cada *_VEGCON.txt en Executables/<S>_0/ (crea las carpetas de los derivados).
 veg_tx_active: True
 veg_tx_suffix: "VEGCON"
-veg_tx_script: "../RELAC_Tx_v15_run/veg_tx_constraints_v14.py"
-veg_tx_needs_csv: "../RELAC_Tx_v15_run/outputs_BSR/NewCapacity.csv"   # PIN (ver Riesgos R3)
+veg_tx_script: "scripts/tx_chain/veg_tx_constraints_v14.py"
+veg_tx_needs_csv: "inputs/tx_chain/outputs_BSR/NewCapacity.csv"   # PIN (ver Riesgos R3)
 
 ########################################################################################
 # === Scenario transforms (post-VEGCON, orden = orden de la lista) ===
@@ -259,10 +259,10 @@ veg_tx_needs_csv: "../RELAC_Tx_v15_run/outputs_BSR/NewCapacity.csv"   # PIN (ver
 # escenarios) su mapeo en derived_scenarios abajo. Nada mas.
 scenario_transforms:
   - name: cost_sensitivity
-    script: "../RELAC_Tx_v15_run/cost_sensitivity_v11.py"
+    script: "scripts/tx_chain/cost_sensitivity_v11.py"
     produces: {BSR: BAU, ISR: INV, VSR: VGB, ISRWF: INVWF, VSRWF: VGBWF}
   - name: nli_sr_recompute
-    script: "../RELAC_Tx_v15_run/nli_sr_recompute_v1.py"
+    script: "scripts/tx_chain/nli_sr_recompute_v1.py"
     in_place: [ISR, VSR, ISRWF, VSRWF]
 
 # Mapa escenario -> escenario base cuyo A2 (sets/templates otoole) se reutiliza.
