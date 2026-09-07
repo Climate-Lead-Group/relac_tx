@@ -4,16 +4,16 @@ relac_io.py  --  shared read-only IO / parsing for the dispatch-floor fix.
 Authoritative sources (per the revised division of labor):
   - Activity limits (LowerLimit / UpperLimit) + forced builds (MinCapacityInvestment)
       -> parsed directly from the per-scenario preprocessed GLPK/MathProg txt
-         t1_confection/Executables/<SCEN>_0/
+         outputs/Executables/<SCEN>_0/
              Pre_processed_<SCEN>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX*.txt
   - Other inputs (ResidualCapacity, CapacityToActivityUnit, CapitalCost, FixedCost,
       VariableCost, OperationalLife, Input/Output/EmissionActivityRatio, demand)
-      -> A2 otoole per-scenario CSVs  t1_confection/A2_Outputs_Params_otoole/<SCEN>/*.csv
+      -> A2 otoole per-scenario CSVs  outputs/A2_Outputs_Params_otoole/<SCEN>/*.csv
   - Model outputs (TotalCapacityAnnual, TotalTechnologyAnnualActivity, production, CF...)
-      -> the combined inputs+outputs CSV in the repo root.
+      -> the combined inputs+outputs CSV in outputs/.
 
 NOTHING here writes to any live input. The only writes are parquet caches under
-fix_dispatch/cache/.
+outputs/fix_dispatch/cache/.
 """
 
 from __future__ import annotations
@@ -22,17 +22,18 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 import pandas as pd
 
 # --------------------------------------------------------------------------- #
 # Paths
 # --------------------------------------------------------------------------- #
-REPO = Path(__file__).resolve().parents[1]
-T1 = REPO / "t1_confection"
-EXECUTABLES = T1 / "Executables"
-OTOOLE = T1 / "A2_Outputs_Params_otoole"
-CACHE = Path(__file__).resolve().parent / "cache"
-CACHE.mkdir(exist_ok=True)
+EXECUTABLES = P.EXECUTABLES
+OTOOLE = P.A2_OTOOLE
+CACHE = P.FIX_DISPATCH_OUT / "cache"
+CACHE.mkdir(parents=True, exist_ok=True)
 
 SCENARIOS = ["BAU", "INV", "OPT", "VGB"]
 
@@ -214,7 +215,7 @@ def parse_mathprog(scenario: str, wanted: list[str]) -> dict[str, pd.DataFrame]:
 # otoole A2 per-scenario CSVs  -- other inputs
 # --------------------------------------------------------------------------- #
 def load_otoole(scenario: str, param: str) -> pd.DataFrame:
-    """Read t1_confection/A2_Outputs_Params_otoole/<SCEN>/<param>.csv verbatim."""
+    """Read outputs/A2_Outputs_Params_otoole/<SCEN>/<param>.csv verbatim."""
     path = OTOOLE / scenario / f"{param}.csv"
     if not path.exists():
         return pd.DataFrame()
@@ -255,9 +256,9 @@ def nonren_floor_techs(scenario: str) -> list[str]:
 # Combined inputs+outputs CSV  -- outputs + input cross-check
 # --------------------------------------------------------------------------- #
 def find_combined_csv() -> Path:
-    cands = sorted(REPO.glob("RELAC_TX*Combined_Inputs_Outputs*.csv"))
+    cands = sorted(P.OUTPUTS.glob("RELAC_TX*Combined_Inputs_Outputs*.csv"))
     if not cands:
-        raise FileNotFoundError("No combined inputs+outputs CSV in repo root")
+        raise FileNotFoundError("No combined inputs+outputs CSV in outputs/")
     # prefer the largest (the full inputs+outputs file, not a _fecha slice)
     return max(cands, key=lambda p: p.stat().st_size)
 
@@ -330,7 +331,7 @@ def to_lookup(df: pd.DataFrame, keys: list[str], value: str = "VALUE") -> dict:
 
 if __name__ == "__main__":
     # quick self-check
-    print("REPO:", REPO)
+    print("REPO:", P.REPO_ROOT)
     print("Combined CSV:", find_combined_csv().name)
     for s in SCENARIOS:
         print(f"  {s} txt:", executable_txt(s).name)

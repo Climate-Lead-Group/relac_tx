@@ -35,12 +35,15 @@ import argparse
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 import pandas as pd
 
 from floor_effect import TechPhysics
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_CANDIDATES = HERE / "candidate_floors.csv"
+DEFAULT_CANDIDATES = P.CANDIDATE_FLOORS
 
 REPORT_YEARS = [2030, 2040, 2050]
 PAIRS = [("BAU", "OPT"), ("INV", "VGB")]

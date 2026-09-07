@@ -3,17 +3,17 @@ fig_floor_effect.py  --  read-only. Renders the before/after effect of the
 dispatch-floor fix as a 3-panel figure.
 
 Data sources:
-  - Baseline (pre-floor) combined inputs+outputs CSV: repo root
+  - Baseline (pre-floor) combined inputs+outputs CSV: outputs/
     RELAC_TX_StorageDelay_Combined_Inputs_Outputs_2026-06-19.csv (~404 MB).
   - Floored (post-floor) combined inputs+outputs CSV: Andrey's solved run at
-    fix_dispatch_solved/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
+    outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
     (BAU + OPT only; INV/VGB were not solved in this run).
   - "Before" activity floor (TotalTechnologyAnnualActivityLowerLimit): parsed
     from the original preprocessed MathProg txt via relac_io (authoritative
     source, confirms it ends at 2026 -- that is the bug this fix addresses).
   - "After" activity floor: no *_FLOORED.txt copy exists on disk (Andrey solved
     from a floored otoole CSV, not a floored txt), so the after-floor is read
-    from fix_dispatch_solved/solved_FLOORED/RELAC_TX_FLOORED_Inputs.csv, the
+    from outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Inputs.csv, the
     actual floored inputs-only CSV used for the solve. Same parameter, same
     values as what write_floors.py would have put in a _FLOORED.txt; this is
     just the CSV form of the same input.
@@ -24,7 +24,11 @@ No model input is written. Only fig_floor_effect.png and cache/*.parquet.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import matplotlib
 matplotlib.use("Agg")
@@ -34,12 +38,11 @@ import pandas as pd
 import relac_io as io
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
-BASELINE_COMBINED = REPO / "RELAC_TX_StorageDelay_Combined_Inputs_Outputs_2026-06-19.csv"
-FLOORED_COMBINED = REPO / "fix_dispatch" / "solved_FLOORED" / "RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv"
-FLOORED_INPUTS = REPO / "fix_dispatch" / "solved_FLOORED" / "RELAC_TX_FLOORED_Inputs.csv"
-CANDIDATES_CSV = HERE / "candidate_floors.csv"
-OUT_PNG = HERE / "fig_floor_effect.png"
+BASELINE_COMBINED = P.OUTPUTS / "RELAC_TX_StorageDelay_Combined_Inputs_Outputs_2026-06-19.csv"
+FLOORED_COMBINED = P.FIX_DISPATCH_OUT / "solved_FLOORED" / "RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv"
+FLOORED_INPUTS = P.FIX_DISPATCH_OUT / "solved_FLOORED" / "RELAC_TX_FLOORED_Inputs.csv"
+CANDIDATES_CSV = P.CANDIDATE_FLOORS
+OUT_PNG = P.FIX_DISPATCH_OUT / "fig_floor_effect.png"
 
 C2A = io.C2A_DEFAULT
 FIRST_YEAR, LAST_YEAR = 2023, 2050

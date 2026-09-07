@@ -5,14 +5,19 @@ build_summary.py
 Step 6: one row per country per tier, plus a compact terminal table.
 
 Run: python build_summary.py
-Reads: candidate_floors.csv
-Writes: candidate_floors_summary.csv
+Reads: inputs/tx_chain/fix_dispatch/candidate_floors.csv
+Writes: outputs/fix_dispatch/candidate_floors_summary.csv
 """
 import csv
+import sys
 from collections import defaultdict
+from pathlib import Path
 
-SRC = "candidate_floors.csv"
-OUT_CSV = "candidate_floors_summary.csv"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
+SRC = P.CANDIDATE_FLOORS
+OUT_CSV = P.FIX_DISPATCH_OUT / "candidate_floors_summary.csv"
 
 OUT_COLUMNS = ["tier", "country", "n_techs", "n_rows", "total_forced_GW", "total_floor_PJ_2050",
                "year_min", "year_max", "cf_stated_pct", "cf_derived_pct", "cf_proxy_pct",

@@ -1,10 +1,10 @@
 """
 write_floors.py  --  writer: produce floored COPIES of the preprocessed txt.
 
-Reads fix_dispatch/candidate_floors.csv (THE swappable input -- see the header
-comment in that file / make_candidates.py). Changing floor values means
-editing candidate_floors.csv and re-running this script; nothing else in this
-pipeline changes.
+Reads inputs/tx_chain/fix_dispatch/candidate_floors.csv (THE swappable input --
+see the header comment in that file / make_candidates.py). Changing floor
+values means editing candidate_floors.csv and re-running this script; nothing
+else in this pipeline changes.
 
 For each (scenario, tech, year) candidate row:
     final_floor = max(existing_floor_in_original_txt, candidate_floor_PJ)
@@ -13,17 +13,17 @@ i.e. a candidate can only RAISE a floor, never lower one (protects legitimate
 an infeasible candidate is skipped and logged loudly, never written.
 
 Writes, per scenario, a COPY next to the original (never edits the original):
-    t1_confection/Executables/<SCEN>_0/
+    outputs/Executables/<SCEN>_0/
         Pre_processed_<SCEN>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt
 The copy is byte-identical to the original EXCEPT inside the
 TotalTechnologyAnnualActivityLowerLimit param block, where changed/new rows
 are surgically replaced or appended. No duplicate tech-year rows (GLPK errors
 on dupes). CRLF line endings preserved throughout.
 
-Also emits fix_dispatch/upstream_floor_rows.csv: the final written floor rows
-in the upstream otoole shape (REGION,TECHNOLOGY,YEAR,VALUE, one section per
-scenario) for later manual promotion into t1_confection/OG_csvs_inputs -- NOT
-wired into the pipeline by this script.
+Also emits outputs/fix_dispatch/upstream_floor_rows.csv: the final written
+floor rows in the upstream otoole shape (REGION,TECHNOLOGY,YEAR,VALUE, one
+section per scenario) for later manual promotion into inputs/OG_csvs_inputs --
+NOT wired into the pipeline by this script.
 
 Usage:
   python write_floors.py                        # all scenarios present in the CSV
@@ -35,16 +35,20 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import relac_io as io
 from feasibility import Feasibility
 
 HERE = Path(__file__).resolve().parent
-CANDIDATES_CSV = HERE / "candidate_floors.csv"
-UPSTREAM_OUT = HERE / "upstream_floor_rows.csv"
+CANDIDATES_CSV = P.CANDIDATE_FLOORS
+UPSTREAM_OUT = P.FIX_DISPATCH_OUT / "upstream_floor_rows.csv"
 
 _PARAM_DECL_LOWER = re.compile(
     r"^\s*param\s+default\s+(\S+)\s*:\s*TotalTechnologyAnnualActivityLowerLimit\s*:=\s*$"
@@ -201,9 +205,10 @@ def write_upstream_rows(results: list[dict]):
                              YEAR=year, VALUE=final, change="raised"))
     df = pd.DataFrame(rows, columns=["scenario", "REGION", "TECHNOLOGY", "YEAR", "VALUE", "change"])
     df = df.sort_values(["scenario", "TECHNOLOGY", "YEAR"]).reset_index(drop=True)
+    UPSTREAM_OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(UPSTREAM_OUT, "w", newline="", encoding="utf-8") as f:
         f.write("# Upstream-format rows (REGION,TECHNOLOGY,YEAR,VALUE per otoole convention).\n")
-        f.write("# NOT wired into t1_confection/OG_csvs_inputs -- for later manual promotion only.\n")
+        f.write("# NOT wired into inputs/OG_csvs_inputs -- for later manual promotion only.\n")
         df.to_csv(f, index=False)
     return df
 
@@ -232,7 +237,7 @@ def main():
                               len(res["unchanged"]), len(res["skipped_infeasible"]))
         print(f"  raised: {n_r}  new: {n_i}  unchanged: {n_u}  skipped(infeasible): {n_s}")
         if not args.dry_run:
-            print(f"  wrote: {res['out_path'].relative_to(io.REPO)}")
+            print(f"  wrote: {res['out_path'].relative_to(P.REPO_ROOT)}")
 
     if not args.dry_run:
         udf = write_upstream_rows(results)

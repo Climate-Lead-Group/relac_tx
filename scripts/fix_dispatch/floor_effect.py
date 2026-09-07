@@ -30,8 +30,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import pandas as pd
 
@@ -39,7 +43,7 @@ import relac_io as io
 from feasibility import Feasibility
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_OUT = HERE / "floor_effect_report.csv"
+DEFAULT_OUT = P.FIX_DISPATCH_OUT / "floor_effect_report.csv"
 
 RATIO_CONSISTENT = 1.01  # max/min below this => treat a per-mode ratio as single-valued
 

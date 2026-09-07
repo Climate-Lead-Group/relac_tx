@@ -5,15 +5,15 @@ se procesan todos los de relac_io.SCENARIOS que tengan outputs otoole del
 Paso 1 en solved_FLOORED/<ESC>/Outputs/ (hoy BAU y OPT; INV/VGB entran solos
 cuando se resuelvan).
 
-Produce fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
-con el MISMO formato (89 columnas) que el CSV base de t1_confection, reutilizando
+Produce outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
+con el MISMO formato (89 columnas) que el CSV base de outputs/, reutilizando
 la maquinaria existente del pipeline en vez de reimplementarla:
 
-  2a. concatenate_files/concatenate_relac.py sobre solved_FLOORED/<ESC>/Outputs
+  2a. scripts/tools/concatenate_relac.py sobre solved_FLOORED/<ESC>/Outputs
       -> staging/<ESC>_0/Pre_processed_<ESC>_0_output.csv (candidato 2 de
       active_output_csv_candidates; el nombre <ESC>_0_Output.csv NUNCA matchea).
   2b. <ESC>_0_Input.csv reconstruido SOLO desde el datafile que consumio el
-      solver: Executables/<ESC>_0/Pre_processed_..._FLOORED_VEGCON.txt (o
+      solver: outputs/Executables/<ESC>_0/Pre_processed_..._FLOORED_VEGCON.txt (o
       .._FLOORED.txt si no hay variante VEGCON; ver relac_io.solver_txt). Cada bloque
       `param` del txt se parsea (indices por parametro segun
       Miscellaneous/conversion_format.yaml, mas EXTRA_PARAM_INDICES para los
@@ -31,10 +31,10 @@ la maquinaria existente del pipeline en vez de reimplementarla:
       columna 89 (CapitalInvestmentAnnualized), igual que hace B2 en __main__.
 
 Ningun archivo del pipeline original se modifica: todo se escribe bajo
-fix_dispatch/solved_FLOORED/.
+outputs/fix_dispatch/solved_FLOORED/.
 
 Uso (desde la raiz del repo):
-  python fix_dispatch/build_combined.py
+  python scripts/fix_dispatch/build_combined.py
 """
 
 from __future__ import annotations
@@ -47,16 +47,16 @@ from pathlib import Path
 
 import pandas as pd
 
-HERE = Path(__file__).resolve().parent           # fix_dispatch/
-REPO = HERE.parent
-T1 = REPO / "t1_confection"
-SOLVED = HERE / "solved_FLOORED"
+HERE = Path(__file__).resolve().parent           # scripts/fix_dispatch
+sys.path.insert(0, str(HERE.parents[0]))         # -> scripts/
+from common import relac_paths as P
+SOLVED = P.FIX_DISPATCH_OUT / "solved_FLOORED"
 STAGING = SOLVED / "staging"
-CONCAT_SCRIPT = REPO / "concatenate_files" / "concatenate_relac.py"
+CONCAT_SCRIPT = P.TOOLS / "concatenate_relac.py"
 LOWER = "TotalTechnologyAnnualActivityLowerLimit"
 
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(T1))
+sys.path.insert(0, str(P.PIPELINE))
 
 import relac_io as io                            # noqa: E402
 import B2_Executing_OG_Model as b2               # noqa: E402
@@ -89,7 +89,7 @@ def load_param_indices() -> dict[str, list[str]]:
     """Parametro -> nombres de sus indices, del config otoole del pipeline."""
     import yaml
 
-    with open(T1 / "Miscellaneous" / "conversion_format.yaml", "r") as fh:
+    with open(P.MISCELLANEOUS / "conversion_format.yaml", "r") as fh:
         conv = yaml.safe_load(fh)
     idx = {name: spec["indices"] for name, spec in conv.items()
            if isinstance(spec, dict) and spec.get("type") == "param"}
@@ -195,7 +195,7 @@ def stage_input(scenario: str) -> Path:
     if src is None:
         raise SystemExit(f"generate_combined_input_file no produjo Input.csv para {scenario}")
     dst = Path(src)
-    print(f"  [{scenario}] escrito {dst.relative_to(REPO)}")
+    print(f"  [{scenario}] escrito {dst.relative_to(P.REPO_ROOT)}")
     return dst
 
 
@@ -203,7 +203,7 @@ def combine() -> Path:
     """2c: reuse concatenate_all_scenarios() pointed at the staging folder."""
     import yaml
 
-    with open(T1 / "Config_MOMF_T1_AB.yaml", "r") as fh:
+    with open(P.CONFIG_AB, "r") as fh:
         params = yaml.safe_load(fh)
     params["executables"] = str(STAGING)
     params["prefix_final_files"] = "RELAC_TX_FLOORED_"

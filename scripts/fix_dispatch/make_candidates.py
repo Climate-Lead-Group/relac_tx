@@ -32,7 +32,7 @@ Floor value: floor_PJ(tech, year) = total_available_capacity(tech, year)
 where total_available_capacity = ResidualCapacity + cumulative forced builds
 (feasibility.Feasibility.total_available_capacity).
 
-Writes fix_dispatch/candidate_floors.csv. Every downstream script
+Writes inputs/tx_chain/fix_dispatch/candidate_floors.csv. Every downstream script
 (write_floors.py, input_comparison_report, test_outputs.py) reads floors
 from candidate_floors.csv ONLY. To change a CF: edit PLAN_GROUNDED or
 CF_BY_FUEL_FALLBACK below and re-run this script, then re-run write_floors.py.
@@ -43,7 +43,11 @@ CF provenance: cf_table_working_set.py in the _Dataset_Power working folder
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import pandas as pd
 
@@ -51,7 +55,7 @@ import relac_io as io
 from feasibility import Feasibility
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "candidate_floors.csv"
+OUT = P.CANDIDATE_FLOORS
 
 # Plan-grounded per-tech CF and quality tier, from cf_table_full.py in the
 # _Dataset_Power working folder (Phase B/C: 37 techs, whole-fleet basis,

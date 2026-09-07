@@ -46,11 +46,15 @@ DERIVACION (trazable; referencias completas al final del archivo)
     (IEA 2025) es de NIVEL, no de pendiente.
 """
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # ============================ USER CONFIGURATION ============================
 HERE = Path(__file__).resolve().parent
-EXE = HERE.parent / "t1_confection" / "Executables"
+EXE = P.EXECUTABLES
 
 # Escenario -> (datafile origen, aplica regla NLI?). Repotenciacion y costo
 # aplican a los 4 (regla fisica). NLI solo a los vegetativos.
@@ -60,7 +64,7 @@ SCENARIOS = {
     "INV": (EXE / "INV_0" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", True),
     "VGB": (EXE / "VGB_0" / "Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", True),
 }
-OUT_DIR = HERE
+OUT_DIR = P.FIX_DISPATCH_OUT
 
 # --- Regla A: lineas nuevas no planificadas -------------------------------
 ANCHOR_YEAR, ANCHOR_MUSD = 2022, 3000.0     # SEGIB/IEA

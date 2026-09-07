@@ -15,8 +15,8 @@ Reads (never writes) the authoritative inputs and flags, per scenario:
   PIPELINE_MISMATCH        floors / forced builds parsed from the txt disagree with the
                            same columns in the combined CSV.
 
-Outputs:  fix_dispatch/validation_report.txt   (readable)
-          fix_dispatch/validation_flags.csv    (machine-readable)
+Outputs:  outputs/fix_dispatch/validation_report.txt   (readable)
+          outputs/fix_dispatch/validation_flags.csv    (machine-readable)
 
 Sources:  limits + forced builds -> preprocessed txt (authoritative)
           OperationalLife/ResidualCapacity/C2A/Max*/AF -> feasibility model
@@ -25,7 +25,11 @@ Sources:  limits + forced builds -> preprocessed txt (authoritative)
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import pandas as pd
 
@@ -33,8 +37,8 @@ import relac_io as io
 from feasibility import Feasibility, NEAR_CAP_FRAC
 
 HERE = Path(__file__).resolve().parent
-REPORT_TXT = HERE / "validation_report.txt"
-FLAGS_CSV = HERE / "validation_flags.csv"
+REPORT_TXT = P.FIX_DISPATCH_OUT / "validation_report.txt"
+FLAGS_CSV = P.FIX_DISPATCH_OUT / "validation_flags.csv"
 
 VALUE_TOL = 1e-4      # tolerance for value equality (PJ / GW)
 AFTER = 2026          # "after 2026" boundary
