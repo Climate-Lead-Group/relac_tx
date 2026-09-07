@@ -54,10 +54,14 @@ from pathlib import Path
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
+sys.path.insert(0, str(P.FIX_DISPATCH))
 import relac_io as io
 
 HERE = Path(__file__).resolve().parent
-CANDIDATES_CSV = HERE / "candidate_floors.csv"
+CANDIDATES_CSV = P.CANDIDATE_FLOORS
 AFTER = 2026
 C2A = io.C2A_DEFAULT
 CF_TOLERANCE = 0.9   # realized CF must be >= contracted_CF * this, else flag
@@ -366,7 +370,7 @@ def main():
     print("CHECK 1: FLOOR COMPLIANCE  (TotalTechnologyAnnualActivity >= floor_PJ)")
     print("=" * 78)
     fc = check_floor_compliance(cand, out)
-    fc.to_csv(HERE / "test_floor_compliance.csv", index=False)
+    fc.to_csv(P.FIX_DISPATCH_OUT / "test_floor_compliance.csv", index=False)
     n_fail = int((~fc["ok"]).sum())
     print(f"  {len(fc)} candidate floor rows checked. {len(fc) - n_fail} PASS, {n_fail} FAIL/MISSING.")
     if n_fail:
@@ -382,7 +386,7 @@ def main():
     print(f"CHECK 2: CF TARGETS  (basis={args.cf_basis}; realized CF >= contracted_CF * {CF_TOLERANCE})")
     print("=" * 78)
     cf = check_cf_targets(cand, out, basis=args.cf_basis)
-    cf.to_csv(HERE / "test_cf_targets.csv", index=False)
+    cf.to_csv(P.FIX_DISPATCH_OUT / "test_cf_targets.csv", index=False)
     n_below = int((cf.status == "BELOW_TARGET").sum())
     n_missing = int((cf.status == "MISSING").sum())
     print(f"  {len(cf)} rows checked. OK: {(cf.status=='OK').sum()}  BELOW_TARGET: {n_below}  MISSING: {n_missing}")
@@ -396,7 +400,7 @@ def main():
     print("CHECK 3: SCENARIO SEPARATION (BAU vs OPT at minimum)")
     print("=" * 78)
     sep = scenario_separation(out)
-    sep.to_csv(HERE / "test_scenario_separation.csv", index=False)
+    sep.to_csv(P.FIX_DISPATCH_OUT / "test_scenario_separation.csv", index=False)
     with pd.option_context("display.width", 200):
         print(sep.to_string(index=False))
     if {"BAU", "OPT"}.issubset(set(sep["scenario"])):
@@ -421,7 +425,7 @@ def main():
               f"CF < {IDLE_CF:.0%} after {AFTER}")
     print("=" * 78)
     idle = check_idle_capacity(cand, out, basis=args.cf_basis)
-    idle.to_csv(HERE / "test_idle_capacity.csv", index=False)
+    idle.to_csv(P.FIX_DISPATCH_OUT / "test_idle_capacity.csv", index=False)
     if len(idle) == 0:
         print("  OK: no floored plant is idle (CF < 5%) after 2026 in this run.")
     else:

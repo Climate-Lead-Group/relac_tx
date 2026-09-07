@@ -1,5 +1,8 @@
-# t1_confection/test_b2_chain_helper.py
+# scripts/tests/test_b2_chain_helper.py
 """Regresion: chain_suffixes/chained_base reproducen los nombres actuales."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 import B2_Executing_OG_Model as b2
 
 PARAMS = {

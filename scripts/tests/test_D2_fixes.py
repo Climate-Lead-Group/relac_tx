@@ -5,12 +5,15 @@ Reads A-O_Parametrization.xlsx output files and verifies that each fix
 produces the expected results. Run after D2_update_secondary_techs.py.
 
 Usage:
-    python t1_confection/test_D2_fixes.py
+    python scripts/tests/test_D2_fixes.py
 """
 import sys
 import openpyxl
 from pathlib import Path
 from collections import defaultdict
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 
 # Expected LowerLimit sums (PJ) for year 2025, from diagnostic report (MAIN_BAU reference)
@@ -247,10 +250,9 @@ def test_fix2_lower_limit_diagnostic(rows):
 
 
 def run_tests():
-    script_dir = Path(__file__).resolve().parent
-    base_path = script_dir / "A1_Outputs"
+    base_path = P.A1_OUTPUTS
 
-    scenarios = find_scenarios(script_dir)
+    scenarios = find_scenarios(P.INPUTS)
     if not scenarios:
         print("[ERROR] No A1_Outputs_* folders found.")
         return 1
