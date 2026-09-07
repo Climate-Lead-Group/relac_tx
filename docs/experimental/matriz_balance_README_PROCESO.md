@@ -1,5 +1,8 @@
 # Matriz de Balance Energético - Electricidad
 
+> **Nota (2026-09):** las rutas de este documento son anteriores a la reestructuración del repo en
+> `inputs/ scripts/ outputs/`. Ver `docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`.
+
 ## Resumen
 
 Este directorio contiene los datos y scripts para analizar flujos de electricidad entre países de América Latina, incluyendo:

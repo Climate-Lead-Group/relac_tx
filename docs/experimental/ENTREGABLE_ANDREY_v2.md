@@ -1,5 +1,8 @@
 # RELAC — Transmisión v2 — Diagnóstico, corrección y entrega
 
+> **Nota (2026-09):** las rutas de este documento son anteriores a la reestructuración del repo en
+> `inputs/ scripts/ outputs/`. Ver `docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`.
+
 **Fecha:** 2026-07-09  ·  **Script canónico:** `veg_tx_constraints.py`  ·  **Preflight:** 18/18 PASS · 0 infactibilidades
 
 Este documento reemplaza la v1. La v1 tenía dos problemas: (a) el piso comprometido
