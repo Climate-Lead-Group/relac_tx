@@ -28,6 +28,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 import argparse
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--executables-dir", default=None)
@@ -35,7 +38,7 @@ _args, _ = _ap.parse_known_args()
 EXEDIR = Path(_args.executables_dir).resolve() if _args.executables_dir else None
 
 _NAME = lambda s: f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
-FN = lambda s: (EXEDIR / f"{s}_0" / _NAME(s)) if EXEDIR else (HERE / _NAME(s))
+FN = lambda s: (EXEDIR / f"{s}_0" / _NAME(s)) if EXEDIR else (P.TX_CHAIN_OUT / _NAME(s))
 SR_SCENARIOS = ("ISR", "VSR", "ISRWF", "VSRWF")
 
 ANCHOR_YEAR, ANCHOR_MUSD, ENV_GROWTH = 2022, 3300.0, 0.01   # = v13/v14 (NO tocar)

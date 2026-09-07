@@ -16,17 +16,21 @@ is written -- existing rows are overwritten, missing rows are INSERTED. Never re
 default (-1 = unbounded) of TotalAnnualMaxCapacityInvestment.
 
 Sources (user 2026-08-28): BSR <- BAU, ISR <- INV, VSR <- VGB, all from the local
-*_VEGCON.txt files in this folder (same convention as v5-v9)."""
+*_VEGCON.txt files in outputs/tx_chain/ (legacy mode) or --executables-dir
+(same convention as v5-v9)."""
 import re, os, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 import argparse
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--executables-dir", default=None,
                  help="Carpeta Executables de B2; resuelve cada datafile en <dir>/<S>_0/ "
-                      "(default: plano junto al script, comportamiento actual)")
+                      "(default: plano en outputs/tx_chain/, comportamiento actual)")
 _args, _ = _ap.parse_known_args()
 EXEDIR = Path(_args.executables_dir).resolve() if _args.executables_dir else None
 
@@ -34,7 +38,7 @@ FN = lambda s: f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORE
 
 def LOCAL(s):
     if EXEDIR is None:
-        return HERE / FN(s)              # modo legado (plano)
+        return P.TX_CHAIN_OUT / FN(s)     # modo legado (plano)
     d = EXEDIR / f"{s}_0"                # modo Executables: BSR_0/, ISR_0/, ... se crean aqui
     d.mkdir(parents=True, exist_ok=True)
     return d / FN(s)

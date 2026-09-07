@@ -64,10 +64,15 @@ from pathlib import Path
 
 # ============================ USER CONFIGURATION ============================
 HERE = Path(__file__).resolve().parent
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 # Carpeta base con los .txt de entrada, con subcarpetas {SCEN}_0/ y dentro
-# Pre_processed_{SCEN}_0_FLOORED.txt. Por defecto los Executables del repo (verificado
-# byte-identico a los _FLOORED que resolvio Andrey). Para reproducir OFF de otros
-# archivos (p.ej. una copia de los de Andrey), apunta BASE_DIR_OVERRIDE a esa carpeta.
+# Pre_processed_{SCEN}_0_FLOORED.txt. Por defecto outputs/Executables del repo
+# (verificado byte-identico a los _FLOORED que resolvio Andrey). Para reproducir
+# OFF de otros archivos (p.ej. una copia de los de Andrey), apunta BASE_DIR_OVERRIDE
+# a esa carpeta via --base-dir.
 import argparse
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--base-dir", default=None, help="Carpeta Executables; activa el modo "
@@ -76,8 +81,7 @@ _ap.add_argument("--needs-csv", default=None, help="NewCapacity.csv de la corrid
 _args, _ = _ap.parse_known_args()
 
 PER_SCENARIO_OUT = _args.base_dir is not None      # modo Executables (B2)
-BASE_DIR_OVERRIDE = Path(_args.base_dir) if _args.base_dir else \
-    Path(r"C:\Users\kt0031\Desktop\relac_tx\t1_confection\Executables")
+BASE_DIR_OVERRIDE = Path(_args.base_dir) if _args.base_dir else P.EXECUTABLES
 EXE = BASE_DIR_OVERRIDE
 
 # Escenario -> (datafile origen, aplica regla NLI?). RPO y costo aplican a los 4.
@@ -97,7 +101,8 @@ SCENARIOS = {
     "INVWF": (EXE / "INV_0" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", "envelope"),
     "VGBWF": (EXE / "VGB_0" / "Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", "envelope"),
 }
-OUT_DIR = HERE
+OUT_DIR = P.TX_CHAIN_OUT
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Paso 0: SWAP del piso comprometido -----------------------------------
 SWAP_REF, SWAP_OPT = "BAU", "OPT"        # el piso de REF se propaga a INV/VGB
@@ -295,7 +300,7 @@ I_COMP_2050 = 20000.0         # v14: endpoint de la trayectoria comparadora (BAC
                               #      nearly 6.5-fold from 2022 levels to reach over
                               #      USD 20 billion"). Lectura conservadora: 20000
                               #      plano en USD2023 => multiple efectivo 6.06x.
-NLI_NEEDS_CSV = Path(_args.needs_csv) if _args.needs_csv else HERE / "outputs_BSR" / "NewCapacity.csv"
+NLI_NEEDS_CSV = Path(_args.needs_csv) if _args.needs_csv else P.VEG_TX_NEEDS_CSV
                               # v14: NECESIDAD REVELADA, pinneada a la corrida BSR del
                               #      2026-09-01 (NLI sin tope + RPO pinneada). Usada por
                               #      (a) el floor ARG de la comparadora y (b) el vector
