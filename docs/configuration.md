@@ -8,7 +8,7 @@ All data entered in the configuration files (technologies, years, countries, cod
 
 ## Config_country_codes.yaml
 
-**Location:** `t1_confection/Config_country_codes.yaml`
+**Location:** `inputs/config/Config_country_codes.yaml`
 
 The single source of truth for all country, region, and technology definitions. Used by most scripts in the project.
 
@@ -238,7 +238,7 @@ DSPTRN:
 
 ## Config_MOMF_T1_A.yaml
 
-**Location:** `t1_confection/Config_MOMF_T1_A.yaml`
+**Location:** `inputs/config/Config_MOMF_T1_A.yaml`
 
 The primary compiler configuration. Defines the data model for the Excel-to-OSeMOSYS compilation step.
 
@@ -272,7 +272,7 @@ The model uses 12 timeslices (4 seasons x 3 daily brackets), a single region (`G
 
 ### Directory and File Paths
 
-The configuration defines all input/output paths and Excel file names used by the compiler. These are relative to `t1_confection/`:
+The configuration defines all input/output paths and Excel file names used by the compiler. These are relative to the repo root (e.g. `inputs/A1_Outputs`, `outputs/A2_Output_Params/`):
 
 - `A1_inputs` / `A1_outputs`: Stage A1 directories
 - `A2_extra_inputs` / `A2_output`: Stage A2 directories
@@ -291,7 +291,7 @@ The file lists all OSeMOSYS parameters organized by technology category:
 
 ## Config_MOMF_T1_AB.yaml
 
-**Location:** `t1_confection/Config_MOMF_T1_AB.yaml`
+**Location:** `inputs/config/Config_MOMF_T1_AB.yaml`
 
 The execution/runtime configuration for the model solver.
 
@@ -375,7 +375,7 @@ See {doc}`solver-patchers` for the full chain, execution order, and every per-pa
 
 ## Config_region_consolidation.yaml
 
-**Location:** `t1_confection/Config_region_consolidation.yaml`
+**Location:** `inputs/config/Config_region_consolidation.yaml`
 
 Controls optional consolidation of sub-regional data into unified country-level data. This is relevant when a country is modeled with multiple sub-regions (e.g., India with 5 regions).
 

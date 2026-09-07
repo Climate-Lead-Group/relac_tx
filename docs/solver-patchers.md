@@ -22,7 +22,7 @@ Some adjustments are easier or only possible on the fully-assembled GMPL model:
 
 ## Execution order
 
-For each scenario, B2 runs (in [`B2_Executing_OG_Model.py`](../t1_confection/B2_Executing_OG_Model.py)):
+For each scenario, B2 runs (in [`B2_Executing_OG_Model.py`](../scripts/pipeline/B2_Executing_OG_Model.py)):
 
 ```
 otoole conversion → OSeMOSYS preprocessing
@@ -56,7 +56,7 @@ The storage-delay patcher is special: when `storage_delay_active: True`, B2 **re
 `storage_delay_active` is **mutually exclusive** with `strip_storage_active`. When storage-delay is on, B2 silently forces `strip_storage_active = False`.
 :::
 
-[`patch_storage_delay.py`](../t1_confection/patch_storage_delay.py) keeps storage in the model but **blocks storage builds for the first N years** (`storage_delay_first_n_years`), then reopens the linked PWR storage technologies so the optimizer can add storage afterward.
+[`patch_storage_delay.py`](../scripts/pipeline/patch_storage_delay.py) keeps storage in the model but **blocks storage builds for the first N years** (`storage_delay_first_n_years`), then reopens the linked PWR storage technologies so the optimizer can add storage afterward.
 
 ---
 
@@ -64,13 +64,13 @@ The storage-delay patcher is special: when `storage_delay_active: True`, B2 **re
 
 ### 1. DaysInDayType injector
 
-**Script:** [`inject_DaysInDayType.py`](../t1_confection/inject_DaysInDayType.py) — runs unconditionally.
+**Script:** [`inject_DaysInDayType.py`](../scripts/pipeline/inject_DaysInDayType.py) — runs unconditionally.
 
 The `B1 → otoole → preprocess` chain never generates the `DaysInDayType` block, so the `.txt` ships with an empty block and OSeMOSYS falls back to `default = 7`. With 4 seasons × 1 daytype that makes storage equations treat the year as 4 × 7 = 28 days while the energy balance uses the real year length — a mismatch. This patcher writes the correct `DaysInDayType` values in place.
 
 ### 2. Storage-delay patcher
 
-**Script:** [`patch_storage_delay.py`](../t1_confection/patch_storage_delay.py) · **Switch:** `storage_delay_active` · **Shipped default: True**
+**Script:** [`patch_storage_delay.py`](../scripts/pipeline/patch_storage_delay.py) · **Switch:** `storage_delay_active` · **Shipped default: True**
 
 | Param | Default | Description |
 |-------|---------|-------------|
@@ -85,7 +85,7 @@ The `B1 → otoole → preprocess` chain never generates the `DaysInDayType` blo
 
 ### 3. Storage-strip patcher (diagnostic)
 
-**Script:** [`strip_storage.py`](../t1_confection/strip_storage.py) · **Switch:** `strip_storage_active` · **Shipped default: True** (forced off when storage-delay is on)
+**Script:** [`strip_storage.py`](../scripts/pipeline/strip_storage.py) · **Switch:** `strip_storage_active` · **Shipped default: True** (forced off when storage-delay is on)
 
 Produces a new `.txt` with selected storage facilities **and their feeding PWR technologies disabled** — used to diagnose whether storage is the source of an infeasibility.
 
@@ -97,7 +97,7 @@ Produces a new `.txt` with selected storage facilities **and their feeding PWR t
 
 ### 4. PWRBCK cap-opening patcher (diagnostic)
 
-**Script:** [`open_pwrbck_caps.py`](../t1_confection/open_pwrbck_caps.py) · **Switch:** `open_pwrbck_active` · **Shipped default: True**
+**Script:** [`open_pwrbck_caps.py`](../scripts/pipeline/open_pwrbck_caps.py) · **Switch:** `open_pwrbck_active` · **Shipped default: True**
 
 `PWRBCK*` are high-cost backstop generators that absorb feasibility edge cases. If their `TotalAnnualMaxCapacity` / `TotalAnnualMaxCapacityInvestment` are hardcapped at 0, the safety net is removed and the LP can become infeasible. This patcher reopens those caps.
 
@@ -115,7 +115,7 @@ The original, blunter reserve-margin repair (`patch_reserve_margin_repair.py`). 
 
 ### 6. Reserve-margin repair — careful XLSX
 
-**Script:** [`patch_reserve_margin_repair_careful_xlsx.py`](../t1_confection/patch_reserve_margin_repair_careful_xlsx.py) · **Switch:** `reserve_margin_xlsx_active` · **Shipped default: True**
+**Script:** [`patch_reserve_margin_repair_careful_xlsx.py`](../scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py) · **Switch:** `reserve_margin_xlsx_active` · **Shipped default: True**
 
 Adds reserve-margin tags and repairs firm fossil capacity caps using per-country-region fallback values from an XLSX workbook. It keeps **stock** (`TotalAnnualMaxCapacity`) and **flow** (`TotalAnnualMaxCapacityInvestment`) limits separate and only replaces sentinel values.
 
@@ -132,7 +132,7 @@ Adds reserve-margin tags and repairs firm fossil capacity caps using per-country
 
 ### 7. Activity-upper-limit patcher
 
-**Script:** [`patch_activity_upper_limit.py`](../t1_confection/patch_activity_upper_limit.py) · **Switch:** `activity_upper_limit_active` · **Shipped default: False**
+**Script:** [`patch_activity_upper_limit.py`](../scripts/pipeline/patch_activity_upper_limit.py) · **Switch:** `activity_upper_limit_active` · **Shipped default: False**
 
 Reads rows from the **Secondary Techs** sheet of `A-O_Parametrization.xlsx` whose `Parameter` equals `activity_upper_limit_parameter_label`. Each year cell holds a **fraction** in `[0, 1]` of that country's electricity demand. The patcher maps each tech to its demand fuel via `OutputActivityRatio`, converts `fraction × demand / OAR` into an absolute cap, and rewrites the `TotalTechnologyAnnualActivityUpperLimit` block.
 
@@ -150,7 +150,7 @@ Reads rows from the **Secondary Techs** sheet of `A-O_Parametrization.xlsx` whos
 
 ## Sync patched CSVs back to the otoole folder
 
-**Script:** [`sync_patched_csvs_from_txt.py`](../t1_confection/sync_patched_csvs_from_txt.py) · **Switch:** `sync_patched_csvs_active` · **Shipped default: True**
+**Script:** [`sync_patched_csvs_from_txt.py`](../scripts/pipeline/sync_patched_csvs_from_txt.py) · **Switch:** `sync_patched_csvs_active` · **Shipped default: True**
 
 After the chain runs, this step extracts the listed parameter blocks from the **final** patched `.txt` and overwrites the matching CSVs in `A2_Outputs_Params_otoole/<scenario>/` **in place**. `generate_combined_input_file()` then reads those CSVs, so the patched values appear in `RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv` (or the baseline `RELAC_TX_Combined_Inputs_Outputs.csv` when storage-delay is off).
 

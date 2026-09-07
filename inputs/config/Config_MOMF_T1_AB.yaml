@@ -238,7 +238,7 @@ preflight_separation_active: True
 preflight_separation_script: "scripts/fix_dispatch/preflight_separation.py"
 
 ########################################################################################
-# === Veg Tx constraints (RELAC_Tx_v15_run/veg_tx_constraints_v14.py) ===
+# === Veg Tx constraints (scripts/tx_chain/veg_tx_constraints_v14.py) ===
 # Barrera cross-escenario: necesita los _FLOORED.txt de BAU y OPT (y de INV/VGB)
 # SIMULTANEAMENTE (raise del piso, calibracion m, techo planificadas = plan OPT).
 # Corre UNA sola vez despues de la etapa FLOORED de todos los escenarios base.

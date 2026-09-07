@@ -120,7 +120,7 @@
 
 Si deseas cambiar el solver por defecto:
 
-1. Editar el archivo: `relac_tx\t1_confection\Config_MOMF_T1_AB.yaml`
+1. Editar el archivo: `relac_tx\inputs\config\Config_MOMF_T1_AB.yaml`
 2. Buscar la clave `solver` y cambiarla a uno de estos valores:
    - `glpk`
    - `cbc`
@@ -206,7 +206,7 @@ Esto te ayuda a:
 ## 5. Archivos de Salida
 
 ### 5.1 Ubicación
-Todos los archivos de salida se generan en: `relac_tx/t1_confection/`
+Todos los archivos de salida se generan en: `relac_tx/outputs/`
 
 ### 5.2 Archivos Generados
 

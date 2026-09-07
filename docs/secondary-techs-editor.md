@@ -13,10 +13,10 @@ The editor workflow has two steps:
 
 ## Step 1: Generate the Editor Template
 
-**Script:** `t1_confection/D1_generate_editor_template.py`
+**Script:** `scripts/pipeline/D1_generate_editor_template.py`
 
 ```bash
-python t1_confection/D1_generate_editor_template.py
+python scripts/pipeline/D1_generate_editor_template.py
 ```
 
 ### What It Creates
@@ -117,10 +117,10 @@ Customize how activity limits are distributed among technologies:
 
 ## Step 3: Apply Changes
 
-**Script:** `t1_confection/D2_update_secondary_techs.py`
+**Script:** `scripts/pipeline/D2_update_secondary_techs.py`
 
 ```bash
-python t1_confection/D2_update_secondary_techs.py
+python scripts/pipeline/D2_update_secondary_techs.py
 ```
 
 ### What It Does

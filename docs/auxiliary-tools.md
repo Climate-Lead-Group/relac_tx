@@ -4,7 +4,7 @@ RELAC TX includes several utility scripts (prefixed with `Z_`) for data maintena
 
 ## Configuration Loader
 
-**Script:** `t1_confection/Z_AUX_config_loader.py`
+**Script:** `scripts/tools/Z_AUX_config_loader.py`
 
 A centralized module (not run directly) that provides cached access to `Config_country_codes.yaml`. All other scripts import functions from this module instead of reading the YAML directly.
 
@@ -39,14 +39,14 @@ year = get_first_year()      # 2023
 
 ## Demand Profile Normalizer
 
-**Script:** `t1_confection/Z_AUX_fix_excel_profiles.py`
+**Script:** `scripts/tools/Z_AUX_fix_excel_profiles.py`
 
 Fixes rounding drift in SpecifiedDemandProfile sheets that can cause OSeMOSYS model errors. Profiles must sum to exactly 1.0 per fuel/technology per year.
 
 ### Usage
 
 ```bash
-python t1_confection/Z_AUX_fix_excel_profiles.py
+python scripts/tools/Z_AUX_fix_excel_profiles.py
 ```
 
 ### What It Does
@@ -64,14 +64,14 @@ Values within `0.0001` of 1.0 are considered acceptable. Values outside this ran
 
 ## Interactive Dashboard Generator
 
-**Script:** `t1_confection/Z_AUX_generate_interactive_dashboards_aggregated.py`
+**Script:** `scripts/dashboard/Z_AUX_generate_interactive_dashboards_aggregated.py`
 
 Generates standalone HTML dashboards with embedded Plotly.js charts for analyzing power (PWR) technology results.
 
 ### Usage
 
 ```bash
-python t1_confection/Z_AUX_generate_interactive_dashboards_aggregated.py
+python scripts/dashboard/Z_AUX_generate_interactive_dashboards_aggregated.py
 ```
 
 ### What It Produces
@@ -98,14 +98,14 @@ Only technologies matching this pattern are included in the visualizations.
 
 ## CSV Sorter
 
-**Script:** `t1_confection/Z_AUX_sort_csv.py`
+**Script:** `scripts/tools/Z_AUX_sort_csv.py`
 
 Sorts all CSV files in a directory by all columns. Used to ensure deterministic file ordering for reproducibility and version control.
 
 ### Usage
 
 ```bash
-python t1_confection/Z_AUX_sort_csv.py
+python scripts/tools/Z_AUX_sort_csv.py
 ```
 
 When run interactively, it prompts for a folder path. The script can also be imported and used programmatically:
@@ -120,7 +120,7 @@ sort_csv_files_in_folder("path/to/csv/folder")
 
 ## Region Consolidation (Brazil)
 
-**Script:** `t1_confection/Z_AUX_united_regions.py`
+**Script:** `scripts/tools/Z_AUX_united_regions.py`
 
 A specialized, manually-configured script for consolidating Brazilian sub-regions (CN, NW, NE, CW, SO, SE, WE) into a unified XX region.
 
@@ -148,7 +148,7 @@ storage = False          # Process A-Xtra_Storage.xlsx
 
 ## Capital Annualization
 
-**Script:** `t1_confection/Z_AUX_capital_annualization_script.py`
+**Script:** `scripts/tools/Z_AUX_capital_annualization_script.py`
 
 Post-processing script that annualizes capital costs in the model results. Runs automatically as part of the B2 execution stage when `annualize_capital: True` in `Config_MOMF_T1_AB.yaml`.
 

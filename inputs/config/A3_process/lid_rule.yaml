@@ -186,8 +186,8 @@ flat_overrides_by_tech:
 # load_lowerlimit_scenarios in A3_process.py) so it can be re-enabled later by
 # setting a scenario back to `all` — no code change required. The pre-existing
 # non-renewable floor that prior `all` runs baked into BAU/INV for 2027-2050 was
-# removed once from the xlsx by t1_confection/clear_lowerlimits_pwr.py (a one-off
-# data cleanup; extend_lowerlimits_pwr.py only adds, never removes).
+# removed once from the xlsx by clear_lowerlimits_pwr.py (a one-off
+# data cleanup script, no longer in the repo; extend_lowerlimits_pwr.py only adds, never removes).
 #
 # The scenario keys are the suffixes used under A1_Outputs/
 # (A1_Outputs_<scenario>), e.g. BAU, INV, OPT. A plain YAML list (old format)

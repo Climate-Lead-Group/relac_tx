@@ -1,5 +1,8 @@
 # Plan: portar Reserve Margin y Storage de OSTRAM a Relac
 
+> **Nota (2026-09):** las rutas de este documento son anteriores a la reestructuración del repo en
+> `inputs/ scripts/ outputs/`. Ver `docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`.
+
 Branch destino: `feature/reserve-margin-and-storage` (creada desde `main` @ `f07a368`).
 Branch fuente OSTRAM: `test_branch_detective` (donde viven `patch_storage_delay.py` y los demás).
 

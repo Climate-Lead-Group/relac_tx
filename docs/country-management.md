@@ -27,7 +27,7 @@ In the **NGS_Unification** sheet:
 
 ## Country Data Validator
 
-**Script:** `t1_confection/Z_validate_country_data.py`
+**Script:** `scripts/tools/Z_validate_country_data.py`
 
 Verifies that a country has complete and consistent data in the OSeMOSYS input CSV files.
 
@@ -35,16 +35,16 @@ Verifies that a country has complete and consistent data in the OSeMOSYS input C
 
 ```bash
 # Validate all countries
-python t1_confection/Z_validate_country_data.py
+python scripts/tools/Z_validate_country_data.py
 
 # Validate a specific country
-python t1_confection/Z_validate_country_data.py --country ARG
+python scripts/tools/Z_validate_country_data.py --country ARG
 
 # Generate detailed report
-python t1_confection/Z_validate_country_data.py --country ARG --report
+python scripts/tools/Z_validate_country_data.py --country ARG --report
 
 # Quiet mode (summary only)
-python t1_confection/Z_validate_country_data.py --quiet
+python scripts/tools/Z_validate_country_data.py --quiet
 ```
 
 ### Command-Line Options
@@ -82,7 +82,7 @@ Results are displayed as:
 
 ## New Country Template Generator
 
-**Script:** `t1_confection/Z_generate_country_template.py`
+**Script:** `scripts/tools/Z_generate_country_template.py`
 
 Creates a complete set of CSV files with the minimum structure needed to add a new country to the model, using an existing country as a reference.
 
@@ -90,13 +90,13 @@ Creates a complete set of CSV files with the minimum structure needed to add a n
 
 ```bash
 # Read configuration from YAML
-python t1_confection/Z_generate_country_template.py
+python scripts/tools/Z_generate_country_template.py
 
 # Override via command line
-python t1_confection/Z_generate_country_template.py --new BLZ --ref GTM --region XX
+python scripts/tools/Z_generate_country_template.py --new BLZ --ref GTM --region XX
 
 # With interconnections to specific neighbors
-python t1_confection/Z_generate_country_template.py --new BLZ --ref GTM -i GTM MEX
+python scripts/tools/Z_generate_country_template.py --new BLZ --ref GTM -i GTM MEX
 ```
 
 ### Command-Line Options
@@ -167,7 +167,7 @@ After generating the template:
 
 ```bash
 # 1. Generate the template
-python t1_confection/Z_generate_country_template.py
+python scripts/tools/Z_generate_country_template.py
 
 # 2. Review and customize the generated CSVs
 # Edit files in templates/BLZ/ as needed
@@ -177,7 +177,7 @@ cd templates/BLZ/
 python merge_into_inputs.py
 
 # 4. Validate the new country's data
-python t1_confection/Z_validate_country_data.py --country BLZ --report
+python scripts/tools/Z_validate_country_data.py --country BLZ --report
 ```
 
 ---

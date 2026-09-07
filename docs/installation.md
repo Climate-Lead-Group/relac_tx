@@ -69,14 +69,14 @@ conda install -c conda-forge coin-or-cbc
 
 1. Install IBM ILOG CPLEX Optimization Studio from the [IBM website](https://www.ibm.com/products/ilog-cplex-optimization-studio).
 2. Ensure the `cplex` binary is available on your system `PATH`.
-3. Set `solver: 'cplex'` in `t1_confection/Config_MOMF_T1_AB.yaml`.
+3. Set `solver: 'cplex'` in `inputs/config/Config_MOMF_T1_AB.yaml`.
 
 ### Gurobi
 
 1. Install Gurobi from the [Gurobi website](https://www.gurobi.com/downloads/).
 2. Activate your license (`grbgetkey <license-key>`).
 3. Ensure the `gurobi` binary is available on your system `PATH`.
-4. Set `solver: 'gurobi'` in `t1_confection/Config_MOMF_T1_AB.yaml`.
+4. Set `solver: 'gurobi'` in `inputs/config/Config_MOMF_T1_AB.yaml`.
 
 ## Verify Installation
 

@@ -1382,7 +1382,7 @@ if __name__ == "__main__":
     # Start timer
     start1 = time.time()
     
-    # Folder where this script lives: .../OSTRAM/t1_confection
+    # Folder where this script lives: .../relac_tx/scripts/pipeline
     global HERE
     def get_here() -> Path:
         # 1) Script normal

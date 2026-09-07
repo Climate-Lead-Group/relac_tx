@@ -14,6 +14,29 @@ Este proyecto implementa un pipeline automatizado para la ejecución de modelos 
 - **Medición de Rendimiento**: Timer integrado para monitorear tiempos de ejecución
 - **Gestión Automática de Entorno**: Creación y actualización automática del entorno Conda
 
+## Estructura del Repositorio
+
+El repositorio se organiza en tres carpetas de primer nivel:
+
+```
+relac_tx/
+├── inputs/    # Datos y configuración mantenidos a mano (config/, data/, OG_csvs_inputs/,
+│              # A1_Outputs/, A2_Extra_Inputs/, Miscellaneous/, reference/, tx_chain/)
+├── scripts/   # Código fuente (pipeline/, common/, dashboard/, tools/, fix_dispatch/,
+│              # tx_chain/, tests/, experimental/)
+└── outputs/   # Todo lo regenerado por el pipeline (A2_Output_Params, Executables,
+               # Figures, logs, model, RELAC_TX_*.csv)
+```
+
+Regla general:
+- **`inputs/`** = mantenido a mano, no se regenera solo.
+- **`outputs/`** = regenerado por el pipeline; no editar a mano.
+- **`scripts/`** = código.
+
+Las rutas de los archivos YAML de configuración son siempre relativas a la raíz del repositorio, sin importar desde qué directorio se invoque el script.
+
+`scripts/common/relac_paths.py` es la única fuente de verdad del layout: cualquier script que necesite una ruta de `inputs/` u `outputs/` debe importarla desde ahí en lugar de hardcodearla.
+
 ## Requisitos del Sistema
 
 - Windows 10 o superior
@@ -45,7 +68,7 @@ Para instrucciones detalladas de instalación y configuración, consulta la guí
 
 ## Estructura de Archivos de Salida
 
-Los resultados se generan en `t1_confection/` con los siguientes archivos:
+Los resultados se generan en `outputs/` con los siguientes archivos:
 - `RELAC_TX_Inputs.csv` / `RELAC_TX_Inputs_YYYY-MM-DD.csv`
 - `RELAC_TX_Outputs.csv` / `RELAC_TX_Outputs_YYYY-MM-DD.csv`
 - `RELAC_TX_Combined_Inputs_Outputs.csv` / `RELAC_TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv`
@@ -54,7 +77,7 @@ Los archivos con fecha mantienen un histórico completo de ejecuciones.
 
 ## Configuración
 
-El archivo principal de configuración es `t1_confection/Config_MOMF_T1_AB.yaml`, donde puedes ajustar:
+El archivo principal de configuración es `inputs/config/Config_MOMF_T1_AB.yaml`, donde puedes ajustar:
 - Solver a utilizar (`solver: 'cplex'`)
 - Número de threads para solvers comerciales
 - Seeds para reproducibilidad
@@ -68,7 +91,7 @@ El sistema incluye una matriz configurable que permite especificar qué combinac
 
 1. **Generar la matriz**:
    ```bash
-   python t1_confection/A0_generate_tech_country_matrix.py
+   python scripts/pipeline/A0_generate_tech_country_matrix.py
    ```
    Esto crea el archivo `Tech_Country_Matrix.xlsx` con las siguientes hojas:
    - **Matrix**: Matriz YES/NO para cada combinación tecnología-país
@@ -83,7 +106,7 @@ El sistema incluye una matriz configurable que permite especificar qué combinac
 
 3. **Ejecutar el preprocesamiento**:
    ```bash
-   python t1_confection/A1_Pre_processing_OG_csvs.py
+   python scripts/pipeline/A1_Pre_processing_OG_csvs.py
    ```
    El script aplicará automáticamente:
    - Filtrado por matriz tecnología-país
@@ -127,7 +150,7 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 1. **Generar plantilla de edición**:
    ```bash
-   python t1_confection/D1_generate_editor_template.py
+   python scripts/pipeline/D1_generate_editor_template.py
    ```
    Esto crea el archivo `Secondary_Techs_Editor.xlsx` con dos hojas:
    - **Instructions**: Para edición manual con listas desplegables
@@ -184,7 +207,7 @@ El proyecto incluye un sistema para facilitar la edición de tecnologías secund
 
 5. **Aplicar cambios**:
    ```bash
-   python t1_confection/D2_update_secondary_techs.py
+   python scripts/pipeline/D2_update_secondary_techs.py
    ```
 
 ### Características del Sistema
@@ -234,9 +257,9 @@ Algunos códigos de país difieren entre OLADE y el modelo:
 Verifica que un país tiene todos los datos requeridos en los archivos CSV de entrada de OSeMOSYS.
 
 ```bash
-python t1_confection/Z_validate_country_data.py                  # Validar todos los países RELAC
-python t1_confection/Z_validate_country_data.py --country ARG    # Validar un país específico
-python t1_confection/Z_validate_country_data.py --country NCC --report  # Generar reporte detallado
+python scripts/tools/Z_validate_country_data.py                  # Validar todos los países RELAC
+python scripts/tools/Z_validate_country_data.py --country ARG    # Validar un país específico
+python scripts/tools/Z_validate_country_data.py --country NCC --report  # Generar reporte detallado
 ```
 
 **Validaciones realizadas:**
@@ -250,8 +273,8 @@ python t1_confection/Z_validate_country_data.py --country NCC --report  # Genera
 Crea un conjunto de archivos CSV con la estructura mínima necesaria para agregar un nuevo país, usando un país existente como referencia.
 
 ```bash
-python t1_confection/Z_generate_country_template.py                              # Lee config desde YAML
-python t1_confection/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY  # Override por CLI
+python scripts/tools/Z_generate_country_template.py                              # Lee config desde YAML
+python scripts/tools/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY  # Override por CLI
 ```
 
 **Configuración** (sección `template_generation` en `Config_country_codes.yaml`):
