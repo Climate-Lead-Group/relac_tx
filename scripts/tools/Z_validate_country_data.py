@@ -3,9 +3,9 @@ Validation script for OG_csvs_inputs data.
 Validates that a country has all required data in the OSeMOSYS CSV input files.
 
 Usage:
-    python Z_validate_country_data.py                  # Validate all RELAC countries
-    python Z_validate_country_data.py --country ARG    # Validate specific country
-    python Z_validate_country_data.py --country NCC --report  # Generate detailed report
+    python scripts/tools/Z_validate_country_data.py                  # Validate all RELAC countries
+    python scripts/tools/Z_validate_country_data.py --country ARG    # Validate specific country
+    python scripts/tools/Z_validate_country_data.py --country NCC --report  # Generate detailed report
 """
 
 import pandas as pd
@@ -13,13 +13,17 @@ import os
 import sys
 import argparse
 from collections import defaultdict
+from pathlib import Path
 import yaml
-from Z_AUX_config_loader import get_countries
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import get_countries
 # ============================================================================
 # Configuration
 # ============================================================================
 
-INPUT_DIR = os.path.join(os.path.dirname(__file__), "OG_csvs_inputs")
+INPUT_DIR = str(P.OG_CSVS_INPUTS)
 
 # Countries ISO-3 (read from Config_country_codes.yaml instead of hardcoded list)
 OSTRAM_COUNTRIES  = get_countries()

@@ -34,6 +34,9 @@ from pathlib import Path
 
 import openpyxl
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 # ---------------------------------------------------------------------------
 # Datos: IAR por pais (de la Tabla Principal del requerimiento)
 #   ren   = IAR Renovable      (RNWTRN, RNWNLI)
@@ -74,8 +77,7 @@ PREFIX_TO_KIND = {
 SHEET = "Demand Techs"
 SCENARIOS = ["BAU", "INV", "OPT", "VGB"]
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-A1_BASE = SCRIPT_DIR / "A1_Outputs"
+A1_BASE = P.A1_OUTPUTS
 
 BASE_YEAR_FILE = "A-O_AR_Model_Base_Year.xlsx"
 PROJECTIONS_FILE = "A-O_AR_Projections.xlsx"

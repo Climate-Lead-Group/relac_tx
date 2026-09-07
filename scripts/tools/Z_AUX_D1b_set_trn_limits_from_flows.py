@@ -10,14 +10,18 @@ and writes Lower/Upper activity limits into Secondary_Techs_Editor.xlsx.
 - Years 2026-2050: flat projection from 2025 value
 
 Usage:
-    python t1_confection/D1b_set_trn_limits_from_flows.py
+    python scripts/tools/Z_AUX_D1b_set_trn_limits_from_flows.py
 """
 import argparse
 import openpyxl
+import sys
 import unicodedata
 from openpyxl.formula.translate import Translator
 from openpyxl.utils import get_column_letter
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # ============================================================================
 # CONSTANTS
@@ -479,10 +483,8 @@ def main():
 
     scenarios = [s.strip() for s in args.scenarios.split(',') if s.strip()] or ["ALL"]
 
-    script_dir = Path(__file__).parent
-
-    flow_file = script_dir / "Matriz Balance energético" / "flujos_energia_estimados_optimizacion.xlsx"
-    editor_file = script_dir / "Secondary_Techs_Editor.xlsx"
+    flow_file = P.MATRIZ_BALANCE / "flujos_energia_estimados_optimizacion.xlsx"
+    editor_file = P.DATA / "Secondary_Techs_Editor.xlsx"
 
     # Validate files exist
     if not flow_file.exists():

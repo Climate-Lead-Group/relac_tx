@@ -42,8 +42,8 @@ Post-write consistency sweep (independent of review actions):
     not changed by the review (e.g. action = Conservar).
 
 Usage:
-    python t1_confection/Z_AUX_apply_parametrization_review.py              # dry-run (default)
-    python t1_confection/Z_AUX_apply_parametrization_review.py --apply      # write + timestamped backup
+    python scripts/tools/Z_AUX_apply_parametrization_review.py              # dry-run (default)
+    python scripts/tools/Z_AUX_apply_parametrization_review.py --apply      # write + timestamped backup
 """
 import argparse
 import shutil
@@ -54,9 +54,10 @@ from pathlib import Path
 
 import openpyxl
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 # Shared validation core (constants, sheet indexing, op_life loader, sweep)
-sys.path.insert(0, str(Path(__file__).parent))
-from _xlsx_validation_core import (  # noqa: E402
+from common._xlsx_validation_core import (  # noqa: E402
     PARAM_NAME, MAX_PARAM_NAME, RESIDUAL_PARAM, MAX_TOTAL_PARAM,
     OPLIFE_SHEET, OPLIFE_PARAM, DEFAULT_OPLIFE, MAX_MULTIPLIER,
     norm_str, is_empty_number,
@@ -66,7 +67,7 @@ from _xlsx_validation_core import (  # noqa: E402
 REVIEW_SHEET = "Review_MinCapInvestment"
 APPLIED_ACTIONS = {"Conservar_con_ajuste", "Quitar"}
 
-OUTPUTS_DIR = Path(__file__).parent / "A1_Outputs"
+OUTPUTS_DIR = P.A1_OUTPUTS
 
 # Each scenario lists the (review_filename, target_sheet) pairs to apply.
 # Both PWR and Tx reviews are applied in any scenario where the file is

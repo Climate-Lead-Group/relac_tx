@@ -6,28 +6,29 @@ so that D2_update_secondary_techs.py reproduces the ResidualCapacity values from
 Old_Inputs parametrization files.
 
 Usage:
-    python AUX_Z_recalc_shares.py
+    python scripts/tools/AUX_Z_recalc_shares.py
 """
 
 import shutil
+import sys
 from pathlib import Path
 
 import openpyxl
 
-
-SCRIPT_DIR = Path(__file__).parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # --- Configuration ---
 
-SHARES_FILE = SCRIPT_DIR / "Shares_PET_OIL_Split.xlsx"
-OLADE_FILE = SCRIPT_DIR / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
+SHARES_FILE = P.DATA / "Shares_PET_OIL_Split.xlsx"
+OLADE_FILE = P.DATA / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
 
 SCENARIO_CONFIG = {
     "SharesBAU": {
-        "old_inputs": SCRIPT_DIR / "Old_Inputs" / "A1_Outputs" / "A1_Outputs_BAU" / "A-O_Parametrization.xlsx",
+        "old_inputs": P.OLD_INPUTS / "A1_Outputs" / "A1_Outputs_BAU" / "A-O_Parametrization.xlsx",
     },
     "SharesNDC": {
-        "old_inputs": SCRIPT_DIR / "Old_Inputs" / "A1_Outputs" / "A1_Outputs_NDC" / "A-O_Parametrization.xlsx",
+        "old_inputs": P.OLD_INPUTS / "A1_Outputs" / "A1_Outputs_NDC" / "A-O_Parametrization.xlsx",
     },
 }
 

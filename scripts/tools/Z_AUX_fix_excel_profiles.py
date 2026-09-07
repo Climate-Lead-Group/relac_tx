@@ -12,9 +12,13 @@ Date: 2026-02-03
 """
 
 import openpyxl
+import sys
 from pathlib import Path
 from datetime import datetime
 import shutil
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 def make_backup(file_path):
     """Create backup of an Excel file"""
@@ -139,15 +143,13 @@ def main():
     print("🔧 PROFILE NORMALIZATION IN EXCEL FILES")
     print("="*70)
 
-    base_dir = Path(__file__).parent
-
     # List of scenarios to process
     scenarios = ["BAU", "NDC", "NDC+ELC", "NDC_NoRPO"]
 
     results = {}
 
     for scenario in scenarios:
-        scenario_dir = base_dir / "A1_Outputs" / f"A1_Outputs_{scenario}"
+        scenario_dir = P.scenario_dir(scenario)
         excel_file = scenario_dir / "A-O_Demand.xlsx"
 
         if excel_file.exists():

@@ -8,6 +8,11 @@ Created on Tue Jul 29 11:20:29 2025
 import pandas as pd
 import os
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 parametrization = False
 demand = True
@@ -19,7 +24,7 @@ folder = 'BAU'
 
 if parametrization:
     # Load Excel file
-    file_path = os.path.join(f"A1_Outputs_{folder}","A-O_Parametrization.xlsx")  # Change this if the file is in another location
+    file_path = os.path.join(P.A1_OUTPUTS, f"A1_Outputs_{folder}","A-O_Parametrization.xlsx")  # Change this if the file is in another location
     xls = pd.ExcelFile(file_path)
 
     # Read the sheet
@@ -531,7 +536,7 @@ if parametrization:
     all_sheets = xls.sheet_names  # inherits your xls = pd.ExcelFile(...) from the beginning
 
     #  (2) Write a new file, iterating over each sheet
-    output_file = os.path.join(f"A1_Outputs_{folder}","A-O_Parametrization_cleaned.xlsx")
+    output_file = os.path.join(P.A1_OUTPUTS, f"A1_Outputs_{folder}","A-O_Parametrization_cleaned.xlsx")
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         for sheet in all_sheets:
             if sheet == "Fixed Horizon Parameters":
@@ -555,7 +560,7 @@ if parametrization:
 
 if demand:
     # Path to the original file
-    file_path = os.path.join(f"A1_Outputs_{folder}","A-O_Demand.xlsx")
+    file_path = os.path.join(P.A1_OUTPUTS, f"A1_Outputs_{folder}","A-O_Demand.xlsx")
 
     # Load all sheets
     xls = pd.ExcelFile(file_path)
@@ -663,7 +668,7 @@ if demand:
     # --- End of "Profiles" processing ---
 
     # 10) Save all sheets to a new workbook
-    output_file = os.path.join(f"A1_Outputs_{folder}","A-O_Demand.xlsx")
+    output_file = os.path.join(P.A1_OUTPUTS, f"A1_Outputs_{folder}","A-O_Demand.xlsx")
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         for sheet in sheet_names:
             if sheet == "Profiles":
@@ -680,7 +685,7 @@ if demand:
 
 if storage:
     # File path
-    file_path = os.path.join("A2_Extra_Inputs","A-Xtra_Storage.xlsx")
+    file_path = str(P.A2_EXTRA_INPUTS / "A-Xtra_Storage.xlsx")
     xls = pd.ExcelFile(file_path)
 
     # Helper function to detect year columns 2021-2050
@@ -845,7 +850,7 @@ if storage:
     print("Sheet 'TechnologyStorage' processed successfully.")
 
     # ===== Save all sheets to new workbook =====
-    output_file = os.path.join("A2_Extra_Inputs","A-Xtra_Storage.xlsx")
+    output_file = str(P.A2_EXTRA_INPUTS / "A-Xtra_Storage.xlsx")
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         df_fhp.to_excel(writer, sheet_name="Fixed Horizon Parameters", index=False)
         df_ccs_clean.to_excel(writer, sheet_name="CapitalCostStorage", index=False)

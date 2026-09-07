@@ -5,11 +5,11 @@ Creates a set of CSV files with the minimum required data structure
 for a new country, using an existing country as a reference template.
 
 Usage:
-    python Z_generate_country_template.py                  # reads from Config_country_codes.yaml
-    python Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY   # CLI overrides
+    python scripts/tools/Z_generate_country_template.py                  # reads from Config_country_codes.yaml
+    python scripts/tools/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY   # CLI overrides
 
 Configure the 'template_generation' section in Config_country_codes.yaml,
-then just run: python Z_generate_country_template.py
+then just run: python scripts/tools/Z_generate_country_template.py
 
 This script does NOT modify the original files in OG_csvs_inputs.
 It creates new CSV files in the output directory that can be manually
@@ -24,14 +24,18 @@ import os
 import sys
 import argparse
 from collections import defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
 SCRIPT_DIR = os.path.dirname(__file__)
-INPUT_DIR = os.path.join(SCRIPT_DIR, "OG_csvs_inputs")
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "Config_country_codes.yaml")
+INPUT_DIR = str(P.OG_CSVS_INPUTS)
+CONFIG_PATH = str(P.CONFIG_COUNTRY_CODES)
 
 # Sets files to modify
 SETS_FILES = ["TECHNOLOGY", "FUEL", "EMISSION", "STORAGE"]
@@ -454,7 +458,7 @@ def generate_merge_script(new_cc, output_dir):
     template_dir_str = os.path.abspath(output_dir).replace("\\", "/")
     input_dir_str = os.path.abspath(INPUT_DIR).replace("\\", "/")
     centerpoints_str = os.path.abspath(
-        os.path.join(SCRIPT_DIR, "Miscellaneous", "centerpoints.csv")
+        str(P.MISCELLANEOUS / "centerpoints.csv")
     ).replace("\\", "/")
     rel_path_str = os.path.relpath(
         script_path, os.path.dirname(__file__)
@@ -468,7 +472,7 @@ def generate_merge_script(new_cc, output_dir):
         f'Modify values as needed to reflect the actual data for {new_cc}.',
         '',
         'Usage:',
-        '    cd t1_confection',
+        '    cd inputs/OG_csvs_inputs',
         f'    python {rel_path_str}',
         '"""',
         '',
@@ -750,7 +754,7 @@ def main():
             ixn_raw = [] if yaml_ixn is None else [str(x) for x in yaml_ixn]
             ixn_source = "YAML"
 
-        output_dir = args.output or os.path.join(SCRIPT_DIR, "templates", new_cc)
+        output_dir = args.output or os.path.join(P.TEMPLATES_OUT, new_cc)
         process_entry(new_cc, ref_cc, new_rr, ixn_raw, ixn_source,
                       cp_lat, cp_lon, output_dir)
         return
@@ -785,7 +789,7 @@ def main():
 
         # For multi-region countries, use CC+RR as subfolder
         subfolder = f"{new_cc}{new_rr}" if new_rr != "XX" else new_cc
-        output_dir = os.path.join(SCRIPT_DIR, "templates", subfolder)
+        output_dir = os.path.join(P.TEMPLATES_OUT, subfolder)
 
         if len(yaml_entries) > 1:
             print(f"\n{'#' * 50}")

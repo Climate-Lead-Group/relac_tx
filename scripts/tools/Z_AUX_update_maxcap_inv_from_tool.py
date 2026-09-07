@@ -33,25 +33,27 @@ los valores cacheados pueden faltar: si una celda de año llega como string (tex
 de formula) el script aborta pidiendo reabrir/guardar el tool en Excel.
 
 Usage:
-    python t1_confection/Z_AUX_update_maxcap_inv_from_tool.py            # dry-run (default)
-    python t1_confection/Z_AUX_update_maxcap_inv_from_tool.py --apply    # escribe (con backup)
-    python t1_confection/Z_AUX_update_maxcap_inv_from_tool.py --apply --no-backup
-    python t1_confection/Z_AUX_update_maxcap_inv_from_tool.py --scenario BAU
+    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py            # dry-run (default)
+    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --apply    # escribe (con backup)
+    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --apply --no-backup
+    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --scenario BAU
 """
 from __future__ import annotations
 
 import argparse
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
-HERE = Path(__file__).resolve().parent
-TOOL_XLSX = HERE / 'LAC_maxcap_tool.xlsx'
-TOOL_COMPLEMENTARY_XLSX = HERE / 'LAC_maxcap_tool_complementary.xlsx'
-A1_OUTPUTS = HERE / 'A1_Outputs'
+TOOL_XLSX = P.DATA / 'LAC_maxcap_tool.xlsx'
+TOOL_COMPLEMENTARY_XLSX = P.DATA / 'LAC_maxcap_tool_complementary.xlsx'
+A1_OUTPUTS = P.A1_OUTPUTS
 
 # Escenarios a los que se PUEDE aplicar este script.
 SCENARIOS = ['BAU', 'INV', 'OPT', 'VGB']

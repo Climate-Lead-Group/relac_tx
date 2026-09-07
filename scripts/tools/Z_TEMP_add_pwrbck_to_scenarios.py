@@ -20,9 +20,9 @@ los del CSV. Si no existe, se agrega al final. Projection.Mode se fija en
 'User defined' en todas las hojas que tengan esa columna.
 
 Usage:
-    python t1_confection/Z_TEMP_add_pwrbck_to_scenarios.py --dry-run
-    python t1_confection/Z_TEMP_add_pwrbck_to_scenarios.py --apply
-    python t1_confection/Z_TEMP_add_pwrbck_to_scenarios.py --apply --scenarios BAU INV
+    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --dry-run
+    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --apply
+    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --apply --scenarios BAU INV
 """
 from __future__ import annotations
 
@@ -35,17 +35,17 @@ from pathlib import Path
 import pandas as pd
 from openpyxl import load_workbook
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-from A1_Pre_processing_OG_csvs import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from pipeline.A1_Pre_processing_OG_csvs import (  # noqa: E402
     assign_tech_type,
     parse_fuel_name,
     parse_tech_name,
     remap_pwrbck_output_fuel,
 )
 
-CSV_DIR = HERE / "OG_csvs_inputs"
-OUT_DIR = HERE / "A1_Outputs"
+CSV_DIR = P.OG_CSVS_INPUTS
+OUT_DIR = P.A1_OUTPUTS
 SCENARIOS_DEFAULT = ["BAU", "INV", "OPT"]
 PREFIX = "PWRBCK"
 
