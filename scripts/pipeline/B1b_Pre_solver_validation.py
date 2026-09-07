@@ -16,10 +16,10 @@ Validations:
 
 Usage:
     # Standalone CLI
-    python t1_confection/B1b_Pre_solver_validation.py --scenario BAU
-    python t1_confection/B1b_Pre_solver_validation.py --scenario BAU --report-only
-    python t1_confection/B1b_Pre_solver_validation.py --scenario BAU --auto-fix-all
-    python t1_confection/B1b_Pre_solver_validation.py --xlsx path/to/A-O_Parametrization.xlsx
+    python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU
+    python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --report-only
+    python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --auto-fix-all
+    python scripts/pipeline/B1b_Pre_solver_validation.py --xlsx path/to/A-O_Parametrization.xlsx
 
     # Imported from B1_Compiler.py
     from B1b_Pre_solver_validation import run as pre_solver_validate
@@ -36,8 +36,9 @@ from pathlib import Path
 
 import openpyxl
 
-sys.path.insert(0, str(Path(__file__).parent))
-from _xlsx_validation_core import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P  # noqa: E402
+from common._xlsx_validation_core import (  # noqa: E402
     AF_PARAM, ACT_LOWER_PARAM, ACT_LOWER_HAIRCUT, MAX_MULTIPLIER,
     consistency_sweep, index_target_sheet, load_capacity_to_activity_unit,
     load_operational_life, load_yearsplit,
@@ -77,12 +78,12 @@ TARGET_SHEETS = ("Secondary Techs", "Demand Techs")
 # -------------------------------------------------------------------
 def default_xlsx_for_scenario(scenario):
     """Return the conventional path for A-O_Parametrization.xlsx of a scenario."""
-    return Path(__file__).parent / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
+    return P.scenario_dir(scenario) / "A-O_Parametrization.xlsx"
 
 
 def read_base_year_from_config():
     """Best-effort: read base_year from Config_MOMF_T1_A.yaml. Returns int or None."""
-    cfg = Path(__file__).parent / "Config_MOMF_T1_A.yaml"
+    cfg = P.CONFIG_A
     if not cfg.exists():
         return None
     try:
@@ -96,7 +97,7 @@ def read_base_year_from_config():
 
 def read_ab_config():
     """Best-effort: load Config_MOMF_T1_AB.yaml. Returns dict (possibly empty)."""
-    cfg = Path(__file__).parent / "Config_MOMF_T1_AB.yaml"
+    cfg = P.CONFIG_AB
     if not cfg.exists():
         return {}
     try:
@@ -234,7 +235,7 @@ def _proj_mode_col(workbook_sheet_ctx, sheet_name):
 # CSV report
 # -------------------------------------------------------------------
 def _write_report(scenario, all_records, applied_groups):
-    out_dir = Path(__file__).parent / "Executables" / f"{scenario}_0"
+    out_dir = P.executables_dir(scenario)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / "_validation_report.csv"
     fieldnames = [
@@ -494,7 +495,7 @@ def _run_v4_coverage(scenario, xlsx_path):
     )
     tolerance = float(ab_cfg.get("activity_upper_limit_coverage_tolerance", 0.15))
 
-    a2_root = Path(__file__).parent / "A2_Outputs_Params_otoole" / scenario
+    a2_root = P.A2_OTOOLE / scenario
     demand_csv = a2_root / "SpecifiedAnnualDemand.csv"
     oar_csv = a2_root / "OutputActivityRatio.csv"
     if not demand_csv.exists() or not oar_csv.exists():

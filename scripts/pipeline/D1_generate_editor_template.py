@@ -5,7 +5,7 @@ This script reads all A-O_Parametrization.xlsx files and generates
 a user-friendly Excel template for editing Secondary Techs data.
 
 Usage:
-    python t1_confection/generate_editor_template.py
+    python scripts/pipeline/D1_generate_editor_template.py
 """
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Protection, Border, Side
@@ -14,7 +14,9 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import yaml
-from Z_AUX_config_loader import get_olade_country_mapping, get_olade_tech_mapping, get_country_names, get_multi_region_map, get_code_to_energy
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import get_olade_country_mapping, get_olade_tech_mapping, get_country_names, get_multi_region_map, get_code_to_energy
 
 # Country and technology mappings from centralized config
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
@@ -28,7 +30,7 @@ def read_base_scenario():
     Returns:
         str: The base scenario name (default: 'BAU')
     """
-    yaml_path = Path(__file__).parent / "Config_MOMF_T1_AB.yaml"
+    yaml_path = P.CONFIG_AB
     try:
         with open(yaml_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
@@ -49,7 +51,7 @@ def collect_data_from_all_scenarios():
         dict with scenarios, countries, tech_mapping (Tech.Name -> Tech), parameters, years,
         tech_by_country (country_code -> list of Tech.Name)
     """
-    base_path = Path(__file__).parent / "A1_Outputs"
+    base_path = P.A1_OUTPUTS
 
     # Auto-discover scenarios from A1_Outputs_* folders
     scenarios = []
@@ -212,7 +214,7 @@ def collect_trn_interconnections():
         ]
     """
     base_scenario = read_base_scenario()
-    base_year_path = Path(__file__).parent / "A1_Outputs" / f"A1_Outputs_{base_scenario}" / "A-O_AR_Model_Base_Year.xlsx"
+    base_year_path = P.A1_OUTPUTS / f"A1_Outputs_{base_scenario}" / "A-O_AR_Model_Base_Year.xlsx"
 
     if not base_year_path.exists():
         print(f"WARNING: Base Year file not found: {base_year_path}")
@@ -870,7 +872,7 @@ def create_editor_template(data, output_path):
         ["   - Year values: Enter numeric values for each year (leave empty to keep current value)", ""],
         ["", ""],
         ["4. Save and close this file", ""],
-        ["5. Run: python t1_confection/D2_update_secondary_techs.py", ""],
+        ["5. Run: python scripts/pipeline/D2_update_secondary_techs.py", ""],
         ["", ""],
         ["OLADE INTEGRATION:", ""],
         ["- If ResidualCapacitiesFromOLADE = YES in OLADE_Config sheet:", ""],
@@ -1822,7 +1824,7 @@ def main():
             return 1
 
         # Create template
-        output_path = Path(__file__).parent / "Secondary_Techs_Editor.xlsx"
+        output_path = P.DATA / "Secondary_Techs_Editor.xlsx"
         create_editor_template(data, output_path)
 
         print("=" * 80)
@@ -1830,10 +1832,10 @@ def main():
         print("=" * 80)
         print()
         # print("Next steps:")
-        # print("1. Open t1_confection/Secondary_Techs_Editor.xlsx")
+        # print("1. Open inputs/data/Secondary_Techs_Editor.xlsx")
         # print("2. Fill in the 'Editor' sheet with your changes")
         # print("3. Save and close the file")
-        # print("4. Run: python t1_confection/update_secondary_techs.py")
+        # print("4. Run: python scripts/pipeline/D2_update_secondary_techs.py")
         print()
 
         return 0

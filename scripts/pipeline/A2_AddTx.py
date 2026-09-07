@@ -13,7 +13,9 @@ import yaml
 import pandas as pd
 from typing import List
 from pathlib import Path
-from Z_AUX_config_loader import get_renewable_fuels, get_iso_country_map
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import get_renewable_fuels, get_iso_country_map
 
 # Country and technology mappings from centralized config
 RENEWABLE_FUELS = get_renewable_fuels()
@@ -633,17 +635,17 @@ def list_scenario_suffixes(base_dir: Path) -> List[str]:
 def main():
 
     script_dir = Path(__file__).resolve().parent
-    OUTPUT_FOLDER = script_dir / "A1_Outputs"
+    OUTPUT_FOLDER = P.A1_OUTPUTS
     scenario_suffixes = list_scenario_suffixes(OUTPUT_FOLDER)
     for scen in scenario_suffixes:
     
     
         defaults = {
-            "yaml": str(script_dir / "Config_country_codes.yaml"),
-            "base": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Model_Base_Year.xlsx"),
-            "proj": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_AR_Projections.xlsx"),
-            "param": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_Parametrization.xlsx"),
-            "demand": str(script_dir / f"A1_Outputs/A1_Outputs_{scen}/A-O_Demand.xlsx"),
+            "yaml": str(P.CONFIG_COUNTRY_CODES),
+            "base": str(P.scenario_dir(scen) / "A-O_AR_Model_Base_Year.xlsx"),
+            "proj": str(P.scenario_dir(scen) / "A-O_AR_Projections.xlsx"),
+            "param": str(P.scenario_dir(scen) / "A-O_Parametrization.xlsx"),
+            "demand": str(P.scenario_dir(scen) / "A-O_Demand.xlsx"),
         }
         ap = argparse.ArgumentParser(description='Process CLG model spreadsheets.')
         ap.add_argument('--yaml', help='Config_country_codes.yaml')

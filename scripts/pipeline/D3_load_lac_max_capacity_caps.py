@@ -1,7 +1,7 @@
 """
 Load LAC Market-Realistic Capacity Ceilings into A-O_Parametrization.xlsx
 
-Source: t1_confection/A1_Outputs/A1_Outputs_BAU/LAC_Capacity_Ceilings_Consolidated.md
+Source: inputs/A1_Outputs/A1_Outputs_BAU/LAC_Capacity_Ceilings_Consolidated.md
 Target: hoja 'Secondary Techs', parametro TotalAnnualMaxCapacityInvestment
         para PWRSPV{ISO3}XX y PWRWON{ISO3}XX (19 paises LAC, 38 filas).
 
@@ -9,15 +9,18 @@ Regla de coherencia con Min:
     Si Max_MD <= Min_existente para un ano dado, entonces Max = Min * 1.01
 
 Usage:
-    python t1_confection/D3_load_lac_max_capacity_caps.py
+    python scripts/pipeline/D3_load_lac_max_capacity_caps.py
 """
 import openpyxl
 import shutil
+import sys
 from pathlib import Path
 from datetime import datetime
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 
-PARAM_PATH = Path(__file__).parent / 'A1_Outputs' / 'A1_Outputs_BAU' / 'A-O_Parametrization.xlsx'
+PARAM_PATH = P.scenario_dir('BAU') / 'A-O_Parametrization.xlsx'
 SHEET_NAME = 'Secondary Techs'
 PARAM_MAX = 'TotalAnnualMaxCapacityInvestment'
 PARAM_MIN = 'TotalAnnualMinCapacityInvestment'

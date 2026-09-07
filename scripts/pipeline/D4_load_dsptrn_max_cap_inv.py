@@ -55,23 +55,26 @@ columnas Scenario, YEAR, TECHNOLOGY, NewCapacity). Ese CSV contiene BAU/INV/OPT;
 aqui filtramos Scenario == 'BAU'.
 
 Usage:
-    python t1_confection/D4_load_dsptrn_max_cap_inv.py --dry-run
-    python t1_confection/D4_load_dsptrn_max_cap_inv.py --apply
+    python scripts/pipeline/D4_load_dsptrn_max_cap_inv.py --dry-run
+    python scripts/pipeline/D4_load_dsptrn_max_cap_inv.py --apply
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import openpyxl
 
 
 HERE = Path(__file__).resolve().parent
-COMBINED_CSV = HERE / 'RELAC_TX_Combined_Inputs_Outputs.csv'
-A1_OUTPUTS = HERE / 'A1_Outputs'
+COMBINED_CSV = P.OUTPUTS / 'RELAC_TX_Combined_Inputs_Outputs.csv'
+A1_OUTPUTS = P.A1_OUTPUTS
 
 SHEET = 'Demand Techs'
 PARAM = 'TotalAnnualMaxCapacityInvestment'

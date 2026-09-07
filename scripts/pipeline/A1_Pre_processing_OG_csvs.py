@@ -7,6 +7,7 @@ Created on 2025
 
 import os
 import re
+import sys
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
@@ -15,7 +16,9 @@ import warnings
 from typing import List, Dict, Any
 from pathlib import Path
 import yaml
-from Z_AUX_config_loader import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import (
     get_olade_country_mapping, get_iso_country_map, get_code_to_energy,
     get_first_year, get_add_missing_countries_from_olade, get_pwr_cleanup_mode,
     get_force_empty_max_capacity_investment_pwr
@@ -33,14 +36,14 @@ def list_scenario_suffixes(base_dir: Path) -> List[str]:
 
 
 # Define folder paths relative to the script location (not cwd)
-SCRIPT_DIR = Path(__file__).resolve().parent  # t1_confection/
-INPUT_FOLDER = SCRIPT_DIR / "OG_csvs_inputs"
-OUTPUT_FOLDER = SCRIPT_DIR / "A1_Outputs"
-MISCELLANEOUS_FOLDER = SCRIPT_DIR / "Miscellaneous"
-A2_EXTRA_INPUTS_FOLDER = SCRIPT_DIR / "A2_Extra_Inputs"
-REGION_CONSOLIDATION_CONFIG = SCRIPT_DIR / "Config_region_consolidation.yaml"
-TECH_COUNTRY_MATRIX_FILE = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
-OLADE_GENERATION_FILE = SCRIPT_DIR / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
+SCRIPT_DIR = Path(__file__).resolve().parent  # scripts/pipeline/
+INPUT_FOLDER = P.OG_CSVS_INPUTS
+OUTPUT_FOLDER = P.A1_OUTPUTS
+MISCELLANEOUS_FOLDER = P.MISCELLANEOUS
+A2_EXTRA_INPUTS_FOLDER = P.A2_EXTRA_INPUTS
+REGION_CONSOLIDATION_CONFIG = P.CONFIG_REGION_CONSOLIDATION
+TECH_COUNTRY_MATRIX_FILE = P.DATA / "Tech_Country_Matrix.xlsx"
+OLADE_GENERATION_FILE = P.DATA / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
 
 # Model horizon years - data outside this range will be filtered/adjusted
 LAST_YEAR = 2050
@@ -3600,7 +3603,7 @@ def main():
         try:
             update_yaml_structure(
                 og_data=OG_Input_Data,
-                yaml_path=SCRIPT_DIR / "Config_MOMF_T1_A.yaml"
+                yaml_path=P.CONFIG_A
             )
         except Exception as e:
             print(f"[Error] Failed to update YAML structure: {e}")

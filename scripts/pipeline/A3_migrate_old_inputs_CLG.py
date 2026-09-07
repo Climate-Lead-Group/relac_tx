@@ -6,7 +6,7 @@ applying technology name transformations (CCG+OCG -> NGS, suffix removal, etc.)
 based on Config_tech_equivalences.yaml and Tech_Country_Matrix.xlsx.
 
 Usage:
-    python t1_confection/A0_migrate_old_inputs.py [--dry-run]
+    python scripts/pipeline/A3_migrate_old_inputs_CLG.py [--dry-run]
 
 Options:
     --dry-run    Show what would be migrated without making changes
@@ -21,11 +21,13 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 from collections import defaultdict
-from Z_AUX_config_loader import get_force_empty_max_capacity_investment_pwr                                                                           
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import get_force_empty_max_capacity_investment_pwr                                                                           
 
 # Import the Excel profile normalization script
 try:
-    from Z_AUX_fix_excel_profiles import normalize_excel_profiles
+    from tools.Z_AUX_fix_excel_profiles import normalize_excel_profiles
     EXCEL_NORMALIZATION_AVAILABLE = True
     print("[INIT] ✓ Excel profile normalization module loaded successfully")
 except ImportError as e:
@@ -208,7 +210,7 @@ class OldInputsMigrator:
 
     def __init__(self, base_path, dry_run=False):
         self.base_path = Path(base_path)
-        self.old_inputs_path = self.base_path / "Old_Inputs"
+        self.old_inputs_path = P.OLD_INPUTS
         self.dry_run = dry_run
         self.log_lines = []
         self.stats = {
@@ -222,11 +224,11 @@ class OldInputsMigrator:
         }
 
         # Load configuration
-        self.matrix = TechCountryMatrix(self.base_path / "Tech_Country_Matrix.xlsx")
-        self.equivalences = TechEquivalences(self.base_path / "Config_tech_equivalences.yaml")
+        self.matrix = TechCountryMatrix(P.DATA / "Tech_Country_Matrix.xlsx")
+        self.equivalences = TechEquivalences(P.CONFIG_TECH_EQUIVALENCES)
 
         # Load country codes config for DSPTRN support
-        yaml_path = self.base_path / "Config_country_codes.yaml"
+        yaml_path = P.CONFIG_COUNTRY_CODES
         if yaml_path.exists():
             with open(yaml_path, 'r', encoding='utf-8') as fh:
                 self.country_codes_config = yaml.safe_load(fh) or {}
@@ -962,7 +964,7 @@ class OldInputsMigrator:
     def migrate_parametrization(self, scenario):
         """Migrate A-O_Parametrization.xlsx for a scenario"""
         old_path = self.old_inputs_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
-        new_path = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
+        new_path = P.A1_OUTPUTS / f"A1_Outputs_{scenario}" / "A-O_Parametrization.xlsx"
 
         if not old_path.exists():
             self.log(f"  Old file not found: {old_path}", "WARNING")
@@ -1047,7 +1049,7 @@ class OldInputsMigrator:
         - Profiles: Fuel/Tech in col 3, no Parameter column, years start col 10
         """
         old_path = self.old_inputs_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
-        new_path = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
+        new_path = P.A1_OUTPUTS / f"A1_Outputs_{scenario}" / "A-O_Demand.xlsx"
 
         if not old_path.exists():
             self.log(f"  Old Demand file not found: {old_path}", "WARNING")
@@ -1110,7 +1112,7 @@ class OldInputsMigrator:
         - Use (Tech, Fuel, Direction) as unique key for matching
         """
         old_path = self.old_inputs_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_AR_Projections.xlsx"
-        new_path = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_AR_Projections.xlsx"
+        new_path = P.A1_OUTPUTS / f"A1_Outputs_{scenario}" / "A-O_AR_Projections.xlsx"
 
         if not old_path.exists():
             self.log(f"  Old AR_Projections not found: {old_path}", "WARNING")
@@ -1172,7 +1174,7 @@ class OldInputsMigrator:
         We need to migrate these values by matching Tech and Fuel columns.
         """
         old_path = self.old_inputs_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_AR_Model_Base_Year.xlsx"
-        new_path = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}" / "A-O_AR_Model_Base_Year.xlsx"
+        new_path = P.A1_OUTPUTS / f"A1_Outputs_{scenario}" / "A-O_AR_Model_Base_Year.xlsx"
 
         if not old_path.exists():
             self.log(f"  Old AR_Model_Base_Year not found: {old_path}", "WARNING")
@@ -1267,7 +1269,7 @@ class OldInputsMigrator:
     def migrate_storage(self):
         """Migrate A-Xtra_Storage.xlsx (shared across scenarios)"""
         old_path = self.old_inputs_path / "A2_Extra_Inputs" / "A-Xtra_Storage.xlsx"
-        new_path = self.base_path / "A2_Extra_Inputs" / "A-Xtra_Storage.xlsx"
+        new_path = P.A2_EXTRA_INPUTS / "A-Xtra_Storage.xlsx"
 
         if not old_path.exists():
             self.log(f"Old Storage file not found: {old_path}", "WARNING")
@@ -1346,7 +1348,7 @@ class OldInputsMigrator:
         results = {}
 
         for scenario in self.scenarios:
-            scenario_dir = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}"
+            scenario_dir = P.A1_OUTPUTS / f"A1_Outputs_{scenario}"
             excel_file = scenario_dir / "A-O_Demand.xlsx"
 
             self.log("")
@@ -1401,7 +1403,7 @@ class OldInputsMigrator:
 
     def _has_dsptrn(self, scenario):
         """Check if the migrated data already contains DSPTRN/ELC03/ELC04 technologies."""
-        base_year_path = (self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}"
+        base_year_path = (P.A1_OUTPUTS / f"A1_Outputs_{scenario}"
                           / "A-O_AR_Model_Base_Year.xlsx")
         if not base_year_path.exists():
             return False
@@ -1446,7 +1448,7 @@ class OldInputsMigrator:
             self.log("  WARNING: Could not import A2_AddTx, skipping DSPTRN injection", "WARNING")
             return
 
-        yaml_path = self.base_path / "Config_country_codes.yaml"
+        yaml_path = P.CONFIG_COUNTRY_CODES
         pairs = load_country_region_pairs(str(yaml_path))
         if not pairs:
             self.log("  WARNING: No country pairs found, skipping DSPTRN injection", "WARNING")
@@ -1455,7 +1457,7 @@ class OldInputsMigrator:
         with open(yaml_path, 'r', encoding='utf-8') as fh:
             yaml_data = yaml.safe_load(fh) or {}
 
-        scenario_dir = self.base_path / "A1_Outputs" / f"A1_Outputs_{scenario}"
+        scenario_dir = P.A1_OUTPUTS / f"A1_Outputs_{scenario}"
         base_path = str(scenario_dir / "A-O_AR_Model_Base_Year.xlsx")
         proj_path = str(scenario_dir / "A-O_AR_Projections.xlsx")
         param_path = str(scenario_dir / "A-O_Parametrization.xlsx")
@@ -1557,7 +1559,8 @@ class OldInputsMigrator:
             self.log("DRY RUN - No changes were made")
 
         # Save log
-        log_path = self.base_path / f"migration_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        P.LOGS.mkdir(parents=True, exist_ok=True)
+        log_path = P.LOGS / f"migration_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         with open(log_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(self.log_lines))
         self.log(f"\nLog saved: {log_path}")
@@ -1573,8 +1576,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        script_dir = Path(__file__).parent
-        migrator = OldInputsMigrator(script_dir, dry_run=args.dry_run)
+        migrator = OldInputsMigrator(P.INPUTS, dry_run=args.dry_run)
         return migrator.run()
 
     except Exception as e:

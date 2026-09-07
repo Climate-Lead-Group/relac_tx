@@ -5,7 +5,7 @@ This script reads the Secondary_Techs_Editor.xlsx file and applies
 the changes to the corresponding A-O_Parametrization.xlsx files.
 
 Usage:
-    python t1_confection/D2_update_secondary_techs.py
+    python scripts/pipeline/D2_update_secondary_techs.py
 """
 import openpyxl
 import re
@@ -14,12 +14,14 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 import yaml
-from Z_AUX_config_loader import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import (
     get_olade_country_mapping, get_olade_country_mapping_normalized,
     get_olade_tech_mapping, get_shares_country_mapping, get_shares_tech_mapping,
     strip_accents, get_enable_dsptrn, get_multi_region_map
 )
-from Z_AUX_D1b_set_trn_limits_from_flows import read_flow_data, fill_trn_sheet
+from tools.Z_AUX_D1b_set_trn_limits_from_flows import read_flow_data, fill_trn_sheet
 
 # Country and technology mappings from centralized config
 OLADE_COUNTRY_MAPPING = get_olade_country_mapping()
@@ -76,7 +78,7 @@ def read_base_scenario():
     Returns:
         str: base scenario name (default: 'BAU')
     """
-    yaml_path = Path(__file__).parent / "Config_MOMF_T1_AB.yaml"
+    yaml_path = P.CONFIG_AB
     try:
         with open(yaml_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
@@ -2694,7 +2696,7 @@ class SecondaryTechsUpdater:
         import yaml
         from pathlib import Path
 
-        yaml_path = Path(__file__).parent / 'Miscellaneous' / 'conversion_format.yaml'
+        yaml_path = P.MISCELLANEOUS / 'conversion_format.yaml'
         if not yaml_path.exists():
             self.log("WARNING: conversion_format.yaml not found, using hardcoded defaults")
             return {'CapacityFactor': 1.0}
@@ -4765,7 +4767,8 @@ class SecondaryTechsUpdater:
             self.log(f"Rows failed: {self.rows_failed}")
 
             # Save log
-            log_path = self.base_path / f"secondary_techs_update_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            P.LOGS.mkdir(parents=True, exist_ok=True)
+            log_path = P.LOGS / f"secondary_techs_update_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             self.save_log(log_path)
             self.log(f"\nLog saved: {log_path}")
 
@@ -4786,14 +4789,13 @@ class SecondaryTechsUpdater:
 def main():
     try:
         # Paths
-        script_dir = Path(__file__).parent
-        editor_path = script_dir / "Secondary_Techs_Editor.xlsx"
-        base_path = script_dir / "A1_Outputs"
-        olade_file_path = script_dir / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
-        shares_file_path = script_dir / "Shares_PET_OIL_Split.xlsx"
-        generation_file_path = script_dir / "OLADE - Generación eléctrica por fuente - Anual.xlsx"
-        shares_total_file_path = script_dir / "Shares_Power_Generation_Technologies.xlsx"
-        trade_balance_file_path = script_dir / "Matriz Balance energético" / "flujos_energia_estimados_optimizacion.xlsx"
+        editor_path = P.DATA / "Secondary_Techs_Editor.xlsx"
+        base_path = P.A1_OUTPUTS
+        olade_file_path = P.DATA / "OLADE - Capacidad instalada por fuente - Anual.xlsx"
+        shares_file_path = P.DATA / "Shares_PET_OIL_Split.xlsx"
+        generation_file_path = P.DATA / "OLADE - Generación eléctrica por fuente - Anual.xlsx"
+        shares_total_file_path = P.DATA / "Shares_Power_Generation_Technologies.xlsx"
+        trade_balance_file_path = P.MATRIZ_BALANCE / "flujos_energia_estimados_optimizacion.xlsx"
 
         # Create updater and run
         updater = SecondaryTechsUpdater(editor_path, base_path, olade_file_path, shares_file_path, generation_file_path, shares_total_file_path, trade_balance_file_path)

@@ -53,10 +53,10 @@ Seguridad
 
 Uso
 ---
-    python t1_confection/sync_historical_from_bau.py --dry-run     # preview (default)
-    python t1_confection/sync_historical_from_bau.py --apply
-    python t1_confection/sync_historical_from_bau.py --apply --scenarios INV
-    python t1_confection/sync_historical_from_bau.py --years 2023,2024,2025
+    python scripts/pipeline/sync_historical_from_bau.py --dry-run     # preview (default)
+    python scripts/pipeline/sync_historical_from_bau.py --apply
+    python scripts/pipeline/sync_historical_from_bau.py --apply --scenarios INV
+    python scripts/pipeline/sync_historical_from_bau.py --years 2023,2024,2025
 """
 from __future__ import annotations
 
@@ -68,8 +68,11 @@ from pathlib import Path
 
 import openpyxl
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 HERE = Path(__file__).resolve().parent
-A1_OUTPUTS = HERE / "A1_Outputs"
+A1_OUTPUTS = P.A1_OUTPUTS
 PARAM_FILENAME = "A-O_Parametrization.xlsx"
 SOURCE_SCENARIO = "BAU"
 # Defaults SOLO para corridas manuales sin --scenarios/--years. En la cadena,

@@ -21,12 +21,13 @@ from pathlib import Path
 
 import openpyxl
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P  # noqa: E402
 from patch_reserve_margin_repair_careful import (  # noqa: E402
     find_param_block,
     fmt_number,
 )
-from _xlsx_validation_core import (  # noqa: E402
+from common._xlsx_validation_core import (  # noqa: E402
     index_target_sheet,
     is_empty_number,
     norm_str,

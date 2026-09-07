@@ -3,9 +3,9 @@ Load Fuel VariableCosts into A-O_Parametrization.xlsx for every scenario.
 
 Author: Climate Lead Group, Andrey Salazar-Vargas
 
-Source: A1_Outputs/<scenario>/LAC_Fuel_Price_Projections_2026_v2_audit.xlsx
+Source: inputs/A1_Outputs/<scenario>/LAC_Fuel_Price_Projections_2026_v2_audit.xlsx
         - sheets matching pattern "Country_<ISO3>" (USD/L per fuel/year/scenario).
-Target: A1_Outputs/<scenario>/A-O_Parametrization.xlsx, sheet "VariableCost".
+Target: inputs/A1_Outputs/<scenario>/A-O_Parametrization.xlsx, sheet "VariableCost".
         Rows whose TECHNOLOGY equals "MIN" + <fuel_code> + <ISO3> are updated.
 
 Unit conversion (USD/L -> M$/PJ):
@@ -15,16 +15,19 @@ Unit conversion (USD/L -> M$/PJ):
 Idempotent: rerunning with the same price_scenario yields the same workbook state.
 
 Usage:
-    python t1_confection/D5_load_fuel_var_costs.py
-    python t1_confection/D5_load_fuel_var_costs.py --price-scenario HIGH
-    python t1_confection/D5_load_fuel_var_costs.py --base A1_Outputs --price-scenario LOW
+    python scripts/pipeline/D5_load_fuel_var_costs.py
+    python scripts/pipeline/D5_load_fuel_var_costs.py --price-scenario HIGH
+    python scripts/pipeline/D5_load_fuel_var_costs.py --base inputs/A1_Outputs --price-scenario LOW
 """
 import argparse
 import re
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
 import openpyxl
 
@@ -356,7 +359,7 @@ def run(base_dir: Path, price_scenario: str = "REF", do_backup: bool = True) -> 
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
-    default_base = Path(__file__).parent / "A1_Outputs"
+    default_base = P.A1_OUTPUTS
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--base",

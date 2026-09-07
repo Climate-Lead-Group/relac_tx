@@ -19,8 +19,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.worksheet.datavalidation import DataValidation
+import sys
 from pathlib import Path
-from Z_AUX_config_loader import get_countries, get_country_names
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+from common.Z_AUX_config_loader import get_countries, get_country_names
 
 # Script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -86,7 +89,7 @@ TECH_DESCRIPTIONS = {
 # Format in YAML: {tech: [country1, country2, ...]}
 # Converted here to set of (tech, country) tuples for fast lookup
 def _load_implausible_combinations():
-    config_path = SCRIPT_DIR / "Config_country_codes.yaml"
+    config_path = P.CONFIG_COUNTRY_CODES
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     combos = set()
@@ -142,7 +145,7 @@ AGGREGATION_RULES = {
 def create_tech_country_matrix():
     """Creates the technology-country matrix Excel file."""
 
-    output_file = SCRIPT_DIR / "Tech_Country_Matrix.xlsx"
+    output_file = P.DATA / "Tech_Country_Matrix.xlsx"
 
     wb = Workbook()
 
