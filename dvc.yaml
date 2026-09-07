@@ -1,61 +1,61 @@
 stages:
   preprocess:                # name of the stage
-    # wdir: t1_confection
-    cmd: python -u t1_confection/B1_Run_Compiler.py
+    # wdir: (repo root)
+    cmd: python -u scripts/pipeline/B1_Run_Compiler.py
     deps:
       # files
-      - t1_confection/B1_Compiler.py
-      - t1_confection/Config_MOMF_T1_A.yaml
+      - scripts/pipeline/B1_Compiler.py
+      - inputs/config/Config_MOMF_T1_A.yaml
 
       # folder with data
-      - t1_confection/A1_Outputs/
-      - t1_confection/A2_Extra_Inputs/
+      - inputs/A1_Outputs/
+      - inputs/A2_Extra_Inputs/
     outs:
       # files
-      - t1_confection/A2_Structure_Lists.xlsx
-
-      # folder with data 
-      - t1_confection/A2_Output_Params/
-
-  executing:                     # name of the stage
-    # wdir: t1_confection
-    cmd: python -u t1_confection/B2_Executing_OG_Model.py
-    deps:
-      # files
-      - t1_confection/Config_MOMF_T1_AB.yaml
-      - t1_confection/osemosys_fast_preprocessed.txt
-      - concatenate_files/concatenate_relac.py
-      - t1_confection/Z_AUX_capital_annualization_script.py
+      - outputs/A2_Structure_Lists.xlsx
 
       # folder with data
-      - t1_confection/A2_Output_Params/
-      - t1_confection/Miscellaneous/
+      - outputs/A2_Output_Params/
+
+  executing:                     # name of the stage
+    # wdir: (repo root)
+    cmd: python -u scripts/pipeline/B2_Executing_OG_Model.py
+    deps:
+      # files
+      - inputs/config/Config_MOMF_T1_AB.yaml
+      - inputs/model/osemosys_fast_preprocessed.txt
+      - scripts/tools/concatenate_relac.py
+      - scripts/pipeline/Z_AUX_capital_annualization_script.py
+
+      # folder with data
+      - outputs/A2_Output_Params/
+      - inputs/Miscellaneous/
 
     outs:
       # folder with data (without cache)
-      - t1_confection/A2_Outputs_Params_otoole/:
+      - outputs/A2_Outputs_Params_otoole/:
           cache: false
           persist: true
-      - t1_confection/Executables/:
+      - outputs/Executables/:
           cache: false
           persist: true
 
       # files (without cache)
-      - t1_confection/RELAC_TX_Inputs.csv:
+      - outputs/RELAC_TX_Inputs.csv:
           cache: false
           persist: true
-      - t1_confection/RELAC_TX_Inputs_fecha.csv:
+      - outputs/RELAC_TX_Inputs_fecha.csv:
           cache: false
           persist: true
-      - t1_confection/RELAC_TX_Outputs.csv:
+      - outputs/RELAC_TX_Outputs.csv:
           cache: false
           persist: true
-      - t1_confection/RELAC_TX_Outputs_fecha.csv:
+      - outputs/RELAC_TX_Outputs_fecha.csv:
           cache: false
           persist: true
-      - t1_confection/RELAC_TX_Combined_Inputs_Outputs.csv:
+      - outputs/RELAC_TX_Combined_Inputs_Outputs.csv:
           cache: false
           persist: true
-      - t1_confection/RELAC_TX_Combined_Inputs_Outputs_fecha.csv:
+      - outputs/RELAC_TX_Combined_Inputs_Outputs_fecha.csv:
           cache: false
           persist: true

@@ -231,7 +231,7 @@ sync_patched_csvs_params:
 # === Dispatch floors (fix_dispatch/write_floors.py, pisos fosiles) ===
 dispatch_floors_active: True
 dispatch_floors_suffix: "FLOORED"
-dispatch_floors_script: "scripts/fix_dispatch/write_floors.py"      # relativo a t1_confection
+dispatch_floors_script: "scripts/fix_dispatch/write_floors.py"      # relativo a la raíz del repo
 dispatch_floors_scenarios: ["BAU", "OPT", "INV", "VGB"]        # base; los derivados heredan
 # Gate de separacion (read-only) ANTES de escribir pisos; exit!=0 aborta el pipeline.
 preflight_separation_active: True
@@ -252,7 +252,7 @@ veg_tx_needs_csv: "inputs/tx_chain/outputs_BSR/NewCapacity.csv"   # PIN (ver Rie
 # === Scenario transforms (post-VEGCON, orden = orden de la lista) ===
 # Cada entrada corre UNA vez sobre Executables (via --executables-dir): lee los
 # datafiles de <base>_0/ y escribe los nuevos en <nuevo>_0/ (creando la carpeta).
-#   script:   ruta relativa a t1_confection
+#   script:   ruta relativa a la raíz del repo
 #   produces: {ESCENARIO_NUEVO: ESCENARIO_BASE}  -> crea Executables/<NUEVO>_0/ con su datafile
 #   in_place: [ESCENARIOS]                       -> modifica datafiles existentes
 # Para AGREGAR un escenario/constraint futuro: nueva entrada aqui + (si crea
