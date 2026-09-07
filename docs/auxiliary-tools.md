@@ -4,7 +4,7 @@ RELAC TX includes several utility scripts (prefixed with `Z_`) for data maintena
 
 ## Configuration Loader
 
-**Script:** `scripts/tools/Z_AUX_config_loader.py`
+**Script:** `scripts/common/Z_AUX_config_loader.py`
 
 A centralized module (not run directly) that provides cached access to `Config_country_codes.yaml`. All other scripts import functions from this module instead of reading the YAML directly.
 
@@ -29,7 +29,7 @@ A centralized module (not run directly) that provides cached access to `Config_c
 ### Usage in Scripts
 
 ```python
-from Z_AUX_config_loader import get_countries, get_first_year
+from common.Z_AUX_config_loader import get_countries, get_first_year
 
 countries = get_countries()  # ['ARG', 'BOL', 'BRA', ...]
 year = get_first_year()      # 2023
@@ -148,7 +148,7 @@ storage = False          # Process A-Xtra_Storage.xlsx
 
 ## Capital Annualization
 
-**Script:** `scripts/tools/Z_AUX_capital_annualization_script.py`
+**Script:** `scripts/pipeline/Z_AUX_capital_annualization_script.py`
 
 Post-processing script that annualizes capital costs in the model results. Runs automatically as part of the B2 execution stage when `annualize_capital: True` in `Config_MOMF_T1_AB.yaml`.
 
