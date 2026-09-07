@@ -129,19 +129,19 @@ OUTPUT
 
 USAGE
 -----
-    # From the t1_confection directory:
-    python add_max_cap_investment_lid_rule.py
+    # From the repo root:
+    python scripts/pipeline/A3_process/rules_scripts/add_max_cap_investment_lid_rule.py
 
     # Override defaults:
     python add_max_cap_investment_lid_rule.py \\
-        --input-dir A1_Outputs/A1_Outputs_BAU \\
+        --input-dir inputs/A1_Outputs/A1_Outputs_BAU \\
         --sheets "Secondary Techs"
 
     # Restore from a legacy _PRE_LID_* backup (if one still exists alongside
     # the scenario dir from before the no-backup default):
     python add_max_cap_investment_lid_rule.py --restore
     python add_max_cap_investment_lid_rule.py \\
-        --restore-from A1_Outputs/A1_Outputs_BAU_PRE_LID_20260430_204529
+        --restore-from inputs/A1_Outputs/A1_Outputs_BAU_PRE_LID_20260430_204529
 """
 
 from __future__ import annotations
@@ -154,6 +154,8 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # -> scripts/
+from common import relac_paths as P
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -232,7 +234,7 @@ COUNTRY_REGION_SLICE = slice(6, 11)  # for length-11 PWR* codes: chars 6..10
 # ---------------------------------------------------------------------------
 # Tech-type filter — only patch GENERATION technologies
 # ---------------------------------------------------------------------------
-# TECH_TYPES.csv lives next to this script. It lists techs by category
+# TECH_TYPES.csv lives in inputs/config/A3_process/. It lists techs by category
 # (GENERATION, INTERCONNECTORS, STORAGE_LONG, STORAGE_SHORT, etc.). Only
 # techs in GENERATION_CATEGORY are eligible for the lid + untie rule.
 # Set RESTRICT_TO_GENERATION = False to fall back to the prior behavior
@@ -646,7 +648,7 @@ def load_generation_techs(tech_types_path: Path) -> set:
     if not tech_types_path.is_file():
         raise FileNotFoundError(
             f"TECH_TYPES.csv not found at {tech_types_path}. "
-            f"Place it next to this script, or set "
+            f"Place it in inputs/config/A3_process/, or set "
             f"RESTRICT_TO_GENERATION = False to disable the filter."
         )
     df = pd.read_csv(tech_types_path)
@@ -1291,9 +1293,9 @@ def run(input_dir, sheets: list = None,
         cli_overrides: dict | None = None) -> dict:
     """End-to-end: edit and write JSON log. Returns the log dict.
 
-    When `yaml_path` is None, the script looks for YAML_FILE_NAME next to
-    itself (where the orchestrator stages the per-scenario override). If
-    found, its values replace the module-level defaults for this process.
+    When `yaml_path` is None, the script looks for YAML_FILE_NAME in
+    inputs/config/A3_process/. If found, its values replace the module-level
+    defaults for this process.
 
     `cli_overrides`: dict applied AFTER the YAML so CLI flags win. Same
     schema as the YAML's parsed config (e.g. {"force_overwrite": True}).
@@ -1301,10 +1303,10 @@ def run(input_dir, sheets: list = None,
     input_dir = Path(input_dir)
     sheets = sheets or DEFAULT_TARGET_SHEETS
 
-    # Optional YAML override (per-scenario). Located next to this script —
-    # the orchestrator stages it there from rules_scripts/configs/<scenario>/.
+    # Optional YAML override (per-scenario). Located in inputs/config/A3_process/
+    # (A3_process.py passes it explicitly via --yaml).
     if yaml_path is None:
-        yaml_path = Path(__file__).resolve().parent / YAML_FILE_NAME
+        yaml_path = P.A3_CONFIG / YAML_FILE_NAME
     yaml_loaded = False
     if yaml_path.is_file():
         apply_config(load_config(yaml_path))
@@ -1317,13 +1319,11 @@ def run(input_dir, sheets: list = None,
         raise FileNotFoundError(f"{paramfile} not found")
 
     # Load the GENERATION tech list. TECH_TYPES.csv is shared by other A3
-    # stages (e.g. patch_ao_c2a.py), so it lives in A3_process/, one level
-    # above this script (which now lives in A3_process/rules_scripts/).
+    # stages (e.g. patch_ao_c2a.py), so it lives in inputs/config/A3_process/.
     generation_techs = None
     tech_types_path = None
     if RESTRICT_TO_GENERATION:
-        script_dir = Path(__file__).resolve().parent
-        tech_types_path = script_dir.parent / TECH_TYPES_FILE
+        tech_types_path = P.A3_CONFIG / TECH_TYPES_FILE
         generation_techs = load_generation_techs(tech_types_path)
 
     # Load the per-cr demand multipliers (from the input dir).
@@ -1508,8 +1508,8 @@ def main() -> int:
     parser.add_argument(
         "--input-dir",
         type=Path,
-        default=Path("A1_Outputs/A1_Outputs_BAU"),
-        help="Directory containing the AO files (default: A1_Outputs/A1_Outputs_BAU)",
+        default=P.scenario_dir("BAU"),
+        help=f"Directory containing the AO files (default: {P.scenario_dir('BAU')})",
     )
     parser.add_argument(
         "--sheets",
@@ -1535,7 +1535,7 @@ def main() -> int:
         "--yaml",
         type=Path,
         default=None,
-        help=f"Override YAML config path (default: {YAML_FILE_NAME} next to this script).",
+        help=f"Override YAML config path (default: {YAML_FILE_NAME} in inputs/config/A3_process/).",
     )
     parser.add_argument(
         "--force-overwrite",

@@ -73,12 +73,12 @@ recovery is via git. B1b makes its own timestamped backup file alongside the
 xlsx.
 
 Usage:
-    python t1_confection/A3_process.py                  # runs all scenarios
-    python t1_confection/A3_process.py --scenario BAU   # runs just BAU
-    python t1_confection/A3_process.py --scenario BAU,INV
-    python t1_confection/A3_process.py --list           # show discovered scenarios
-    python t1_confection/A3_process.py --skip-validation # skip B1b auto-fix step
-    python t1_confection/A3_process.py --skip-historical-sync # skip final BAU harmonization
+    python scripts/pipeline/A3_process.py                  # runs all scenarios
+    python scripts/pipeline/A3_process.py --scenario BAU   # runs just BAU
+    python scripts/pipeline/A3_process.py --scenario BAU,INV
+    python scripts/pipeline/A3_process.py --list           # show discovered scenarios
+    python scripts/pipeline/A3_process.py --skip-validation # skip B1b auto-fix step
+    python scripts/pipeline/A3_process.py --skip-historical-sync # skip final BAU harmonization
 """
 from __future__ import annotations
 
@@ -87,11 +87,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
 
-T1_CONFECTION = Path(__file__).resolve().parent
+T1_CONFECTION = Path(__file__).resolve().parent   # scripts/pipeline (solo para localizar scripts hermanos)
 A3_PROCESS_DIR = T1_CONFECTION / "A3_process"
 RULES_SCRIPTS_DIR = A3_PROCESS_DIR / "rules_scripts"
-A1_OUTPUTS_DIR = T1_CONFECTION / "A1_Outputs"
+A1_OUTPUTS_DIR = P.A1_OUTPUTS
 SCENARIO_PREFIX = "A1_Outputs_"
 
 # Source scenario for the final BAU harmonization pass (must match
@@ -102,7 +104,7 @@ DEFAULT_RULES_SCRIPT = "add_max_cap_investment_lid_rule.py"
 EXTEND_LL_SCRIPT = "extend_lowerlimits_pwr.py"
 B1B_VALIDATOR = T1_CONFECTION / "B1b_Pre_solver_validation.py"
 SYNC_HIST_SCRIPT = T1_CONFECTION / "sync_historical_from_bau.py"
-LID_RULE_YAML = RULES_SCRIPTS_DIR / "lid_rule.yaml"
+LID_RULE_YAML = P.A3_CONFIG / "lid_rule.yaml"
 
 # Historical-year cutoff: every per-scenario A3 step (lid, extend, B1b) only
 # modifies cells from this year onward. Years 2023-2025 are historical/observed
@@ -430,6 +432,7 @@ def run_for_scenario(scenario: str, rules_script: str,
     print(f"  rules_script  : {rules_script}")
 
     cmd = [PYTHON, rs_path, "--input-dir", input_dir,
+           "--yaml", LID_RULE_YAML,
            "--modify-from-year", MODIFY_FROM_YEAR]
     if force_overwrite:
         cmd.append("--force-overwrite")

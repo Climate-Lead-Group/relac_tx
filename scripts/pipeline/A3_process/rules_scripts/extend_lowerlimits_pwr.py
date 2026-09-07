@@ -17,7 +17,7 @@ A3_process.py invokes this for each scenario as:
     python extend_lowerlimits_pwr.py --input-dir <scenario_dir> [--force-overwrite]
 
 Direct invocation:
-    python extend_lowerlimits_pwr.py --input-dir t1_confection/A1_Outputs/A1_Outputs_BAU
+    python extend_lowerlimits_pwr.py --input-dir inputs/A1_Outputs/A1_Outputs_BAU
 
 Default (no --force-overwrite): only fills empty or zero 2025..2050 cells with
 the 2024 value; non-zero pre-existing values are preserved. With

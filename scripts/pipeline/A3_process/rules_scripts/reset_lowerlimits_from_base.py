@@ -28,7 +28,7 @@ USAGE
         [--base-dir <base_scenario_dir>]
 
 If --base-dir is omitted it defaults to:
-    <t1_confection>/NO BORRAR A1_Outputs - Escenario Base/Base
+    inputs/reference/NO BORRAR A1_Outputs - Escenario Base/Base
 
 Side effects:
 - Makes a timestamped backup of the xlsx next to it before writing.
@@ -46,6 +46,8 @@ import shutil
 import sys
 import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # -> scripts/
+from common import relac_paths as P
 
 import openpyxl
 
@@ -64,8 +66,7 @@ COL_YEAR_2023 = 9  # column for year `y` = COL_YEAR_2023 + (y - 2023)
 
 PARAM_FILENAME = "A-O_Parametrization.xlsx"
 
-T1_CONFECTION = Path(__file__).resolve().parents[2]
-DEFAULT_BASE_DIR = T1_CONFECTION / "NO BORRAR A1_Outputs - Escenario Base" / "Base"
+DEFAULT_BASE_DIR = P.BASE_SCENARIO_REF / "Base"
 
 
 def year_to_col(year: int) -> int:
