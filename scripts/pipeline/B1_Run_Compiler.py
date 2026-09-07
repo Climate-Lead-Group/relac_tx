@@ -24,6 +24,9 @@ import sys
 import re
 from typing import List, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
+from common import relac_paths as P
+
 # Try to use ruamel.yaml to preserve comments/formatting; fallback to PyYAML; final fallback to regex.
 def try_import_yaml_handlers():
     ruamel_yaml = None
@@ -147,7 +150,7 @@ def run_compiler(script_dir: Path) -> int:
     if not compiler.is_file():
         raise FileNotFoundError(f"Missing script: {compiler}")
     # Run using same Python interpreter
-    result = subprocess.run([sys.executable, str(compiler)], cwd=str(script_dir))
+    result = subprocess.run([sys.executable, str(compiler)], cwd=str(P.REPO_ROOT))
     return result.returncode
 
 
@@ -156,9 +159,10 @@ def main():
     script_dir = Path(__file__).resolve().parent
 
     # Define key paths
-    yaml_file = script_dir / "Config_MOMF_T1_A.yaml"
+    P.ensure_output_dirs()
+    yaml_file = P.CONFIG_A
     compiler_script = script_dir / "B1_Compiler.py"
-    A1_Outputs_script = script_dir / "A1_Outputs"
+    A1_Outputs_script = P.A1_OUTPUTS
 
 
     if not yaml_file.is_file():

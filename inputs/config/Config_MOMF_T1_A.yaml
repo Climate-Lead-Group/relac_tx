@@ -1,9 +1,9 @@
-A1_inputs: ./A1_Inputs
-A1_outputs: ./A1_Outputs
-A2_extra_inputs: ./A2_Extra_Inputs
-A2_output: ./A2_Output_Params/
-A2_output_main_scen: ./A2_Output_Params/
-A2_output_NDP: ./A2_Output_Params/NDC/
+A1_inputs: inputs/A1_Inputs
+A1_outputs: inputs/A1_Outputs
+A2_extra_inputs: inputs/A2_Extra_Inputs
+A2_output: outputs/A2_Output_Params/
+A2_output_main_scen: outputs/A2_Output_Params/
+A2_output_NDP: outputs/A2_Output_Params/NDC/
 Modes_Demand: /A-I_Classifier_Modes_Demand.xlsx
 Sectors: Sectors
 Fuel_per_Sectors: Fuel_per_Sectors
@@ -76,7 +76,7 @@ A_O_Dem: A-O_Demand
 Print_Paramet_Completed: /A-O_Parametrization_COMPLETED.xlsx
 Print_Paramet_Natural_Completed: /A-O_Parametrization_Natural_COMPLETED.xlsx
 Print_Proj_Completed: /A-O_AR_Projections_COMPLETED.xlsx
-Print_A2_Struct_List: A2_Structure_Lists.xlsx
+Print_A2_Struct_List: outputs/A2_Structure_Lists.xlsx
 lists: Lists
 Pickle_Fleet_Groups_Dist: /A-O_Fleet_Groups_Distance.pickle
 Pickle_Fleet_Groups_OR: /A-O_Fleet_Groups_OR.pickle
