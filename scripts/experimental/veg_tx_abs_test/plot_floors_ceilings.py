@@ -2,13 +2,17 @@
 """Plot floors & ceilings from the ORIGINAL vs VEGCON .txt datafiles.
    Investment (GW/yr) and capacity (GW cumulative). Read-only, F5-executable."""
 import re
+import sys
 from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
+
 HERE = Path(__file__).resolve().parent
-EXE  = HERE.parent / "t1_confection" / "Executables"
+EXE  = P.EXECUTABLES
 
 ORIG = {
     "BAU": EXE / "BAU_0" / "Pre_processed_BAU_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt",
@@ -16,7 +20,7 @@ ORIG = {
     "INV": EXE / "INV_0" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt",
     "VGB": EXE / "VGB_0" / "Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt",
 }
-VEGCON = {s: HERE / f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt" for s in ORIG}
+VEGCON = {s: P.REFERENCE / "veg_tx_abs_test" / f"Pre_processed_{s}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt" for s in ORIG}
 
 PARAMS = ("TotalAnnualMinCapacityInvestment", "TotalAnnualMaxCapacityInvestment",
           "TotalAnnualMaxCapacity", "ResidualCapacity", "CapitalCost")
@@ -295,7 +299,9 @@ for col, label in enumerate(["ORIGINAL", "VEGCON"]):
     ax.tick_params(colors=TXT)
 
 fig.tight_layout(rect=[0, 0, 1, 0.97])
-png = HERE / "floors_ceilings_comparison.png"
+OUT_DIR = P.EXPERIMENTAL_OUT / "veg_tx_abs_test"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+png = OUT_DIR / "floors_ceilings_comparison.png"
 fig.savefig(png, dpi=140, bbox_inches="tight")
 print(f"\nPNG: {png}")
 print("Done.")

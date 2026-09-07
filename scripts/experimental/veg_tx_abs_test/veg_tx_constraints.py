@@ -58,11 +58,15 @@ DERIVACION (trazable; referencias completas al final del archivo)
     Wiser, LBNL 2019). El choque 2019-24 (IEA 2025) es de NIVEL, no de pendiente.
 """
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
 
 # ============================ USER CONFIGURATION ============================
 HERE = Path(__file__).resolve().parent
-EXE = HERE.parent / "t1_confection" / "Executables"
+EXE = P.EXECUTABLES
 
 # Escenario -> (datafile origen, aplica regla NLI?). RPO y costo aplican a los 4.
 # NLI solo a los vegetativos. El swap del piso usa REF y OPT (abajo).
@@ -72,7 +76,8 @@ SCENARIOS = {
     "INV": (EXE / "INV_0" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", True),
     "VGB": (EXE / "VGB_0" / "Pre_processed_VGB_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt", True),
 }
-OUT_DIR = HERE
+OUT_DIR = P.EXPERIMENTAL_OUT / "veg_tx_abs_test"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Paso 0: SWAP del piso comprometido -----------------------------------
 SWAP_REF, SWAP_OPT = "BAU", "OPT"        # el piso de REF se propaga a INV/VGB

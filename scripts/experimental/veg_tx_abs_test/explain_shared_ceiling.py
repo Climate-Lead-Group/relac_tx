@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """Explica COMO se reparte el envelope MUSD en topes por-tech (GW). Lee el INV
    escrito y descompone: planificadas + RPO + NLI, y la NLI por pais. Read-only."""
+import sys
 from pathlib import Path
 import importlib.util
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
+
 HERE = Path(__file__).resolve().parent
-INV = HERE / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
+INV = P.REFERENCE / "veg_tx_abs_test" / "Pre_processed_INV_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt"
 
 # importar las funciones del script canonico (no corre main())
 spec = importlib.util.spec_from_file_location("vtc", HERE / "veg_tx_constraints.py")

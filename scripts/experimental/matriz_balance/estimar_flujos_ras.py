@@ -9,6 +9,10 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
+
 # Archivos
 FLUJOS_FILE = "flujos_energia_interconexiones.xlsx"
 MATRIZ_FILE = "Matriz_ImportExport_PorPais.xlsx"
@@ -193,7 +197,7 @@ def matriz_a_dataframe(
 
 
 def main():
-    base_path = Path(__file__).parent
+    base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos...")
     df_flujos = pd.read_excel(base_path / FLUJOS_FILE)

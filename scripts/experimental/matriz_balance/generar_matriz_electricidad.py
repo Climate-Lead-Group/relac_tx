@@ -26,6 +26,9 @@ import openpyxl
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
+
 # Factor de conversión
 PJ_TO_GWH = 277.778  # 1 PJ = 277.778 GWh
 
@@ -41,7 +44,7 @@ print()
 print("PASO 1/2: Extrayendo datos del Excel de OLADE...")
 print("-" * 100)
 
-file_path = 'OLADE - Matriz de balance energético - Anual.xlsx'
+file_path = str(P.MATRIZ_BALANCE / 'OLADE - Matriz de balance energético - Anual.xlsx')
 
 # Verificar que existe el archivo
 if not Path(file_path).exists():
@@ -204,7 +207,7 @@ df_consolidated = df_consolidated[base_cols + other_cols]
 df_consolidated = df_consolidated.sort_values(['País', 'Año'])
 
 # Guardar archivo intermedio
-intermediate_file = 'Matriz_Completa_Con_Produccion.xlsx'
+intermediate_file = str(P.MATRIZ_BALANCE / 'Matriz_Completa_Con_Produccion.xlsx')
 df_consolidated.to_excel(intermediate_file, index=False, sheet_name='Consolidado')
 print(f"✓ Archivo intermedio guardado: {intermediate_file}")
 print(f"  Dimensiones: {df_consolidated.shape[0]} filas x {df_consolidated.shape[1]} columnas")
@@ -262,7 +265,7 @@ df_resumen = df_electricidad.groupby('País').agg({
 df_resumen = df_resumen.sort_values('Balance_Neto_GWh', ascending=False)
 
 # Guardar archivo final
-output_file = 'Matriz_ImportExport_PorPais.xlsx'
+output_file = str(P.MATRIZ_BALANCE / 'Matriz_ImportExport_PorPais.xlsx')
 with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
     df_electricidad.to_excel(writer, sheet_name='Matriz_Completa', index=False)
     df_resumen.to_excel(writer, sheet_name='Resumen_Por_País', index=False)

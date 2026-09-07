@@ -14,6 +14,10 @@ Opcionalmente, puede llenar los datos desde un archivo fuente existente.
 import pandas as pd
 from pathlib import Path
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
+
 # ============================================================================
 # CONFIGURACIÓN - Modificar según necesidades
 # ============================================================================
@@ -254,7 +258,7 @@ def main():
     """Función principal."""
     # Generar lista de años
     years = list(range(YEAR_START, YEAR_END + 1))
-    base_path = Path(__file__).parent
+    base_path = P.MATRIZ_BALANCE
 
     print(f"Generando tabla de flujos de energía...")
     print(f"  - Años: {YEAR_START} a {YEAR_END}")

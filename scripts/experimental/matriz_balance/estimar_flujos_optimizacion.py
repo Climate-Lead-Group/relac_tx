@@ -16,6 +16,10 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import lsq_linear
 from pathlib import Path
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/
+from common import relac_paths as P
 from collections import deque
 
 # ============================================================================
@@ -487,7 +491,7 @@ def calcular_flujos_fisicos(df_bilateral, año):
 # ============================================================================
 
 def main():
-    base_path = Path(__file__).parent
+    base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos OLADE...")
     df_matriz = pd.read_excel(base_path / MATRIZ_FILE, sheet_name="Matriz_Completa")
