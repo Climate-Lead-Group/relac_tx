@@ -1,0 +1,3170 @@
+[
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2029,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2030,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2031,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2029,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2030,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2031,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 10.597396,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 10.469598,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 10.338628,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 10.152942,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 10.014084,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 9.89222,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 9.705723,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 9.529309,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 9.362314,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 9.203241,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 9.053373,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 8.910102,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 8.774389,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 8.644645,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 8.521801,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 8.404239,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 8.29221,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 8.185574,
+    "new": 12.614
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2033,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2034,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2035,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 13.354375,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 13.113058,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 12.884356,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 12.668624,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 12.463203,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 12.269257,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 12.083775,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 11.907314,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 11.739755,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 11.580207,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 11.428682,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 11.283485,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 11.145704,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 11.013917,
+    "new": 13.245
+  },
+  {
+    "scenario": "BAU",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 10.887976,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2029,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2030,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2031,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2029,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2030,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2031,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 10.597396,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 10.469598,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 10.338628,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 10.152942,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 10.014084,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 9.89222,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 9.705723,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 9.529309,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 9.362314,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 9.203241,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 9.053373,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 8.910102,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 8.774389,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 8.644645,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 8.521801,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 8.404239,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 8.29221,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 8.185574,
+    "new": 12.614
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2033,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2034,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2035,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 13.354375,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 13.113058,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 12.884356,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 12.668624,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 12.463203,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 12.269257,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 12.083775,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 11.907314,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 11.739755,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 11.580207,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 11.428682,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 11.283485,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 11.145704,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 11.013917,
+    "new": 13.245
+  },
+  {
+    "scenario": "INV",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 10.887976,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.035964
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRBIOARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRGEOGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.0119
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRGEOGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.0119
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRGEOGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.0119
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRGEOGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.0119
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRGEOGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.376643
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 2.228571
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRHYDGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.042818
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.173158
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.515318
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.515318
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.515318
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.515318
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.515318
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.340592
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.340592
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.340592
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.340592
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRLDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.340592
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.147107
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRNGSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWROILURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.138
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWROILURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.138
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWROILURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.015
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.010588
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.74222
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.74222
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.74222
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": 0.187,
+    "new": 0.74222
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.74222
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.690852
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.690852
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.690852
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.690852
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.690852
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.4
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.5
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.6
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.6
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSDSPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.434179
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.771429
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.066386
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 3.37451
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 3.37451
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 3.37451
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 3.37451
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 3.37451
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 2.423894
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 2.423894
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 2.423894
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 2.423894
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 2.423894
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "field": "Projection.Mode",
+    "old": "EMPTY",
+    "new": "User defined"
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVCRIXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.03
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.6
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.6
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.8
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVPRYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.8
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": 0.15,
+    "new": 0.155
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": 0.015,
+    "new": 0.01
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": 0.05,
+    "new": 0.055
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRSPVURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": 0.035,
+    "new": 0.04
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRURNARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.207857
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONARGXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 0.72675
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONBRAXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 2.914286
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": 0.758,
+    "new": 0.68948
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.516338
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.516338
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.516338
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2044,
+    "old": 0.871,
+    "new": 0.516338
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2045,
+    "old": null,
+    "new": 0.516338
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2046,
+    "old": null,
+    "new": 1.29177
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2047,
+    "old": null,
+    "new": 1.29177
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2048,
+    "old": null,
+    "new": 1.29177
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2049,
+    "old": null,
+    "new": 1.29177
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCHLXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2050,
+    "old": null,
+    "new": 1.29177
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONCRIXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.14
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONGTMXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": null,
+    "new": 0.016
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2040,
+    "old": 0.1,
+    "new": 0.125
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2041,
+    "old": 0.05,
+    "new": 0.025
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2042,
+    "old": 0.09,
+    "new": 0.14
+  },
+  {
+    "scenario": "OPT",
+    "tech": "PWRWONURYXX",
+    "parameter": "TotalAnnualMinCapacityInvestment",
+    "year": 2043,
+    "old": 0.075,
+    "new": 0.055
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2029,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2030,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2031,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2029,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2030,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2031,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 10.597396,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 10.469598,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 10.338628,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 10.152942,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 10.014084,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 9.89222,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 9.705723,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 9.529309,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 9.362314,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 9.203241,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 9.053373,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 8.910102,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 8.774389,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 8.644645,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 8.521801,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 8.404239,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 8.29221,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 8.185574,
+    "new": 12.614
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2033,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2034,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2035,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 13.354375,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 13.113058,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 12.884356,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 12.668624,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 12.463203,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 12.269257,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 12.083775,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 11.907314,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 11.739755,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 11.580207,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 11.428682,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 11.283485,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 11.145704,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 11.013917,
+    "new": 13.245
+  },
+  {
+    "scenario": "OPT",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 10.887976,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2029,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2030,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2031,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.4
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2029,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2030,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2031,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 10.597396,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 10.469598,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 10.338628,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 10.152942,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 10.014084,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 9.89222,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 9.705723,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 9.529309,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 9.362314,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 9.203241,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 9.053373,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 8.910102,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 8.774389,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 8.644645,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 8.521801,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 8.404239,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 8.29221,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNCOLXXPANXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 8.185574,
+    "new": 12.614
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2032,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2033,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2034,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "ResidualCapacity",
+    "year": 2035,
+    "old": 0,
+    "new": 0.42
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2032,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2033,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2034,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2035,
+    "old": 0,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2036,
+    "old": 13.354375,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2037,
+    "old": 13.113058,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2038,
+    "old": 12.884356,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2039,
+    "old": 12.668624,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2040,
+    "old": 12.463203,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2041,
+    "old": 12.269257,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2042,
+    "old": 12.083775,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2043,
+    "old": 11.907314,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2044,
+    "old": 11.739755,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2045,
+    "old": 11.580207,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2046,
+    "old": 11.428682,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2047,
+    "old": 11.283485,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2048,
+    "old": 11.145704,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2049,
+    "old": 11.013917,
+    "new": 13.245
+  },
+  {
+    "scenario": "VGB",
+    "tech": "TRNBOLXXBRAXX",
+    "parameter": "TotalTechnologyAnnualActivityUpperLimit",
+    "year": 2050,
+    "old": 10.887976,
+    "new": 13.245
+  }
+]

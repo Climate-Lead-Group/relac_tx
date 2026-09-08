@@ -20,10 +20,11 @@ escenarios, siempre la misma cantidad de variables de menos). No es semilla, hil
 en los sets; el salto del objetivo con backstop disparado (PWRBCK) es el síntoma típico de perder capacidad
 residual o almacenamiento.
 
-## 2. Hipótesis principal — ya confirmada en el repo (2026-09-08, sin correr nada)
+## 2. Hipótesis principal — confirmada en el repo (2026-09-08) y corregida en `inputs/` el mismo día
 
-Los **cuatro cambios de datos del 2026-09-04** viven en los CSV de `outputs/A2_Output_Params/` (salida de B1,
-commiteada en `93adb77`/`62937e0`) pero **no en los xlsx de `inputs/` que B1 lee**. Cualquier re-ejecución de
+Los **seis cambios de datos** (cuatro del 2026-09-04 más la apertura de topes OPT y la demanda OLADE) viven en los
+CSV de `outputs/A2_Output_Params/` (salida de B1, commiteada en `93adb77`/`62937e0`) pero **no vivían en los xlsx de
+`inputs/` que B1 lee**. Cualquier re-ejecución de
 B1, en cualquier layout y cualquier máquina, regenera `A2_Output_Params` desde los xlsx y los pierde. El
 estado C corrió B1; A y B usaron el `A2_Output_Params` ya parcheado (o un `Executables/` previo).
 
@@ -34,13 +35,21 @@ Evidencia tomada en este clon (`git show`, openpyxl, sin ejecutar el pipeline):
 | Clon BDS (`BDS{C}XX01`, `PWRBDS{C}XX`) | `A-Xtra_Storage.xlsx`: **0** filas BDS | `STORAGE.csv`/`TECHNOLOGY.csv`: 2 filas BDS |
 | `RNWTRNBRAXX` ResidualCapacity | `A-O_Parametrization.xlsx` Demand Techs: **52.990319556** | `ResidualCapacity.csv`: **85.4** |
 | `RNWRPO*XX` OperationalLife | `A-O_Parametrization.xlsx` Fixed Horizon: **20** | `OperationalLife.csv`: **50.0** |
-| Pisos MinCapInv 2040+ (solo OPT) | por verificar en `A1_Outputs_OPT/A-O_Parametrization.xlsx` (Secondary Techs) | por verificar en `OPT/TotalAnnualMinCapacityInvestment.csv` |
+| Pisos MinCapInv 2040+ (solo OPT) + adelanto TRNCOLXXPANXX (2029) / TRNBOLXXBRAXX (2032) | `A-O_Parametrization.xlsx` Secondary Techs: **1** celda 2040+ en OPT, TRN entran 2033/2036 | `OPT/TotalAnnualMinCapacityInvestment.csv`: 201 celdas; TRN 2029/2032 |
+| Topes OPT abiertos (`TotalAnnualMaxCapacityInvestment` = piso×1.01, 82 celdas) | `A1_Outputs_OPT/A-O_Parametrization.xlsx`: topes viejos (< piso) | `OPT/TotalAnnualMaxCapacityInvestment.csv`: piso×1.01 |
+| Demanda OLADE (D2 con `DemandFromOLADE=YES`, `TradeBalanceDemandAdjustment=NO`) | `A-O_Demand.xlsx` ELCARGXX03 2023 = **558.83** | `SpecifiedAnnualDemand.csv` ELCARGXX03 2023 = **564.3** |
 
-Los xlsx de `inputs/` no cambian de contenido desde antes del 04-09 (último commit que los tocó = el
-`git mv` puro `6731992`). Y los scripts que aplicaron esos cambios **no están en el repo ni en su historia**
+Los xlsx de `inputs/` no cambiaban de contenido desde antes del 04-09 (último commit que los tocó = el
+`git mv` puro `6731992`). Los scripts que aplicaron esos cambios **no estaban en el repo ni en su historia**
 (`add_bds_storage.py`, `validate_bds_structure.py`, `patch_rnwtrnbraxx_residualcapacity.py`,
-`patch_nueva_capacidad_2040_tx_advance.py`, el parche de OperationalLife RPO): se aplicaron localmente en
-kt0031 y/o directamente sobre los CSV de A2, sin volver a la fuente de verdad (xlsx).
+`patch_nueva_capacidad_2040_tx_advance.py`, `patch_open_maxcaps_pisos_OPT.py`, `patch_rpo_operationallife.py`):
+se aplicaron localmente sobre el clon viejo (layout `t1_confection/`) sin volver a commitear la fuente de verdad (xlsx).
+
+**Fuente de verdad recuperada (2026-09-08):** `stash@{0}` de este repo ("wip: equalize-scenario-early-years-adjust-BAU-OPT
+antes de clean-sirelac", 2026-09-03, sha `1d09222`) contiene los xlsx con los seis cambios ya aplicados. El stash tiene
+un objeto corrupto (no xlsx), así que se extrajo archivo por archivo con `git show "stash@{0}:<ruta>"` (nunca `stash pop`):
+44 xlsx (38 de `A1_Outputs/`, 4 de `A2_Extra_Inputs/`, `Secondary_Techs_Editor.xlsx`), md5 idéntico al blob del stash.
+Los scripts de parche quedaron versionados en `scripts/tools/data_patches/` (con README y los JSON de aplicación).
 
 Consecuencia secundaria ya visible: los `outputs/A2_Outputs_Params_otoole/{BAC,OPC}` versionados están
 desfasados (sin BDS, 52.99, OL 20) frente a `BAU/OPT/INV/VGB/VSRWF`, que están al día. B2 los sobreescribe
@@ -107,14 +116,25 @@ B2 correcto, o dejar de versionar los otoole de derivados (B2 los regenera siemp
 
 ## 4. Decisión y corrección (tras §3)
 
-El estado correcto es **A=B con los cuatro cambios del 04-09**, salvo que se decida lo contrario. Para que
-cualquier máquina lo reproduzca desde `inputs/`:
+El estado correcto es **A=B con los seis cambios** (BDS, pisos OPT 2040+ y topes abiertos, TRN COL-PAN/BOL-BRA,
+OL RPO 50, RC RNWTRNBRAXX 85.4, demanda OLADE). La demanda OLADE se adopta porque es la que usan el A2 versionado y los
+solves de referencia. Para que cualquier máquina lo reproduzca desde `inputs/`:
 
-1. Recuperar los cuatro scripts de parche (kt0031 / Downloads / rama `equalize-scenario-early-years-adjust-BAU-OPT`
-   commits 70a60ff..1bfb917 para BDS) y **versionarlos** en `scripts/tools/data_patches/`.
-2. Aplicarlos a los xlsx de `inputs/` (BAU/INV/OPT/VGB + `A-Xtra_Storage.xlsx`), con backup, y commitear los
-   xlsx. Orden documentado para BDS: tras A3 y antes de B1 (A3 regenera los A-O y borra BDS).
-3. Correr B1 y comprobar que `outputs/A2_Output_Params/**` queda **byte a byte igual** al versionado hoy
+1. ✅ **Hecho (2026-09-08).** Los seis scripts de parche (+ `test_add_bds_storage.py` y los 2 JSON de aplicación del
+   2026-08-13) versionados en `scripts/tools/data_patches/` con rutas del layout nuevo (`relac_paths`) y README.
+2. ✅ **Hecho (2026-09-08).** En vez de re-aplicar los parches, se restauraron los xlsx ya parcheados desde `stash@{0}`
+   (ver §2). Verificado con openpyxl en los 4 escenarios: BDS 16 filas en Xtra (4/4/22 en
+   Base_Year/Projections/Secondary Techs), RC RNWTRNBRAXX 85.4, OL RPO 50 (38 techs), TRN 2029/2032, pisos 2040+
+   OPT=201 / BAU=1 / INV=1 / VGB=17, 0 conflictos Min>Max en OPT, demanda ARG 564.3 / BRA 2599.63.
+   Orden documentado para BDS: tras A3 y antes de B1 (A3 regenera los A-O y borra BDS).
+   También se agregaron a `inputs/config/Config_MOMF_T1_A.yaml` las entradas `BDSCHLXX01`/`BDSPERXX01` en
+   `xtra_scen.Storage` y a `Config_MOMF_T1_AB.yaml` `PWRBDS` en `activity_upper_limit_exclude_prefixes` (B1 arma el set
+   STORAGE desde ese YAML; el auditor `validate_bds_structure.py` pasa V1–V10 con CHL/PER).
+   **Pendientes de decisión** (no se tocaron): (b) `OLADE_Config` del editor restaurado dice Residual/ActivityLower=YES, ActivityUpper=EXISTING_ONLY,
+   TradeBalance=YES (el editor del clon de backup dice NO en los cuatro, coherente con la demanda generada);
+   (c) el resto de xlsx del stash (`CapacityAndDistances`, `Demanda CireLAC_GTER_WEO`, `LAC_maxcap_tool*`, matrices
+   OLADE, `Miscellaneous/`, `NO BORRAR…`, `Old_Inputs/`) no se restauró.
+3. ⏳ **Pendiente.** Correr B1 y comprobar que `outputs/A2_Output_Params/**` queda **byte a byte igual** al versionado hoy
    (`git status` limpio tras B1): esa es la prueba de que `inputs/` volvió a ser la fuente de verdad.
 4. Solo entonces correr B2 con los seis escenarios y comparar contra A=B (`compare_cplex_sol` + `.sol`).
 5. Actualizar el spec de la reestructuración (§13) y las memorias: la diferencia fue de datos, no de layout.
