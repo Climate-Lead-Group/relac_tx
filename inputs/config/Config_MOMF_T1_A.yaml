@@ -176,6 +176,8 @@ xtra_scen:
   - 'SDSPRYXX01'
   - 'SDSSLVXX01'
   - 'SDSURYXX01'
+  - 'BDSCHLXX01'
+  - 'BDSPERXX01'
 Conversionls:
 - 1
 - 0

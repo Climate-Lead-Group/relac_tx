@@ -197,7 +197,7 @@ activity_upper_limit_scenarios: ["BAU"]
 activity_upper_limit_parameter_label: "TotalTechnologyAnnualActivityUpperLimit_fraction"
 activity_upper_limit_demand_fuel_prefixes: ["ELC"]
 activity_upper_limit_tech_prefixes: ["PWR"]
-activity_upper_limit_exclude_prefixes: ["PWRSDS", "PWRLDS", "PWRBCK", "PWRTRN"]
+activity_upper_limit_exclude_prefixes: ["PWRSDS", "PWRBDS", "PWRLDS", "PWRBCK", "PWRTRN"]
 activity_upper_limit_suffix: "ActUpLim"
 # V4 sum-of-fractions coverage check tolerance (per region/fuel/year).
 # If sum(fractions across capped techs) < 1.0 - tolerance, B1b raises a V4
