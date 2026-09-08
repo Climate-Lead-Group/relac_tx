@@ -731,7 +731,7 @@ Sin `push` hasta que el usuario lo indique.
 
 ---
 
-## 13. Estado al 2026-09-07 y pasos pendientes
+## 13. Estado al 2026-09-08 y pasos pendientes
 
 **Implementado y revisado** en la rama `restructure/inputs-scripts-outputs` (Tasks 2–17 del plan):
 commit de `git mv` puro `6731992` (1163 renombres, 0 cambios de contenido), `scripts/common/relac_paths.py`,
@@ -739,9 +739,16 @@ adaptación de rutas en los ~75 scripts, YAML relativos a la raíz, `dvc.yaml`/`
 documentación, `scripts/tools/migrate_layout_untracked.py`. Revisión final de rama: 0 Critical; los 2 Important
 (orden de negaciones en `.gitignore`; `docs/fix_dispatch/INSTRUCCIONES_SOLVE.md`) corregidos.
 
-**Pendiente** (se hará en otra máquina, sin solver): la verificación byte a byte de §9 (Tasks 1 y 18, opcional 19).
-Herramientas y procedimiento: `scripts/tools/verification/README.md`. Al terminar, anotar aquí el resultado
-(archivos comparados / distintos / diferencias benignas / tiempos). Después: commit de limpieza de código muerto
+**Verificación de resultado (2026-09-08): replicable.** La primera comparación de solves en otra máquina dio distinto
+(estado C: menos filas/columnas en el LP, objetivo ×5.8 en BAC). La causa **no fue el layout** sino datos: los xlsx de
+`inputs/` estaban detrás de los CSV de `outputs/A2_Output_Params/` (seis cambios aplicados con scripts no versionados).
+Diagnóstico y corrección en `docs/superpowers/plans/2026-09-08-diagnostico-estado-C-solves.md`: xlsx restaurados desde
+`stash@{0}` y YAML con las entradas BDS (`fbfe827`), scripts de parche versionados en `scripts/tools/data_patches/`
+(`b6a314f`). Con eso, B1 → B2 en el nuevo layout reproduce el resultado de referencia A=B: **el resultado hasta este
+punto con el nuevo workflow es totalmente replicable desde `inputs/`**. La comparación byte a byte de artefactos
+intermedios de §9 (Tasks 1 y 18) queda como opcional; su herramienta sigue en `scripts/tools/verification/README.md`.
+
+**Pendiente:** commit de limpieza de código muerto
 (constantes `HERE`/`SCRIPT_DIR` sin uso en ~21 scripts, `here` en B2, `P` sin uso en `patch_activity_upper_limit.py`,
 local `P` en `veg_tx_constraints_v14.py`/`experimental/.../veg_tx_constraints.py`), merge a `main`, y en la máquina
 `kt0031`: `git pull` + `python scripts/tools/migrate_layout_untracked.py --apply`.

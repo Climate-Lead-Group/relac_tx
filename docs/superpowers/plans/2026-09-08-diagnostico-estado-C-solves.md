@@ -134,15 +134,15 @@ solves de referencia. Para que cualquier máquina lo reproduzca desde `inputs/`:
    TradeBalance=YES (el editor del clon de backup dice NO en los cuatro, coherente con la demanda generada);
    (c) el resto de xlsx del stash (`CapacityAndDistances`, `Demanda CireLAC_GTER_WEO`, `LAC_maxcap_tool*`, matrices
    OLADE, `Miscellaneous/`, `NO BORRAR…`, `Old_Inputs/`) no se restauró.
-3. ⏳ **Pendiente.** Correr B1 y comprobar que `outputs/A2_Output_Params/**` queda **byte a byte igual** al versionado hoy
-   (`git status` limpio tras B1): esa es la prueba de que `inputs/` volvió a ser la fuente de verdad.
-4. Solo entonces correr B2 con los seis escenarios y comparar contra A=B (`compare_cplex_sol` + `.sol`).
-5. Actualizar el spec de la reestructuración (§13) y las memorias: la diferencia fue de datos, no de layout.
+3. ✅ **Hecho (2026-09-08).** B1 corrido sobre `inputs/` restaurado (commits `fbfe827` + `b6a314f`): el resultado
+   reproduce el estado A=B. `inputs/` volvió a ser la fuente de verdad.
+4. ✅ **Hecho (2026-09-08).** B2 con el nuevo workflow reproduce los solves de referencia A=B: el estado C quedó cerrado.
+5. ✅ **Hecho (2026-09-08).** Spec §13 y memorias actualizadas: la diferencia fue de datos, no de layout.
 
 Atajo aceptable mientras tanto: correr **solo B2** (sin B1) sobre el `A2_Output_Params` versionado, que ya está
 correcto. `run.py`/DVC volvería a lanzar B1: no usarlo hasta cerrar el punto 2.
 
-## 5. Archivos a pasar a la sesión de análisis
+## 5. Archivos a pasar a la sesión de análisis (histórico; ya no necesarios)
 
 Prioridad 1 (bastan para cerrar §3.2 y §3.3; ~6 MB cada txt, comprimir):
 - De **A o B** y de **C**, para BAC e ISR: `Executables/<S>_0/Pre_processed_<S>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt`
@@ -163,3 +163,25 @@ Prioridad 2 (contexto):
 Prioridad 3 (para la corrección del §4): los scripts `add_bds_storage.py`, `validate_bds_structure.py`,
 `patch_rnwtrnbraxx_residualcapacity.py`, `patch_nueva_capacidad_2040_tx_advance.py`, `patch_open_maxcaps_pisos_OPT.py`
 y el parche de OperationalLife RPO, tal como están en kt0031, para versionarlos.
+
+## 6. Cierre (2026-09-08)
+
+**Resultado replicable.** Con `inputs/` restaurado desde `stash@{0}` (commit `fbfe827`), los YAML de `inputs/config/` con
+las entradas BDS y los scripts de parche versionados (`b6a314f`), el nuevo workflow `inputs/ → scripts/ → outputs/`
+(B1 → B2 en el layout reestructurado) reproduce el resultado de referencia A=B: el estado C descrito en §1 ya no ocurre.
+La reestructuración no cambió el resultado; la divergencia era de datos (xlsx detrás de los CSV derivados) y quedó
+corregida en la fuente de verdad.
+
+**Qué garantiza la replicabilidad a partir de aquí**
+
+- Cualquier clon de la rama `restructure/inputs-scripts-outputs` desde `b6a314f` puede correr B1 → B2 desde `inputs/` y
+  obtener el mismo LP y el mismo solve, sin parches locales ni artefactos externos.
+- Los seis cambios de datos están en los xlsx versionados y su historia está en `scripts/tools/data_patches/README.md`.
+- Si se vuelve a correr A3 (regenera los A-O y borra BDS), hay que re-aplicar la cadena documentada en ese README antes
+  de B1; `validate_bds_structure.py` (V1–V10) detecta si falta algo, incluidos los YAML.
+- Si se corre D2 con el `Secondary_Techs_Editor.xlsx` actual (OLADE_Config con `TradeBalanceDemandAdjustment=YES`),
+  la demanda se regenera distinta a la versionada (ELCARGXX03 2023 pasaría de 564.3 a otro valor). Decisión del
+  2026-09-08: se conserva el editor del stash tal cual; no correr D2 sin revisar esa configuración.
+
+**Queda fuera** (decisiones abiertas, no bloquean): el resto de xlsx del stash listados en §4.2(c) y la limpieza de
+`outputs/A2_Outputs_Params_otoole/{BAC,OPC}` versionados (§3.6).
