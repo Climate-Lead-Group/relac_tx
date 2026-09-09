@@ -14,8 +14,10 @@ stages:
       # files
       - outputs/A2_Structure_Lists.xlsx
 
-      # folder with data
-      - outputs/A2_Output_Params/
+      # folder with data (without cache: the folder is versioned in git, see .gitignore)
+      - outputs/A2_Output_Params/:
+          cache: false
+          persist: true
 
   executing:                     # name of the stage
     # wdir: (repo root)
