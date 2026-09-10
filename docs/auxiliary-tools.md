@@ -62,28 +62,6 @@ Values within `0.0001` of 1.0 are considered acceptable. Values outside this ran
 
 ---
 
-## CSV Sorter
-
-**Script:** `scripts/tools/Z_AUX_sort_csv.py`
-
-Sorts all CSV files in a directory by all columns. Used to ensure deterministic file ordering for reproducibility and version control.
-
-### Usage
-
-```bash
-python scripts/tools/Z_AUX_sort_csv.py
-```
-
-When run interactively, it prompts for a folder path. The script can also be imported and used programmatically:
-
-```python
-from Z_AUX_sort_csv import sort_csv_files_in_folder
-
-sort_csv_files_in_folder("path/to/csv/folder")
-```
-
----
-
 ## Region Consolidation (Brazil)
 
 **Script:** `scripts/tools/Z_AUX_united_regions.py`
