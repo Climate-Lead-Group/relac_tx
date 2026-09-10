@@ -62,40 +62,6 @@ Values within `0.0001` of 1.0 are considered acceptable. Values outside this ran
 
 ---
 
-## Interactive Dashboard Generator
-
-**Script:** `scripts/dashboard/Z_AUX_generate_interactive_dashboards_aggregated.py`
-
-Generates standalone HTML dashboards with embedded Plotly.js charts for analyzing power (PWR) technology results.
-
-### Usage
-
-```bash
-python scripts/dashboard/Z_AUX_generate_interactive_dashboards_aggregated.py
-```
-
-### What It Produces
-
-Standalone HTML files containing:
-
-- **Renewability share charts**: Percentage of renewable vs. non-renewable power generation.
-- **Total sum charts**: Aggregated capacity or generation by technology type.
-- **Temporal evolution charts**: How the technology mix changes over the model horizon.
-
-All charts are interactive (zoom, hover, filter) and require no external dependencies -- they embed Plotly.js directly in the HTML.
-
-### PWR Technology Validation
-
-The dashboard uses a regex pattern to identify valid power technologies:
-
-```
-^PWR(BIO|WAS|CSP|GEO|HYD|SPV|WON|WOF|COA|GAS|OIL|PET|URN|...)([A-Z]{3})XX$
-```
-
-Only technologies matching this pattern are included in the visualizations.
-
----
-
 ## CSV Sorter
 
 **Script:** `scripts/tools/Z_AUX_sort_csv.py`
