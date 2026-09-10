@@ -3,8 +3,14 @@ stages:
     # wdir: (repo root)
     cmd: python -u scripts/pipeline/B1_Run_Compiler.py
     deps:
-      # files
+      # scripts (cmd + lo que importa/ejecuta; ver docs/plan_dvc_deps_gap.md seccion 3)
+      - scripts/pipeline/B1_Run_Compiler.py
       - scripts/pipeline/B1_Compiler.py
+      - scripts/pipeline/B1b_Pre_solver_validation.py
+      - scripts/common/relac_paths.py
+      - scripts/common/_xlsx_validation_core.py
+
+      # config
       - inputs/config/Config_MOMF_T1_A.yaml
 
       # folder with data
@@ -23,13 +29,39 @@ stages:
     # wdir: (repo root)
     cmd: python -u scripts/pipeline/B2_Executing_OG_Model.py
     deps:
-      # files
+      # config y modelo
       - inputs/config/Config_MOMF_T1_AB.yaml
+      - inputs/config/Config_MOMF_T1_A.yaml        # B2 lee xtra_scen.Main_Scenario
       - inputs/model/osemosys_fast_preprocessed.txt
-      - scripts/tools/concatenate_relac.py
-      - scripts/pipeline/Z_AUX_capital_annualization_script.py
 
-      # folder with data
+      # orquestador y parches activos (scripts/pipeline)
+      - scripts/pipeline/B2_Executing_OG_Model.py
+      - scripts/pipeline/preprocess_data.py
+      - scripts/pipeline/inject_DaysInDayType.py
+      - scripts/pipeline/patch_storage_delay.py
+      - scripts/pipeline/strip_storage.py
+      - scripts/pipeline/open_pwrbck_caps.py
+      - scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py
+      - scripts/pipeline/patch_reserve_margin_repair_careful.py   # importado por el anterior
+      - scripts/pipeline/sync_patched_csvs_from_txt.py
+      - scripts/pipeline/Z_AUX_capital_annualization_script.py
+      - scripts/tools/concatenate_relac.py
+      - scripts/common/relac_paths.py
+
+      # pisos de despacho (scripts/fix_dispatch)
+      - scripts/fix_dispatch/write_floors.py
+      - scripts/fix_dispatch/preflight_separation.py
+      - scripts/fix_dispatch/relac_io.py
+      - scripts/fix_dispatch/feasibility.py
+      - scripts/fix_dispatch/floor_effect.py
+      - inputs/tx_chain/fix_dispatch/candidate_floors.csv
+
+      # cadena Tx (los 3 scripts de la carpeta corren; __pycache__ excluido via .dvcignore)
+      - scripts/tx_chain/
+      - inputs/tx_chain/outputs_BSR/NewCapacity.csv
+
+      # datos
+      - inputs/data/firm_capacity_fallbacks_by_cr.xlsx
       - outputs/A2_Output_Params/
       - inputs/Miscellaneous/
 

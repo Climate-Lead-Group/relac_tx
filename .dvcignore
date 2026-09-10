@@ -1,3 +1,6 @@
 # Ignorar __pycache__ y bytecode SOLO dentro de outputs/Executables
 outputs/Executables/**/__pycache__/
 outputs/Executables/**/*.py[cod]
+# Bytecode bajo scripts/: evita que deps de carpeta (scripts/tx_chain/) cambien sin cambios de fuente
+scripts/**/__pycache__/
+scripts/**/*.py[cod]
