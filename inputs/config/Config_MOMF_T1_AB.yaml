@@ -238,14 +238,14 @@ preflight_separation_active: True
 preflight_separation_script: "scripts/fix_dispatch/preflight_separation.py"
 
 ########################################################################################
-# === Veg Tx constraints (scripts/tx_chain/veg_tx_constraints_v14.py) ===
+# === Veg Tx constraints (scripts/tx_chain/veg_tx_constraints.py) ===
 # Barrera cross-escenario: necesita los _FLOORED.txt de BAU y OPT (y de INV/VGB)
 # SIMULTANEAMENTE (raise del piso, calibracion m, techo planificadas = plan OPT).
 # Corre UNA sola vez despues de la etapa FLOORED de todos los escenarios base.
 # Escribe cada *_VEGCON.txt en Executables/<S>_0/ (crea las carpetas de los derivados).
 veg_tx_active: True
 veg_tx_suffix: "VEGCON"
-veg_tx_script: "scripts/tx_chain/veg_tx_constraints_v14.py"
+veg_tx_script: "scripts/tx_chain/veg_tx_constraints.py"
 veg_tx_needs_csv: "inputs/tx_chain/outputs_BSR/NewCapacity.csv"   # PIN (ver Riesgos R3)
 
 ########################################################################################
@@ -262,7 +262,7 @@ scenario_transforms:
     script: "scripts/tx_chain/cost_sensitivity_v11.py"
     produces: {BSR: BAU, ISR: INV, VSR: VGB, ISRWF: INVWF, VSRWF: VGBWF}
   - name: nli_sr_recompute
-    script: "scripts/tx_chain/nli_sr_recompute_v1.py"
+    script: "scripts/tx_chain/nli_sr_recompute.py"
     in_place: [ISR, VSR, ISRWF, VSRWF]
 
 # Mapa escenario -> escenario base cuyo A2 (sets/templates otoole) se reutiliza.

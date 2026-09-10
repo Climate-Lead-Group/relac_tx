@@ -16,7 +16,7 @@ MUST_EXIST = [
     P.CANDIDATE_FLOORS, P.VEG_TX_NEEDS_CSV, P.A2_OUTPUT_PARAMS / "BAU", P.A2_OTOOLE,
     P.OUTPUT_MODEL / "osemosys_fast_preprocessed_storage_delay.txt",
     P.PIPELINE / "B2_Executing_OG_Model.py", P.FIX_DISPATCH / "write_floors.py",
-    P.TX_CHAIN / "veg_tx_constraints_v14.py", P.TOOLS / "concatenate_relac.py",
+    P.TX_CHAIN / "veg_tx_constraints.py", P.TOOLS / "concatenate_relac.py",
 ]
 
 def main() -> int:

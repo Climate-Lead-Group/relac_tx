@@ -379,8 +379,8 @@ B2 orchestrates four previously-manual scripts as subprocesses, with their inter
 | Etapa | What runs | Script (unmodified logic) | Output |
 |---|---|---|---|
 | B (per-scenario) | `preflight_separation` gate once, then `write_floors.py --scenarios <S>` per base scenario | `scripts/fix_dispatch/write_floors.py` | `Executables/<S>_0/..._FLOORED.txt` |
-| C (barrier, 1 call) | `veg_tx_constraints_v14.py --base-dir Executables --needs-csv <pin>` | `scripts/tx_chain/veg_tx_constraints_v14.py` | `..._FLOORED_VEGCON.txt` for BAU, OPT, INV, VGB, BAC, OPC, INVWF, VGBWF (creates the derived scenarios' `<S>_0/` folders) |
-| D (barrier, registry) | `cost_sensitivity_v11.py` then `nli_sr_recompute_v1.py`, both `--executables-dir Executables` | `scripts/tx_chain/cost_sensitivity_v11.py`, `nli_sr_recompute_v1.py` | BSR, ISR, VSR, ISRWF, VSRWF (new scenarios); ISR/VSR/ISRWF/VSRWF edited in place |
+| C (barrier, 1 call) | `veg_tx_constraints.py --base-dir Executables --needs-csv <pin>` | `scripts/tx_chain/veg_tx_constraints.py` | `..._FLOORED_VEGCON.txt` for BAU, OPT, INV, VGB, BAC, OPC, INVWF, VGBWF (creates the derived scenarios' `<S>_0/` folders) |
+| D (barrier, registry) | `cost_sensitivity_v11.py` then `nli_sr_recompute.py`, both `--executables-dir Executables` | `scripts/tx_chain/cost_sensitivity_v11.py`, `nli_sr_recompute.py` | BSR, ISR, VSR, ISRWF, VSRWF (new scenarios); ISR/VSR/ISRWF/VSRWF edited in place |
 
 Extensibility: a new constraint script or derived scenario is added entirely in `Config_MOMF_T1_AB.yaml` -- a `scenario_transforms` entry (script + `produces`/`in_place`) plus a `derived_scenarios` mapping and, if it should be solved, an entry in `solve_scenarios`. No B2 code change is needed.
 

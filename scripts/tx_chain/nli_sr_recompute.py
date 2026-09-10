@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""nli_sr_recompute_v1.py -- paso NUEVO de la cadena v10 (correr DESPUES de
+"""nli_sr_recompute.py -- paso NUEVO de la cadena v10 (correr DESPUES de
 cost_sensitivity y ANTES de resolver). Solo escenarios SR: ISR, VSR, ISRWF, VSRWF.
 
 QUE CORRIGE (usuario 2026-09-01): los SR heredan los topes NLI de INV/VGB(/WF),

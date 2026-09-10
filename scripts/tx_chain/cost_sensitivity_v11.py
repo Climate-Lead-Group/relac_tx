@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """v11 transform: SOLO REPOTENCIACION PLANIFICADA (RPO pinneada al piso).
 v11 (2026-09-01): agrega la familia water-fill: ISRWF <- INVWF, VSRWF <- VGBWF
-(archivos generados por veg_tx_constraints_v14 con WATERFILL_ENABLE=True).
-Despues de este paso, correr nli_sr_recompute_v1.py (devuelve la reserva RPO
+(archivos generados por veg_tx_constraints con WATERFILL_ENABLE=True).
+Despues de este paso, correr nli_sr_recompute.py (devuelve la reserva RPO
 muerta al presupuesto NLI de los 4 SR). Logica intacta desde v10.
 Reads a base datafile and, for every repowering technology (families TRNRPO*/RNWRPO*,
 19 countries each), sets TotalAnnualMaxCapacityInvestment = TotalAnnualMinCapacityInvestment
