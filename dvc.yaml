@@ -74,23 +74,23 @@ stages:
           cache: false
           persist: true
 
-      # files (without cache). Prefijo RELAC_TX_StorageDelay_ porque storage_delay_active: True
-      # (Config_MOMF_T1_AB.yaml: storage_delay_prefix_final_files). Si se apaga, volver a RELAC_TX_.
-      - outputs/RELAC_TX_StorageDelay_Inputs.csv:
+      # files (without cache). Prefijo = prefix_final_files de Config_MOMF_T1_AB.yaml;
+      # B2 lo verifica al arrancar (check_dvc_outs_prefix) y aborta si no coincide.
+      - outputs/RELAC_TX_Inputs.csv:
           cache: false
           persist: true
-      - outputs/RELAC_TX_StorageDelay_Inputs_fecha.csv:
+      - outputs/RELAC_TX_Inputs_fecha.csv:
           cache: false
           persist: true
-      - outputs/RELAC_TX_StorageDelay_Outputs.csv:
+      - outputs/RELAC_TX_Outputs.csv:
           cache: false
           persist: true
-      - outputs/RELAC_TX_StorageDelay_Outputs_fecha.csv:
+      - outputs/RELAC_TX_Outputs_fecha.csv:
           cache: false
           persist: true
-      - outputs/RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv:
+      - outputs/RELAC_TX_Combined_Inputs_Outputs.csv:
           cache: false
           persist: true
-      - outputs/RELAC_TX_StorageDelay_Combined_Inputs_Outputs_fecha.csv:
+      - outputs/RELAC_TX_Combined_Inputs_Outputs_fecha.csv:
           cache: false
           persist: true

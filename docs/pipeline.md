@@ -369,7 +369,7 @@ python -u scripts/pipeline/B2_Executing_OG_Model.py
 8. **Post-processing** -- input re-sync from the final `.txt` (fixes stale-input bug for derived scenarios), capital annualization, scenario concatenation.
 
 :::{note}
-When `storage_delay_active: True` (the shipped default), the run is redirected to a parallel set of artifacts prefixed `RELAC_TX_StorageDelay_` so the baseline `RELAC_TX_*` files are not overwritten. See {doc}`solver-patchers` for details.
+The final CSVs always use `prefix_final_files` (`RELAC_TX_`), regardless of which patchers are active; `dvc.yaml` declares them as `outs` under that name and B2 aborts at startup if they disagree. When `storage_delay_active: True` (the shipped default) only the solver model file and the root datafile are redirected. See {doc}`solver-patchers` for details.
 :::
 
 ### Tx Chain Integration (FLOORED → VEGCON → scenario transforms)

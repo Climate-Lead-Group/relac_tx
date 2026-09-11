@@ -44,13 +44,15 @@ Each active patcher appends a suffix to the datafile name (e.g. `Pre_processed_B
 
 ## Storage-delay mode and the dual output pipeline
 
-The storage-delay patcher is special: when `storage_delay_active: True`, B2 **redirects the whole run** to a parallel set of artifacts so the baseline results are never overwritten.
+The storage-delay patcher is special: when `storage_delay_active: True`, B2 redirects the solver model file and the root datafile.
 
 | Aspect | Baseline run | Storage-delay run |
 |--------|--------------|-------------------|
 | Solver model file | `osemosys_fast_preprocessed.txt` | `osemosys_fast_preprocessed_storage_delay.txt` (`storage_delay_model_output`) |
-| Output file prefix | `RELAC_TX_` | `RELAC_TX_StorageDelay_` (`storage_delay_prefix_final_files`) |
 | Root datafile | `RELAC_TX_data.txt` | `RELAC_TX_data_storage_delay.txt` (`storage_delay_root_datafile`) |
+| Final CSV prefix | `RELAC_TX_` | `RELAC_TX_` (unchanged) |
+
+The final CSVs (`RELAC_TX_Inputs.csv`, `RELAC_TX_Outputs.csv`, `RELAC_TX_Combined_Inputs_Outputs.csv`) always use `prefix_final_files`. Until 2026-09-11 storage-delay runs used a separate `RELAC_TX_StorageDelay_` prefix; that desynced the `outs` in `dvc.yaml` (so `dvc repro` failed after the solve) and the consumers that read the un-prefixed name (dashboard, D4). B2 now checks at startup that the `dvc.yaml` outs carry `prefix_final_files` and aborts otherwise.
 
 :::{note}
 `storage_delay_active` is **mutually exclusive** with `strip_storage_active`. When storage-delay is on, B2 silently forces `strip_storage_active = False`.
@@ -80,7 +82,6 @@ The `B1 → otoole → preprocess` chain never generates the `DaysInDayType` blo
 | `storage_delay_allowed_value` | `"-1"` | PWR cap value applied in the open years (`-1` = unconstrained) |
 | `storage_delay_suffix` | `"StorageDelayN5"` | Filename suffix for the chained `.txt` |
 | `storage_delay_model_output` | `osemosys_fast_preprocessed_storage_delay.txt` | Patched model file the solver is redirected to |
-| `storage_delay_prefix_final_files` | `RELAC_TX_StorageDelay_` | Output-file prefix for this run |
 | `storage_delay_root_datafile` | `RELAC_TX_data_storage_delay.txt` | Root datafile name |
 
 ### 3. Storage-strip patcher (diagnostic)
@@ -152,7 +153,7 @@ Reads rows from the **Secondary Techs** sheet of `A-O_Parametrization.xlsx` whos
 
 **Script:** [`sync_patched_csvs_from_txt.py`](../scripts/pipeline/sync_patched_csvs_from_txt.py) · **Switch:** `sync_patched_csvs_active` · **Shipped default: True**
 
-After the chain runs, this step extracts the listed parameter blocks from the **final** patched `.txt` and overwrites the matching CSVs in `A2_Outputs_Params_otoole/<scenario>/` **in place**. `generate_combined_input_file()` then reads those CSVs, so the patched values appear in `RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv` (or the baseline `RELAC_TX_Combined_Inputs_Outputs.csv` when storage-delay is off).
+After the chain runs, this step extracts the listed parameter blocks from the **final** patched `.txt` and overwrites the matching CSVs in `A2_Outputs_Params_otoole/<scenario>/` **in place**. `generate_combined_input_file()` then reads those CSVs, so the patched values appear in `RELAC_TX_Combined_Inputs_Outputs.csv`.
 
 `sync_patched_csvs_params` lists which parameters are synced (default):
 

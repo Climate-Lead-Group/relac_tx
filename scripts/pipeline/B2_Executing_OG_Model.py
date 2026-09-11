@@ -16,6 +16,7 @@ import time
 from datetime import date, datetime
 import multiprocessing as mp
 import math
+import re
 from typing import List, Any
 from pathlib import Path
 import numpy as np
@@ -1120,6 +1121,49 @@ def generate_combined_input_file(input_folder, output_folder, scenario_name):
     return output_path, inputs_data.head()
 
 
+def check_dvc_outs_prefix(params, dvc_yaml=None):
+    """
+    Abort at startup if the CSV outs declared for stage 'executing' in dvc.yaml
+    do not start with params['prefix_final_files'].
+
+    B2 writes outputs/<prefix_final_files>{Inputs,Outputs,Combined_Inputs_Outputs}.csv.
+    If dvc.yaml declares other names, the solve completes but `dvc repro` fails at
+    the very end and dvc.lock is not updated (seen 2026-09-09 with a
+    RELAC_TX_StorageDelay_ prefix vs RELAC_TX_ outs). Checking here turns an
+    hours-late failure into an immediate one. No-op when dvc.yaml is absent
+    (B2 launched outside DVC).
+    """
+    dvc_yaml = Path(dvc_yaml) if dvc_yaml else P.REPO_ROOT / 'dvc.yaml'
+    if not dvc_yaml.is_file():
+        return None
+    with open(dvc_yaml, 'r', encoding='utf-8') as f:
+        stages = (yaml.safe_load(f) or {}).get('stages', {}) or {}
+    outs = (stages.get('executing') or {}).get('outs') or []
+    prefix = params['prefix_final_files']
+    # Exact stems B2 writes; a plain startswith() would accept e.g.
+    # RELAC_TX_StorageDelay_Inputs.csv as a RELAC_TX_ out (the 2026-09-09 case).
+    stems = {Path(params.get('inputs_file', 'Inputs.csv')).stem,
+             Path(params.get('outputs_file', 'Outputs.csv')).stem,
+             'Combined_Inputs_Outputs'}
+    pattern = re.compile(r'^' + re.escape(prefix) + r'(' + '|'.join(map(re.escape, sorted(stems)))
+                         + r')(_[^/]*)?[.]csv$')   # optional _fecha / _YYYY-MM-DD suffix
+    bad = []
+    for out in outs:
+        path = out if isinstance(out, str) else next(iter(out))
+        name = Path(path).name
+        if name.endswith('.csv') and not pattern.match(name):
+            bad.append(path)
+    if bad:
+        raise SystemExit(
+            f"[dvc.yaml] CSV outs of stage 'executing' do not match prefix_final_files='{prefix}' "
+            f"+ {sorted(stems)}: {', '.join(bad)}. B2 would write files DVC does not track and "
+            f"`dvc repro` would fail after the solve. Align dvc.yaml outs with prefix_final_files "
+            f"in Config_MOMF_T1_AB.yaml."
+        )
+    print(f"[dvc.yaml] CSV outs of 'executing' consistent with prefix_final_files='{prefix}'")
+    return prefix
+
+
 def export_root_datafile(here, params, scenario_name, export_name=None):
     """
     Copy the preprocessed main-scenario datafile to outputs/ so the
@@ -1408,9 +1452,10 @@ if __name__ == "__main__":
         params = yaml.safe_load(f)
 
     # storage_delay precedence: when this patcher is active it is mutually
-    # exclusive with strip_storage, switches the solver to the patched model
-    # written by patch_storage_delay.py, and uses its own prefix so the run's
-    # combined inputs/outputs do not overwrite the baseline RELAC_TX_* artifacts.
+    # exclusive with strip_storage and switches the solver to the patched model
+    # written by patch_storage_delay.py. The final CSVs keep the single
+    # prefix_final_files (RELAC_TX_): dvc.yaml outs and downstream consumers
+    # (dashboard, D4) depend on that name, so it never changes with a flag.
     if params.get('storage_delay_active', False):
         if params.get('strip_storage_active', False):
             print("[storage_delay] strip_storage_active forced to False (mutually exclusive)")
@@ -1418,10 +1463,11 @@ if __name__ == "__main__":
         params.setdefault('storage_delay_model_input', params['osemosys_model'])
         params.setdefault('storage_delay_model_output', 'outputs/model/osemosys_fast_preprocessed_storage_delay.txt')
         params['osemosys_model'] = params['storage_delay_model_output']
-        if params.get('storage_delay_prefix_final_files'):
-            params['prefix_final_files'] = params['storage_delay_prefix_final_files']
         print(f"[storage_delay] osemosys_model -> {params['osemosys_model']}")
-        print(f"[storage_delay] prefix_final_files -> {params['prefix_final_files']}")
+
+    # Fail fast: dvc.yaml outs must carry prefix_final_files, otherwise dvc repro
+    # fails AFTER the solve ("output outputs/RELAC_TX_Inputs.csv does not exist").
+    check_dvc_outs_prefix(params)
 
     FROZEN_CHAIN = 'StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED'
     if params.get('veg_tx_active', False) or params.get('scenario_transforms', []):

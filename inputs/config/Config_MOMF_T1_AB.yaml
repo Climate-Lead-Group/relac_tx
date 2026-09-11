@@ -80,9 +80,9 @@ annualize_capital: True
 # Master switch. False (or absent) = pipeline runs unchanged.
 # When True: mutually exclusive with strip_storage_active (strip is silently
 # turned off). The solver is redirected to the patched OSeMOSYS model file
-# produced by patch_storage_delay.py, and combined inputs/outputs are written
-# with `storage_delay_prefix_final_files` so baseline RELAC_TX_* artifacts are
-# not overwritten.
+# produced by patch_storage_delay.py. The final CSVs keep the single prefix
+# `prefix_final_files` (RELAC_TX_): dvc.yaml outs and downstream consumers
+# (dashboard, D4) depend on that name. B2 checks dvc.yaml against it at startup.
 storage_delay_active: True
 storage_delay_first_n_years: 5
 storage_delay_storage_prefixes:
@@ -93,7 +93,6 @@ storage_delay_storage_prefixes:
 storage_delay_allowed_value: "-1"     # PWR cap value applied in open years (-1 = unconstrained)
 storage_delay_suffix: "StorageDelayN5"
 storage_delay_model_output: "outputs/model/osemosys_fast_preprocessed_storage_delay.txt"
-storage_delay_prefix_final_files: "RELAC_TX_StorageDelay_"
 storage_delay_root_datafile: "RELAC_TX_data_storage_delay.txt"
 
 ########################################################################################
@@ -210,8 +209,7 @@ activity_upper_limit_coverage_tolerance: 0.15
 # .txt and OVERWRITE IN PLACE the matching CSVs inside
 # A2_Outputs_Params_otoole/<scen>/. generate_combined_input_file() then reads
 # from this folder so the patched values appear in
-# RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv (and the legacy
-# RELAC_TX_Combined_Inputs_Outputs.csv when storage_delay is off).
+# RELAC_TX_Combined_Inputs_Outputs.csv.
 #
 # Note: this writes into the original A2 folder in place, so re-running the
 # pipeline regenerates the CSVs from A1 before the patcher chain re-applies.
