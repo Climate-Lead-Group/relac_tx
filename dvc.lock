@@ -3,95 +3,192 @@ stages:
   executing:
     cmd: python -u scripts/pipeline/B2_Executing_OG_Model.py
     deps:
-    - path: scripts/tools/concatenate_relac.py
-      hash: md5
-      md5: 73fe184e6cb2f8cfe57d85e740c87cf9
-      size: 4989
-    - path: outputs/A2_Output_Params/
-      hash: md5
-      md5: 0d44ef556ccf815b0961dcb2b2c6d4e4.dir
-      size: 37133291
-      nfiles: 172
-    - path: inputs/config/Config_MOMF_T1_AB.yaml
-      hash: md5
-      md5: 0dc4ccc7fbab87e3ec3c3f0550d9be9d
-      size: 1887
     - path: inputs/Miscellaneous/
       hash: md5
-      md5: 324c0f302e8f20dd6a901e9bae5e2db5.dir
-      size: 267094
+      md5: 889c0b66579073828aa2825bd496d157.dir
+      size: 255740
       nfiles: 72
-    - path: scripts/pipeline/Z_AUX_capital_annualization_script.py
+    - path: inputs/config/Config_MOMF_T1_A.yaml
       hash: md5
-      md5: dd28a97035414d458dc4d5f16f8d83e6
-      size: 27123
+      md5: ed98bcd8d3ffc8b4521c1eb567679ba6
+      size: 11007
+    - path: inputs/config/Config_MOMF_T1_AB.yaml
+      hash: md5
+      md5: 941f21d70ee3a738b5a2b462278d8ad5
+      size: 12194
+    - path: inputs/data/firm_capacity_fallbacks_by_cr.xlsx
+      hash: md5
+      md5: 7ea3663b5f9ab705662adc21062a99b3
+      size: 6116
     - path: inputs/model/osemosys_fast_preprocessed.txt
       hash: md5
-      md5: 35277c7325a26e424661d9b86d95e4b2
-      size: 94156
+      md5: 67cbfd2c3ccc4ec0f1f54865a979d71c
+      size: 95301
+    - path: inputs/tx_chain/fix_dispatch/candidate_floors.csv
+      hash: md5
+      md5: ad4df1f583303ce01e958e740296d6bd
+      size: 514211
+    - path: inputs/tx_chain/outputs_BSR/NewCapacity.csv
+      hash: md5
+      md5: ec5586c8adea7df052cedf833a8042f2
+      size: 212542
+    - path: outputs/A2_Output_Params/
+      hash: md5
+      md5: 22dfdaa5c77e7b4d4ab97a375bf7820e.dir
+      size: 48643148
+      nfiles: 172
+    - path: scripts/common/relac_paths.py
+      hash: md5
+      md5: 3c3fafff1466543b53675b4dc920cc04
+      size: 2997
+    - path: scripts/fix_dispatch/feasibility.py
+      hash: md5
+      md5: dd5cea4f7d7829a34d58006e7de8ac6a
+      size: 9019
+    - path: scripts/fix_dispatch/floor_effect.py
+      hash: md5
+      md5: b081710e51651a312deb357fe7610ff6
+      size: 12475
+    - path: scripts/fix_dispatch/preflight_separation.py
+      hash: md5
+      md5: e12f152f690772bd7af2536bbceb3333
+      size: 8581
+    - path: scripts/fix_dispatch/relac_io.py
+      hash: md5
+      md5: 6767e6b4317eb7cea3465dc1aac107f1
+      size: 15265
+    - path: scripts/fix_dispatch/write_floors.py
+      hash: md5
+      md5: df9c29c1ab6fd41ff5e1f1f16ca5391b
+      size: 11830
+    - path: scripts/pipeline/B2_Executing_OG_Model.py
+      hash: md5
+      md5: 921c33099d1bcce186151143c8551468
+      size: 77039
+    - path: scripts/pipeline/Z_AUX_capital_annualization_script.py
+      hash: md5
+      md5: a1aa43da025589627d5e1d979736df05
+      size: 27792
+    - path: scripts/pipeline/inject_DaysInDayType.py
+      hash: md5
+      md5: 95d96c80b9df0132b298c658928bc706
+      size: 4928
+    - path: scripts/pipeline/open_pwrbck_caps.py
+      hash: md5
+      md5: 30ff19f5c097a815430f9f9e85b5433b
+      size: 7240
+    - path: scripts/pipeline/patch_reserve_margin_repair_careful.py
+      hash: md5
+      md5: 636d2001397e6149016d28a41b664ce5
+      size: 22177
+    - path: scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py
+      hash: md5
+      md5: 9ca3c809f3a99d21ed07e2597b766f72
+      size: 11118
+    - path: scripts/pipeline/patch_storage_delay.py
+      hash: md5
+      md5: 7740481f2feb1e004fc5bc9b12610362
+      size: 15758
+    - path: scripts/pipeline/preprocess_data.py
+      hash: md5
+      md5: 304771b925cf520bf384cbbc16dcaaf0
+      size: 12021
+    - path: scripts/pipeline/strip_storage.py
+      hash: md5
+      md5: 2ea3be13c432c297db4a1a0721800768
+      size: 15113
+    - path: scripts/pipeline/sync_patched_csvs_from_txt.py
+      hash: md5
+      md5: 3066987ffcab66aca7d4b8875c7cc5c8
+      size: 3801
+    - path: scripts/tools/concatenate_relac.py
+      hash: md5
+      md5: aa2cd1a6c37e9f075850bd6ca1cf83fa
+      size: 5061
+    - path: scripts/tx_chain/
+      hash: md5
+      md5: 58b8b48dd3b203b31fb474f38c1e5d9b.dir
+      size: 98375
+      nfiles: 3
     outs:
     - path: outputs/A2_Outputs_Params_otoole/
       hash: md5
-      md5: 4a30530bf5c111f76754e77d5ce0ce1b.dir
-      size: 4748266
-      nfiles: 64
+      md5: 0afcdbdf8736285399e3f5327c83f107.dir
+      size: 63736342
+      nfiles: 640
     - path: outputs/Executables/
       hash: md5
-      md5: 9cb2d7323cc985a6622c18735b253c64.dir
-      size: 128820721
-      nfiles: 6
-    - path: outputs/RELAC_TX_Combined_Inputs_Outputs.csv
+      md5: 84b94d492adfe7de97cd79ce2bb06d7f.dir
+      size: 7668337535
+      nfiles: 343
+    - path: outputs/RELAC_TX_StorageDelay_Combined_Inputs_Outputs.csv
       hash: md5
-      md5: d0478f072bcb162119d7dd41d0f9224a
-      size: 168178869
-    - path: outputs/RELAC_TX_Combined_Inputs_Outputs_2026-02-10.csv
+      md5: 2e1292b288d16737792d4de7f55f934a
+      size: 725944082
+    - path: outputs/RELAC_TX_StorageDelay_Combined_Inputs_Outputs_2026-09-09.csv
       hash: md5
-      md5: d0478f072bcb162119d7dd41d0f9224a
-      size: 168178869
-    - path: outputs/RELAC_TX_Inputs.csv
+      md5: 2e1292b288d16737792d4de7f55f934a
+      size: 725944082
+    - path: outputs/RELAC_TX_StorageDelay_Inputs.csv
       hash: md5
-      md5: 2f9c74d09d3e55c3e655739074aedaca
-      size: 23886543
-    - path: outputs/RELAC_TX_Inputs_2026-02-10.csv
+      md5: a3d27da1513fd6d21278b31bb871907b
+      size: 148127624
+    - path: outputs/RELAC_TX_StorageDelay_Inputs_2026-09-09.csv
       hash: md5
-      md5: 2f9c74d09d3e55c3e655739074aedaca
-      size: 23886543
-    - path: outputs/RELAC_TX_Outputs.csv
+      md5: a3d27da1513fd6d21278b31bb871907b
+      size: 148127624
+    - path: outputs/RELAC_TX_StorageDelay_Outputs.csv
       hash: md5
-      md5: 29a4107de2ffd99ea6220c178db087da
-      size: 101642187
-    - path: outputs/RELAC_TX_Outputs_2026-02-10.csv
+      md5: 08504c87a1c532f1b1eceff1b051f010
+      size: 384825808
+    - path: outputs/RELAC_TX_StorageDelay_Outputs_2026-09-09.csv
       hash: md5
-      md5: 29a4107de2ffd99ea6220c178db087da
-      size: 101642187
+      md5: 08504c87a1c532f1b1eceff1b051f010
+      size: 384825808
   preprocess:
     cmd: python -u scripts/pipeline/B1_Run_Compiler.py
     deps:
     - path: inputs/A1_Outputs/
       hash: md5
-      md5: 3f03ea236d6c9d72f3d3dbf7c1ad0b1d.dir
-      size: 49385139
-      nfiles: 221
+      md5: 3cfb18857901d4f070bb02b3ed1e869f.dir
+      size: 82595142
+      nfiles: 238
     - path: inputs/A2_Extra_Inputs/
       hash: md5
-      md5: d7f3cffc58ff33d405439d6acc80fe1e.dir
-      size: 710846
-      nfiles: 34
-    - path: scripts/pipeline/B1_Compiler.py
-      hash: md5
-      md5: 7e85a7cdbcf7c09934ef522ab47ca6c6
-      size: 96135
+      md5: 265299194a98c0ab35dcb55a2b290812.dir
+      size: 98524
+      nfiles: 5
     - path: inputs/config/Config_MOMF_T1_A.yaml
       hash: md5
-      md5: c190c951cd77151ac3006d2b5f394d07
-      size: 10830
+      md5: ed98bcd8d3ffc8b4521c1eb567679ba6
+      size: 11007
+    - path: scripts/common/_xlsx_validation_core.py
+      hash: md5
+      md5: 0945d360c11f180a937e769a6a54585f
+      size: 26107
+    - path: scripts/common/relac_paths.py
+      hash: md5
+      md5: 3c3fafff1466543b53675b4dc920cc04
+      size: 2997
+    - path: scripts/pipeline/B1_Compiler.py
+      hash: md5
+      md5: 12a7ea5ae4660fe9899429d1fc028d41
+      size: 97368
+    - path: scripts/pipeline/B1_Run_Compiler.py
+      hash: md5
+      md5: 03f13448ee018c903c9ec4621cac026b
+      size: 8281
+    - path: scripts/pipeline/B1b_Pre_solver_validation.py
+      hash: md5
+      md5: abc67554e4183da7caa7d92d370c1212
+      size: 23955
     outs:
     - path: outputs/A2_Output_Params/
       hash: md5
-      md5: 0d44ef556ccf815b0961dcb2b2c6d4e4.dir
-      size: 37133291
+      md5: 22dfdaa5c77e7b4d4ab97a375bf7820e.dir
+      size: 48643148
       nfiles: 172
     - path: outputs/A2_Structure_Lists.xlsx
       hash: md5
-      md5: 2380d34c99262cd405ca175f3710b637
-      size: 18337
+      md5: 68f6e5868057f3e487bbf3bc4f137591
+      size: 20838
