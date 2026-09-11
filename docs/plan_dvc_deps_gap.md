@@ -10,7 +10,7 @@ sí corre (import), B2 lee `Config_MOMF_T1_A.yaml`, y los deps de carpeta bajo `
 
 **Estado de aplicación (2026-09-10):** el §7 está aplicado en la rama `dvc/declare-deps` (`dvc.yaml` +
 `.dvcignore`). Validación en seco OK: `dvc stage list`, `dvc dag`, `dvc status` (lista los 8 deps de
-`preprocess` y 24 de `executing` sin error de ruta), `dvc repro --dry`, y `dvc check-ignore` confirma
+`preprocess` y 26 de `executing` sin error de ruta), `dvc repro --dry`, y `dvc check-ignore` confirma
 que `scripts/**/__pycache__` queda excluido. Pendiente: una corrida real que actualice `dvc.lock`,
 commitear ese lock en la rama y mergear a `main`.
 
