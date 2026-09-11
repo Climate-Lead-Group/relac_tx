@@ -14,6 +14,13 @@ sí corre (import), B2 lee `Config_MOMF_T1_A.yaml`, y los deps de carpeta bajo `
 que `scripts/**/__pycache__` queda excluido. Pendiente: una corrida real que actualice `dvc.lock`,
 commitear ese lock en la rama y mergear a `main`.
 
+**Hallazgo de la primera corrida real (kt0031, 2026-09-09):** B2 terminó bien (62 min) pero `dvc repro`
+falló con `output 'outputs\RELAC_TX_Inputs.csv' does not exist`. Causa: con `storage_delay_active: True`
+B2 escribe con prefijo `RELAC_TX_StorageDelay_` (`storage_delay_prefix_final_files`), y los `outs` de
+`dvc.yaml` seguían con `RELAC_TX_`. Bug previo a esta rama: explica que `dvc.lock` de `executing` no se
+actualizara desde 2026-02-10 y los seis `deleted` del §4.2. Corregido en la rama renombrando los seis
+`outs`. Los `outs` deben seguir al flag: si se apaga `storage_delay_active`, volver a `RELAC_TX_`.
+
 ## 1. El problema en una frase
 
 `dvc.yaml` declara como `deps` solo una fracción de los scripts y datos que cada stage realmente
