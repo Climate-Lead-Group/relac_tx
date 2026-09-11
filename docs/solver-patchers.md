@@ -31,9 +31,8 @@ otoole conversion → OSeMOSYS preprocessing
 2. Storage-delay patcher          (storage_delay_active)
 3. Storage-strip patcher          (strip_storage_active)
 4. PWRBCK cap-opening patcher     (open_pwrbck_active)
-5. Reserve-margin repair (blunt)  (reserve_margin_repair_active)
-6. Reserve-margin repair (XLSX)   (reserve_margin_xlsx_active)
-7. Activity-upper-limit patcher   (activity_upper_limit_active)
+5. Reserve-margin repair (XLSX)   (reserve_margin_xlsx_active)
+6. Activity-upper-limit patcher   (activity_upper_limit_active)
    ↓
 Sync patched CSVs → solver → results
 ```
@@ -108,13 +107,7 @@ Produces a new `.txt` with selected storage facilities **and their feeding PWR t
 | `open_pwrbck_pattern` | `"PWRBCK"` | Technology-name prefix to match |
 | `open_pwrbck_suffix` | `"OpenBCK"` | Filename suffix |
 
-### 5. Reserve-margin repair — blunt (legacy)
-
-**Switch:** `reserve_margin_repair_active` · **Shipped default: False**
-
-The original, blunter reserve-margin repair (`patch_reserve_margin_repair.py`). The switch is preserved in B2 for compatibility, but the script is **not shipped in this repository** — only the careful variants below are. Leave this disabled and use the XLSX path (step 6).
-
-### 6. Reserve-margin repair — careful XLSX
+### 5. Reserve-margin repair — careful XLSX
 
 **Script:** [`patch_reserve_margin_repair_careful_xlsx.py`](../scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py) · **Switch:** `reserve_margin_xlsx_active` · **Shipped default: True**
 
@@ -131,7 +124,7 @@ Adds reserve-margin tags and repairs firm fossil capacity caps using per-country
 | `reserve_margin_xlsx_global_value` | `0.15` | Global `ReserveMargin` written for every (REGION, YEAR); unset = leave block untouched |
 | `reserve_margin_xlsx_suffix` | `"RMCarefulXLSX"` | Filename suffix |
 
-### 7. Activity-upper-limit patcher
+### 6. Activity-upper-limit patcher
 
 **Script:** [`patch_activity_upper_limit.py`](../scripts/pipeline/patch_activity_upper_limit.py) · **Switch:** `activity_upper_limit_active` · **Shipped default: False**
 
@@ -182,7 +175,6 @@ To run the plain baseline pipeline (no patchers, single `RELAC_TX_*` output set)
 storage_delay_active: False
 strip_storage_active: False
 open_pwrbck_active: False
-reserve_margin_repair_active: False
 reserve_margin_xlsx_active: False
 activity_upper_limit_active: False
 sync_patched_csvs_active: False

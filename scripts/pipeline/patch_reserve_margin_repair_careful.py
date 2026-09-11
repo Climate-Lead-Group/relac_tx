@@ -1,6 +1,7 @@
 """Careful reserve-margin repair with per-country-region firm capacity caps.
 
-This is a more conservative sibling to patch_reserve_margin_repair.py.
+Library behind patch_reserve_margin_repair_careful_xlsx.py (the blunt
+patch_reserve_margin_repair.py it derived from is no longer part of the pipeline).
 It does not edit the input datafile in place.
 
 Main differences:

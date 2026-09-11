@@ -19,7 +19,17 @@ falló con `output 'outputs\RELAC_TX_Inputs.csv' does not exist`. Causa: con `st
 B2 escribe con prefijo `RELAC_TX_StorageDelay_` (`storage_delay_prefix_final_files`), y los `outs` de
 `dvc.yaml` seguían con `RELAC_TX_`. Bug previo a esta rama: explica que `dvc.lock` de `executing` no se
 actualizara desde 2026-02-10 y los seis `deleted` del §4.2. Corregido en la rama renombrando los seis
-`outs`. Los `outs` deben seguir al flag: si se apaga `storage_delay_active`, volver a `RELAC_TX_`.
+`outs`.
+
+**Seguimiento (2026-09-11, rama `fix/dvc-outs-prefix-and-legacy-rm-patcher`):** (1) prefijo único
+`RELAC_TX_` para los CSV finales (se eliminó `storage_delay_prefix_final_files`; los `outs` ya no
+dependen de ningún flag) y B2 verifica al arrancar que los `outs` CSV de `dvc.yaml` coincidan con
+`prefix_final_files` (`check_dvc_outs_prefix`, aborta antes del solve). (2) Eliminado el patcher
+legacy `run_reserve_margin_repair_patcher` (B2:459 apuntaba a un script inexistente y su CLI era
+incompatible con `_careful.py`), su entrada en `CHAIN_ORDER` y `reserve_margin_repair_active`.
+Hallazgo adicional: kt0031 hace checkout con CRLF y esta máquina con LF; los md5 de `dvc.lock`
+difieren por máquina para archivos de texto (verificado: relac_paths.py y osemosys txt). Sin
+`.gitattributes` el lock de una máquina invalida ambos stages en la otra. Pendiente de decidir.
 
 ## 1. El problema en una frase
 

@@ -10,7 +10,6 @@ PARAMS = {
     'storage_delay_active': True,  'storage_delay_suffix': 'StorageDelayN5',
     'strip_storage_active': False, 'strip_storage_suffix': 'NoStorage',
     'open_pwrbck_active': True,    'open_pwrbck_suffix': 'OpenBCK',
-    'reserve_margin_repair_active': False,
     'reserve_margin_xlsx_active': True, 'reserve_margin_xlsx_suffix': 'RMCarefulXLSX',
     'dispatch_floors_active': False,
     'veg_tx_active': False,

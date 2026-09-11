@@ -125,12 +125,6 @@ open_pwrbck_pattern: "PWRBCK"
 open_pwrbck_suffix: "OpenBCK"
 
 ########################################################################################
-# === Older blunt reserve-margin repair ===
-# Keep this disabled for the XLSX careful path. It is preserved in the B2 copy
-# for compatibility, but the XLSX patcher below is the one intended for this config.
-reserve_margin_repair_active: False
-
-########################################################################################
 # === Careful XLSX reserve-margin repair ===
 # This calls patch_reserve_margin_repair_careful_xlsx.py.
 # It produces e.g.:

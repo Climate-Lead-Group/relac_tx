@@ -57,7 +57,6 @@ CHAIN_ORDER = [
     ('storage_delay_active',         'storage_delay_suffix',         'StorageDelayN5'),
     ('strip_storage_active',         'strip_storage_suffix',         'NoStorage'),
     ('open_pwrbck_active',           'open_pwrbck_suffix',           'OpenBCK'),
-    ('reserve_margin_repair_active', 'reserve_margin_repair_suffix', 'RMRepair'),
     ('reserve_margin_xlsx_active',   'reserve_margin_xlsx_suffix',   'RMCarefulXLSX'),
     ('dispatch_floors_active',       'dispatch_floors_suffix',       'FLOORED'),
     ('veg_tx_active',                'veg_tx_suffix',                'VEGCON'),
@@ -431,77 +430,6 @@ def run_open_pwrbck_patcher(params, scenario_name):
         print(result.stdout)
     print('#------------------------------------------------------------------------------#')
 
-def run_reserve_margin_repair_patcher(params, scenario_name):
-    """
-    OPTIONAL diagnostic/final-ish step: patches ReserveMarginTagTechnology and
-    opens selected firm capacity caps in the preprocessed datafile.
-
-    Controlled by params['reserve_margin_repair_active'] (default False = no-op).
-
-    YAML keys consumed:
-        reserve_margin_repair_active: bool  -- master switch (default False)
-        reserve_margin_repair_suffix: str   -- chained filename suffix (default "RMRepair")
-        reserve_margin_backstop_credit: num -- PWRBCK reserve credit (default 1.0)
-        reserve_margin_ccs_credit: num      -- PWRCCS reserve credit (default 0.9)
-        reserve_margin_open_capacity_value: num -- cap value for selected techs (default 9999)
-        reserve_margin_open_capacity_prefixes: list -- default ["PWRPET", "PWROIL", "PWRNGS"]
-        reserve_margin_patch_backstop: bool -- set PWRBCK tags (default True)
-        reserve_margin_patch_ccs: bool      -- set PWRCCS tags (default True)
-        reserve_margin_open_capacity: bool  -- open selected caps (default True)
-
-    This chains after strip_storage/open_pwrbck when those patchers are active.
-    """
-    if not params.get('reserve_margin_repair_active', False):
-        return  # No-op when disabled
-
-    suffix = params.get('reserve_margin_repair_suffix', 'RMRepair')
-    script_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'patch_reserve_margin_repair.py',
-    )
-
-    in_base = chained_base(params, scenario_name, upto=suffix)
-    out_base = f"{in_base}_{suffix}"
-
-    in_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{in_base}.txt")
-    out_file = os.path.join(ROOT, params['executables'], scenario_name + '_0', f"{out_base}.txt")
-
-    command = [
-        sys.executable,
-        script_path,
-        in_file,
-        '-o',
-        out_file,
-        '--backstop-credit',
-        str(params.get('reserve_margin_backstop_credit', 1.0)),
-        '--ccs-credit',
-        str(params.get('reserve_margin_ccs_credit', 0.9)),
-        '--open-capacity-value',
-        str(params.get('reserve_margin_open_capacity_value', 9999)),
-    ]
-
-    open_prefixes = params.get(
-        'reserve_margin_open_capacity_prefixes',
-        ['PWRPET', 'PWROIL', 'PWRNGS'],
-    )
-    command += ['--open-capacity-prefixes'] + list(open_prefixes)
-
-    if not params.get('reserve_margin_patch_backstop', True):
-        command.append('--skip-backstop-credit')
-    if not params.get('reserve_margin_patch_ccs', True):
-        command.append('--skip-ccs-credit')
-    if not params.get('reserve_margin_open_capacity', True):
-        command.append('--skip-capacity-opening')
-
-    print(f"Repairing reserve margin data for '{scenario_name}_0' (suffix={suffix}):")
-    print(' '.join(command))
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"[ERROR] reserve_margin_repair patcher failed for '{scenario_name}':\n{result.stderr}")
-    else:
-        print(result.stdout)
-    print('#------------------------------------------------------------------------------#')
-
 def run_reserve_margin_xlsx_patcher(params, scenario_name):
     """
     OPTIONAL careful reserve-margin repair step using an XLSX fallback workbook.
@@ -518,8 +446,7 @@ def run_reserve_margin_xlsx_patcher(params, scenario_name):
         reserve_margin_xlsx_target_prefixes: list -- default ["PWRPET", "PWROIL", "PWRNGS"]
         reserve_margin_xlsx_sentinel_values: list -- default [0, 9999]
 
-    This chains after strip_storage/open_pwrbck and also after the older
-    reserve_margin_repair patch if that older patch is active.
+    This chains after strip_storage/open_pwrbck.
     """
     if not params.get('reserve_margin_xlsx_active', False):
         return
@@ -1526,7 +1453,6 @@ if __name__ == "__main__":
                 run_storage_delay_patcher(params, scenario_name)
                 run_strip_storage_patcher(params, scenario_name)
                 run_open_pwrbck_patcher(params, scenario_name)
-                run_reserve_margin_repair_patcher(params, scenario_name)
                 run_reserve_margin_xlsx_patcher(params, scenario_name)
                 run_activity_upper_limit_patcher(params, scenario_name)
                 run_dispatch_floors_patcher(params, scenario_name, HERE)

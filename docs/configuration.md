@@ -364,7 +364,6 @@ annualize_capital: True
 | `storage_delay_active` | `True` | Block storage builds for the first N years (redirects the solver model file; final CSVs keep the `RELAC_TX_` prefix) |
 | `strip_storage_active` | `True` | Disable storage + feeding PWR techs (diagnostic; forced off when storage-delay is on) |
 | `open_pwrbck_active` | `True` | Reopen PWRBCK* backstop capacity caps |
-| `reserve_margin_repair_active` | `False` | Legacy blunt reserve-margin repair |
 | `reserve_margin_xlsx_active` | `True` | Careful reserve-margin repair from `firm_capacity_fallbacks_by_cr.xlsx` |
 | `activity_upper_limit_active` | `False` | Cap `TotalTechnologyAnnualActivityUpperLimit` from demand fractions |
 | `sync_patched_csvs_active` | `True` | Sync patched values back into the otoole CSVs |
