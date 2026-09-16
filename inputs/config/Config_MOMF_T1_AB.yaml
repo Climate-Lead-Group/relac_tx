@@ -251,7 +251,7 @@ veg_tx_needs_csv: "inputs/tx_chain/outputs_BSR/NewCapacity.csv"   # PIN (ver Rie
 # escenarios) su mapeo en derived_scenarios abajo. Nada mas.
 scenario_transforms:
   - name: cost_sensitivity
-    script: "scripts/tx_chain/cost_sensitivity_v11.py"
+    script: "scripts/tx_chain/cost_sensitivity_v_SR_WF.py"
     produces: {BSR: BAU, ISR: INV, VSR: VGB, ISRWF: INVWF, VSRWF: VGBWF}
   - name: nli_sr_recompute
     script: "scripts/tx_chain/nli_sr_recompute.py"

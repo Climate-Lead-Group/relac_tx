@@ -52,7 +52,7 @@ run.py
              │     patch_reserve_margin_repair_careful_xlsx, sync_patched_csvs_from_txt
              ├─ subprocess fix_dispatch: preflight_separation (gate), write_floors (por escenario)
              │     └─ ambos importan relac_io, feasibility; preflight importa floor_effect
-             ├─ subprocess tx_chain: veg_tx_constraints (barrera), cost_sensitivity_v11,
+             ├─ subprocess tx_chain: veg_tx_constraints (barrera), cost_sensitivity_v_SR_WF,
              │     nli_sr_recompute (transforms)
              ├─ subprocess scripts/tools/concatenate_relac.py (post-solve)
              └─ import Z_AUX_capital_annualization_script (annualize_capital True)
@@ -107,7 +107,7 @@ Scripts (`scripts/fix_dispatch/`):
 
 Scripts (`scripts/tx_chain/`), los tres corren:
 - `veg_tx_constraints.py` (yaml `veg_tx_script`)
-- `cost_sensitivity_v11.py`, `nli_sr_recompute.py` (yaml `scenario_transforms[*].script`)
+- `cost_sensitivity_v_SR_WF.py`, `nli_sr_recompute.py` (yaml `scenario_transforms[*].script`)
 
 Scripts comunes:
 - `scripts/common/relac_paths.py`
