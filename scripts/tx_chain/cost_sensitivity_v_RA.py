@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""RA cost-sensitivity transform: renewable CapitalCost ONLY (variante A de la pata renovable).
+"""RA (Renovables Altos) cost-sensitivity transform: renewable CapitalCost ONLY.
+PENDIENTE (2026-09-16): CALIBRAR los multiplicadores de Renovables Altos. Hoy son los de RB
+(renovables baratas), es decir, el escenario aun NO representa renovables caras.
 Copia estructural de cost_sensitivity_v_RB.py (2026-09-16): misma logica, mismas familias,
 mismo self-check. Los MULTIPLICADORES se ajustan manualmente en la seccion "tunable knobs";
 el self-check se deriva de esos knobs, asi que no hay que tocar nada mas al cambiarlos.
@@ -7,7 +9,7 @@ Restricted to the B* and I* scenarios. Reads a base VEGCON .txt, scales CapitalC
 solar, wind and battery storage, writes a new datafile. Only VALUES change; structure/bounds
 untouched -> feasibility preserved. Backstop is left AS-IS in the solve.
 
-Multipliers (hoy = RB; AJUSTAR MANUALMENTE):
+Multipliers (PLACEHOLDER = RB; PENDIENTE CALIBRAR Renovables Altos):
   - PWRSPV/PWRCSP x0.60 (NREL ATB 2024 PV Moderate; EIA AEO2025 Low Zero-Carbon Tech Cost)
   - PWRWON/PWRWOF x0.75 (NREL ATB 2024 land-based wind Moderate [EST]; shallower than PV)
   - PWRSDS x0.50 (NREL ATB 2024 utility battery Moderate)
@@ -44,7 +46,7 @@ def LOCAL(s):
 # base scenario -> new scenario code (only B* and I*)
 PAIRS={"BAC":"BRA", "INV":"IRA"}
 
-# ----- tunable knobs -----
+# ----- tunable knobs ----- PENDIENTE: calibrar Renovables Altos (valores actuales = RB)
 VRE_MULT   = 0.6                       # solar CapitalCost x0.6
 WIND_MULT  = 0.75                      # wind CapitalCost x0.75 (shallower decline than PV)
 STO_MULT   = 0.5                       # battery storage CapitalCost x0.5

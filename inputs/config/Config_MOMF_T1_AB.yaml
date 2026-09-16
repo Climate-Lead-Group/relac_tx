@@ -267,7 +267,7 @@ scenario_transforms:
   - name: cost_sensitivity_RB          # CapitalCost solar x0.60 / eolica x0.75 / baterias x0.50
     script: "scripts/tx_chain/cost_sensitivity_v_RB.py"
     produces: {BRB: BAC, IRB: INV}
-  - name: cost_sensitivity_RA          # variante A de la pata renovable (multiplicadores a ajustar)
+  - name: cost_sensitivity_RA          # Renovables Altos. PENDIENTE CALIBRAR: multiplicadores hoy = RB
     script: "scripts/tx_chain/cost_sensitivity_v_RA.py"
     produces: {BRA: BAC, IRA: INV}
 
