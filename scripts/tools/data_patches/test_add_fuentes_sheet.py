@@ -9,6 +9,7 @@ Verifica:
   4. El filtro por `Archivo` (con `|`) reparte bien las filas entre los 3 tipos de libro.
   5. La lectura estilo B1 (pandas ExcelFile) sigue funcionando al excluir `Fuentes`, y
      sync_historical_from_bau.year_columns() no ve columnas de año en la hoja nueva.
+  6. Las plantillas de Miscellaneous reciben la hoja con encabezado pero sin filas de datos.
 
 Uso:
     python scripts/tools/data_patches/test_add_fuentes_sheet.py
@@ -120,6 +121,19 @@ def main() -> int:
                 check(yc == {}, f"{src.name}: sync_historical no detecta columnas de año en '{afs.SHEET_NAME}'")
             except ImportError as e:  # pragma: no cover
                 print(f"  SKIP sync_historical no importable: {e}")
+        # Plantillas: la hoja debe quedar solo con título y encabezado (0 filas de datos)
+        tmpl = tmp / "plantilla_A-O_Demand.xlsx"
+        shutil.copy2(P.MISCELLANEOUS / "A-O_Demand.xlsx", tmpl)
+        afs.apply_to_workbook(tmpl, [], dry_run=False)
+        wbt = openpyxl.load_workbook(tmpl, read_only=True)
+        wst = wbt[afs.SHEET_NAME]
+        data_rows = [r for r in wst.iter_rows(min_row=3, values_only=True) if any(v is not None for v in r)]
+        hdr_t = [c.value for c in next(wst.iter_rows(min_row=2, max_row=2))][: len(afs.COLUMNS)]
+        wbt.close()
+        check(hdr_t == afs.COLUMNS and not data_rows, "plantilla: hoja Fuentes con encabezado y 0 filas de datos")
+        tmpl_targets = [(k, p, tp) for k, p, tp in afs.targets(True) if tp]
+        check(len(tmpl_targets) == 3 and all("Miscellaneous" in str(p) for _, p, _ in tmpl_targets),
+              "targets(): las 3 plantillas de Miscellaneous van marcadas como plantilla")
     finally:
         gc.collect()
         time.sleep(0.2)

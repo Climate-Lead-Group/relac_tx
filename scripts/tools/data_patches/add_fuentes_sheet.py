@@ -10,8 +10,8 @@ separados por `|`):
   - inputs/A1_Outputs/A1_Outputs_<esc>/A-O_Parametrization.xlsx   (BAU, INV, OPT, VGB)
   - inputs/A1_Outputs/A1_Outputs_<esc>/A-O_Demand.xlsx            (BAU, INV, OPT, VGB)
   - inputs/A2_Extra_Inputs/A-Xtra_Storage.xlsx
-  - inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx  (plantillas; --no-templates
-    para omitirlas)
+  - inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx  (plantillas: solo título y
+    encabezado, SIN filas, porque las plantillas no tienen datos; --no-templates para omitirlas)
 
 La hoja se llama `Fuentes`, va al final del libro y NO tiene columnas de años, de modo que
 sync_historical_from_bau.py la salta ("no year columns"). B1_Compiler.py la excluye explícitamente
@@ -70,15 +70,16 @@ def rows_for(rows: list[dict[str, str]], workbook_key: str) -> list[dict[str, st
     return [r for r in rows if workbook_key in [a.strip() for a in r["Archivo"].split("|")]]
 
 
-def targets(include_templates: bool = True) -> list[tuple[str, Path]]:
-    out: list[tuple[str, Path]] = []
+def targets(include_templates: bool = True) -> list[tuple[str, Path, bool]]:
+    """(clave del CSV, ruta, es_plantilla). Las plantillas reciben la hoja vacía (solo encabezado)."""
+    out: list[tuple[str, Path, bool]] = []
     for scen in SCENARIOS:
         for key in ("A-O_Parametrization", "A-O_Demand"):
-            out.append((key, P.scenario_dir(scen) / WORKBOOK_FILES[key]))
-    out.append(("A-Xtra_Storage", P.A2_EXTRA_INPUTS / WORKBOOK_FILES["A-Xtra_Storage"]))
+            out.append((key, P.scenario_dir(scen) / WORKBOOK_FILES[key], False))
+    out.append(("A-Xtra_Storage", P.A2_EXTRA_INPUTS / WORKBOOK_FILES["A-Xtra_Storage"], False))
     if include_templates:
         for key, fname in WORKBOOK_FILES.items():
-            out.append((key, P.MISCELLANEOUS / fname))
+            out.append((key, P.MISCELLANEOUS / fname, True))
     return out
 
 
@@ -121,13 +122,13 @@ def apply_to_workbook(path: Path, rows: list[dict[str, str]], dry_run: bool) -> 
         print(f"  [omitido] no existe: {path}")
         return 0
     if dry_run:
-        print(f"  [dry-run] {_rel(path)}: {len(rows)} filas en hoja '{SHEET_NAME}'")
+        print(f"  [dry-run] {_rel(path)}: {len(rows)} filas en hoja '{SHEET_NAME}'" + (" (plantilla: solo encabezado)" if not rows else ""))
         return len(rows)
     wb = openpyxl.load_workbook(path)
     write_sheet(wb, rows)
     wb.save(path)
     wb.close()
-    print(f"  [ok] {_rel(path)}: hoja '{SHEET_NAME}' con {len(rows)} filas")
+    print(f"  [ok] {_rel(path)}: hoja '{SHEET_NAME}' con {len(rows)} filas" + (" (plantilla: solo encabezado)" if not rows else ""))
     return len(rows)
 
 
@@ -135,8 +136,10 @@ def run(apply: bool, include_templates: bool = True, csv_path: Path = CSV_PATH) 
     rows = load_rows(csv_path)
     summary: dict[str, int] = {}
     print(f"Tabla maestra: {csv_path} ({len(rows)} filas)")
-    for key, path in targets(include_templates):
-        summary[str(path)] = apply_to_workbook(path, rows_for(rows, key), dry_run=not apply)
+    for key, path, is_template in targets(include_templates):
+        # Plantillas de Miscellaneous: no tienen datos, así que la hoja va sin filas (solo título y encabezado).
+        wb_rows = [] if is_template else rows_for(rows, key)
+        summary[str(path)] = apply_to_workbook(path, wb_rows, dry_run=not apply)
     if not apply:
         print("\nDry-run: nada escrito. Use --apply para escribir la hoja.")
     return summary
