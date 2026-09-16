@@ -8,8 +8,8 @@ This guide covers the full setup process for running RELAC TX on a Windows machi
 - **Git:** [Git for Windows](https://gitforwindows.org/) (version 2.40+)
 - **Python distribution:** [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/download)
 - **Solver:** At least one of the following LP/MIP solvers:
-  - [GLPK](https://www.gnu.org/software/glpk/) (open source, included in conda-forge)
-  - [CBC](https://github.com/coin-or/Cbc) (open source)
+  - [GLPK](https://www.gnu.org/software/glpk/) (open source, **installed automatically** with the Conda environment)
+  - [CBC](https://github.com/coin-or/Cbc) (open source, **installed automatically** with the Conda environment)
   - [CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio) (commercial, IBM)
   - [Gurobi](https://www.gurobi.com/) (commercial, free academic license)
 
@@ -41,29 +41,29 @@ The environment installs the following packages:
 | openpyxl | >= 3.1 | Excel file reading |
 | xlsxwriter | >= 3.2.4 | Excel file writing |
 | pyyaml | >= 6.0 | YAML configuration parsing |
+| matplotlib | >= 3.8 | Figures (`scripts/fix_dispatch`, `scripts/tx_chain`) |
+| plotly | >= 5.18, < 7 | Interactive dashboard (`scripts/dashboard/build_dashboard.py`) |
+| ruamel.yaml | >= 0.17 | Comment-preserving YAML edits in `B1_Run_Compiler.py` (PyYAML fallback if absent) |
+| scipy | >= 1.11 | Least-squares fit in `scripts/experimental/matriz_balance` |
+| glpk | latest (conda-forge) | GLPK solver, provides the `glpsol` CLI |
+| coincbc | latest (conda-forge) | CBC solver, provides the `cbc` CLI (metapackage for `coin-or-cbc`) |
 | git | >= 2.40 | Version control |
 | dvc | latest | Data Version Control pipeline |
 | otoole | >= 1.1.1 | OSeMOSYS data format conversion |
 
 ## Solver Setup
 
-### GLPK (simplest option)
+### GLPK and CBC (included in the environment)
 
-GLPK can be installed directly via conda:
+Both open-source solvers are declared in `environment.yaml` (`glpk` and `coincbc`), so they are installed together with the Conda environment. No extra step is needed for a fresh environment.
 
-```bash
-conda activate OG-MOMF-env
-conda install -c conda-forge glpk
-```
-
-### CBC
-
-CBC can also be installed via conda:
+If your `OG-MOMF-env` was created before the solvers were added, `run.py` detects the missing `glpsol`/`cbc` binaries and installs them on its next run. You can also do it manually:
 
 ```bash
-conda activate OG-MOMF-env
-conda install -c conda-forge coin-or-cbc
+conda install -n OG-MOMF-env -c conda-forge glpk coincbc
 ```
+
+Note: the binaries live inside the environment (`...\envs\OG-MOMF-env\Library\bin`), so they are only on `PATH` when the environment is active (or when running through `conda run`, as `run.py` does).
 
 ### CPLEX
 

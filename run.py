@@ -7,7 +7,8 @@ Features:
 - Backup of dvc.yaml, temporary replacement of 'fecha' -> YYYY-MM-DD (any occurrence).
 - If the Conda environment exists, it is NOT recreated.
 - If the environment exists, verifies dependencies and installs missing ones:
-    * conda-forge: pandas, numpy, openpyxl, pyyaml, xlsxwriter
+    * conda-forge: pandas, numpy, openpyxl, pyyaml, xlsxwriter, matplotlib, plotly, ruamel.yaml, scipy
+    * conda-forge solvers (checked as CLI binaries, not modules): glpk (glpsol), coincbc (cbc)
     * pip: dvc, otoole
   (installs 'pip' in the environment if needed).
 - Initializes DVC repo if missing (.dvc/).
@@ -38,7 +39,18 @@ CONDA_DEPS = {
     "numpy": "numpy",
     "openpyxl": "openpyxl",
     "yaml": "pyyaml",          # PyYAML se importa como 'yaml'
-    "xlsxwriter": "xlsxwriter"
+    "xlsxwriter": "xlsxwriter",
+    "matplotlib": "matplotlib",
+    "plotly": "plotly",
+    "ruamel.yaml": "ruamel.yaml",   # B1 prefers it to keep YAML comments; PyYAML fallback otherwise
+    "scipy": "scipy",
+}
+# Open-source solvers shipped with the env. They are CLI binaries (not Python
+# modules), so they are checked with 'where'/'which' inside the env.
+SOLVER_BINS = {
+    # cli_binary: conda_package
+    "glpsol": "glpk",
+    "cbc": "coincbc",          # metapackage -> coin-or-cbc
 }
 PIP_DEPS = {
     # python_module: pip_package
@@ -152,10 +164,21 @@ def module_present(env_name: str, module: str) -> bool:
     except subprocess.CalledProcessError:
         return False
 
+def solver_present(env_name: str, binary: str) -> bool:
+    """True if 'binary' resolves via where/which when running inside the conda env
+    (env/Library/bin is on PATH there; a global install found on PATH also counts)."""
+    finder = "where" if os.name == "nt" else "which"
+    try:
+        run(f"conda run -n {env_name} {finder} {binary}")
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 def ensure_deps(env_name: str) -> None:
     """
     Verifies modules in the environment and installs missing ones.
     - Conda (conda-forge) for the data stack.
+    - Conda (conda-forge) for the open-source solvers (glpk, coincbc), checked as binaries.
     - Pip for dvc/otoole.
     """
     # Ensure pip is available inside the environment if we'll need it
@@ -168,6 +191,14 @@ def ensure_deps(env_name: str) -> None:
     if missing_conda:
         pkgs = " ".join(missing_conda)
         print(f"Installing missing conda deps: {missing_conda}")
+        run(f"conda install -n {env_name} -c conda-forge -y {pkgs}")
+
+    # Solver binaries (glpsol, cbc) — existing envs created before these were
+    # added to environment.yaml will not have them; install on demand.
+    missing_solvers = [pkg for binary, pkg in SOLVER_BINS.items() if not solver_present(env_name, binary)]
+    if missing_solvers:
+        pkgs = " ".join(missing_solvers)
+        print(f"Installing missing solver packages: {missing_solvers}")
         run(f"conda install -n {env_name} -c conda-forge -y {pkgs}")
 
     # Pip deps

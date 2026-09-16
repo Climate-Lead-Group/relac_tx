@@ -12,6 +12,14 @@ dependencies:
   - openpyxl>=3.1
   - pyyaml>=6.0
   - xlsxwriter>=3.2.4   # from conda-forge, stable on Windows
+  - matplotlib>=3.8     # figures (scripts/fix_dispatch, scripts/tx_chain)
+  - plotly>=5.18,<7     # dashboard (build_dashboard.py); developed/tested on plotly 6.x
+  - ruamel.yaml>=0.17   # B1_Run_Compiler: edits YAML preserving comments (falls back to PyYAML if absent)
+  - scipy>=1.11         # scripts/experimental/matriz_balance (lsq_linear)
+
+  # Solvers (open source; CPLEX/Gurobi are installed separately)
+  - glpk                # provides glpsol CLI
+  - coincbc             # provides cbc CLI (metapackage -> coin-or-cbc)
 
   # Pip (for DVC and otoole)
   - pip

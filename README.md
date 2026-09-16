@@ -42,7 +42,7 @@ Las rutas de los archivos YAML de configuración son siempre relativas a la raí
 - Windows 10 o superior
 - Git para Windows
 - Miniconda o Anaconda
-- Al menos un solver: GLPK, CBC, CPLEX o Gurobi
+- Al menos un solver: GLPK, CBC, CPLEX o Gurobi (GLPK y CBC vienen incluidos en el entorno Conda vía `environment.yaml`; CPLEX y Gurobi se instalan aparte)
 
 ## Inicio Rápido
 

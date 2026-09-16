@@ -28,24 +28,21 @@
 
 ### 2.1 Solvers
 
-#### GLPK
-- **Versión recomendada:** 4.65
-- Instálalo siguiendo la *Guía CLG – GLPK*
-- **Verificación** (en **Anaconda Prompt**):
+#### GLPK y CBC (incluidos en el entorno)
+- **No requieren instalación manual:** ambos están declarados en `environment.yaml` (`glpk` y `coincbc`) y se instalan junto con el entorno Conda al ejecutar `run.py`.
+- Si tu entorno `OG-MOMF-env` es anterior a esta inclusión, `run.py` detecta que faltan los binarios `glpsol`/`cbc` y los instala en su siguiente ejecución. Instalación manual equivalente (en **Anaconda Prompt**):
   ```bash
-  glpsol --version
+  conda install -n OG-MOMF-env -c conda-forge glpk coincbc
   ```
-  Debe mostrar: "GLPK LP/MIP Solver, v4.65"
-
-#### CBC
-- **Versión recomendada:** 2.7.5
-- Instálalo siguiendo la *Guía CLG – CBC*
-- **Verificación** (en **Anaconda Prompt**):
+- **Verificación** (en **Anaconda Prompt**, con el entorno activo):
   ```bash
+  conda activate OG-MOMF-env
+  glpsol --version
   cbc -v
   CTRL+Z
   ```
-  Debería indicar la versión y fecha de compilación
+  `glpsol` debe mostrar "GLPK LP/MIP Solver, v5.0" (o superior); `cbc` debe indicar la versión (2.10.x) y fecha de compilación.
+- **Nota:** los binarios viven dentro del entorno (`...\envs\OG-MOMF-env\Library\bin`), por lo que solo están en el `PATH` con el entorno activo o vía `conda run` (como hace `run.py`). Si prefieres una instalación global fuera de Conda, sigue las *Guías CLG – GLPK / CBC*.
 
 #### CPLEX
 - **Versión recomendada:** 22.1.1.0
