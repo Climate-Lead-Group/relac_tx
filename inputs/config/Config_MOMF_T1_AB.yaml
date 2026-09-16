@@ -294,10 +294,7 @@ derived_scenarios:
   IRA: INV
 
 # Universo a RESOLVER (etapa E, paralelizada). Comentar los que no se quieran.
-# Orden = orden de ejecucion (parallel: False). BAC y OPC primero; luego los 13
-# escenarios que generan los 5 scripts cost_sensitivity_v_*.py (SR_WF, FA, FB, RB, RA).
-solve_scenarios: [BAC, OPC,
-                  BSR, ISR, VSR, ISRWF, VSRWF,
-                  BFA, IFA, BFB, IFB, BRB, IRB, BRA, IRA]
+# Orden = orden de ejecucion (parallel: False).
+solve_scenarios: [BAC, BFA, BFB, BRA, BRB, BSR, ISR, IFA, IFB, INV, IRA, IRB, OPC, VSR]
 # solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF,
 #                   BFA, IFA, BFB, IFB, BRB, IRB, BRA, IRA]
