@@ -217,7 +217,8 @@ sync_patched_csvs_params:
   - TotalAnnualMinCapacityInvestment
   - TotalTechnologyAnnualActivityUpperLimit
   - TotalTechnologyAnnualActivityLowerLimit   # write_floors (FLOORED)
-  - CapitalCost                                # veg_tx (calibracion m + escalada)
+  - CapitalCost                                # veg_tx (calibracion m + escalada); RB/RA
+  - VariableCost                               # cost_sensitivity FA/FB (combustible fosil)
 
 ########################################################################################
 # === Dispatch floors (fix_dispatch/write_floors.py, pisos fosiles) ===
@@ -256,6 +257,19 @@ scenario_transforms:
   - name: nli_sr_recompute
     script: "scripts/tx_chain/nli_sr_recompute.py"
     in_place: [ISR, VSR, ISRWF, VSRWF]
+  # Sensibilidad de costos sobre BAC e INV (VEGCON de la etapa C). Independientes entre si.
+  - name: cost_sensitivity_FA          # combustible fosil MIN* VariableCost x1.70
+    script: "scripts/tx_chain/cost_sensitivity_v_FA.py"
+    produces: {BFA: BAC, IFA: INV}
+  - name: cost_sensitivity_FB          # combustible fosil MIN* VariableCost x0.52
+    script: "scripts/tx_chain/cost_sensitivity_v_FB.py"
+    produces: {BFB: BAC, IFB: INV}
+  - name: cost_sensitivity_RB          # CapitalCost solar x0.60 / eolica x0.75 / baterias x0.50
+    script: "scripts/tx_chain/cost_sensitivity_v_RB.py"
+    produces: {BRB: BAC, IRB: INV}
+  - name: cost_sensitivity_RA          # variante A de la pata renovable (multiplicadores a ajustar)
+    script: "scripts/tx_chain/cost_sensitivity_v_RA.py"
+    produces: {BRA: BAC, IRA: INV}
 
 # Mapa escenario -> escenario base cuyo A2 (sets/templates otoole) se reutiliza.
 # Los transforms solo cambian VALORES, nunca sets, asi que el A2 de la base es
@@ -270,7 +284,16 @@ derived_scenarios:
   VSR: VGB
   ISRWF: INV
   VSRWF: VGB
+  BFA: BAU
+  IFA: INV
+  BFB: BAU
+  IFB: INV
+  BRB: BAU
+  IRB: INV
+  BRA: BAU
+  IRA: INV
 
 # Universo a RESOLVER (etapa E, paralelizada). Comentar los que no se quieran.
 solve_scenarios: [VSRWF]
-# solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF]
+# solve_scenarios: [BAU, OPT, INV, VGB, BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF,
+#                   BFA, IFA, BFB, IFB, BRB, IRB, BRA, IRA]
