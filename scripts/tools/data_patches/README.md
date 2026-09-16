@@ -23,6 +23,7 @@ original; solo cambiaron las constantes de ruta y las líneas de "Uso".
 | `patch_open_maxcaps_pisos_OPT.py` | En OPT, donde el piso nuevo supera el tope `TotalAnnualMaxCapacityInvestment`, abre el tope a `piso × 1.01` (precedente VGB). Celdas/filas `EMPTY` = sin tope, no se tocan. | `A1_Outputs_OPT/A-O_Parametrization.xlsx` / Secondary Techs | 2026-08-13 14:25 — log `open_maxcaps_pisos_OPT_20260813_142555.json` (82 celdas) | `--dry-run` (hoy reporta 0 conflictos) |
 | `patch_rpo_operationallife.py` | `OperationalLife` 20 → 50 en todas las filas cuyo Tech contiene `RPO` (`RNWRPO*`, `TRNRPO*`: 38 techs). Precondición: todas en 20; si no, no toca el escenario. | `A-O_Parametrization.xlsx` / Fixed Horizon Parameters, col. H (4 escenarios) | 2026-09-01 (backups `.bak_20260901_*` en el stash) | dry-run por defecto; `--apply` escribe. Hoy reporta "NO SE SUSTITUYE: Value = 50" (ya aplicado) |
 | `patch_rnwtrnbraxx_residualcapacity.py` | `ResidualCapacity` de `RNWTRNBRAXX` 52.990319556 → 85.40 en I..AJ (2023-2050). Precondición: las 28 celdas en 52.99. | `A-O_Parametrization.xlsx` / Demand Techs, fila 676 (4 escenarios) | 2026-09-02 | dry-run por defecto; `--apply` escribe. Hoy reporta "NO SE SUSTITUYE: = 85.4" (ya aplicado) |
+| `add_fuentes_sheet.py` | Agrega/reemplaza la hoja documental **`Fuentes`** (fuente, archivo/hoja de origen y transformación por bloque de datos) al final de cada libro, leyendo la tabla maestra `inputs/config/data_sources.csv` (columna `Archivo` admite `A|B`). Idempotente. Sin columnas de años → `sync_historical_from_bau.py` la salta; `B1_Compiler.py` la excluye igual que `growth_formula`. | `A-O_Parametrization.xlsx` y `A-O_Demand.xlsx` de los 4 escenarios; `A2_Extra_Inputs/A-Xtra_Storage.xlsx`; plantillas `inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx` | 2026-09-14 (78 / 23 / 5 filas por tipo de libro) | dry-run por defecto; `--apply` escribe; `--no-templates` omite `Miscellaneous/`. Test: `python scripts/tools/data_patches/test_add_fuentes_sheet.py` |
 
 Los dos JSON son los logs `old → new` por celda que generaron los parches del 2026-08-13 al aplicarse
 (originalmente en `A1_Outputs/`; se mueven aquí porque `A1_Outputs/` está en `inputs/` y `*log*` cae en
@@ -41,6 +42,7 @@ A3 (regenera A-O_* y BORRA BDS)
  -> patch_open_maxcaps_pisos_OPT.py          (Max = piso x 1.01 donde Min > Max)
  -> patch_rpo_operationallife.py --apply     (OL RPO 20 -> 50)
  -> patch_rnwtrnbraxx_residualcapacity.py --apply (RC 52.99 -> 85.4)
+ -> add_fuentes_sheet.py --apply             (hoja documental Fuentes; A3 la borra al regenerar)
  -> B1 -> B2
 ```
 
@@ -48,6 +50,9 @@ A3 (regenera A-O_* y BORRA BDS)
 seguros en cualquier punto (editan por match de Tech).
 
 ## Advertencias
+
+- La hoja `Fuentes` es solo documental. Para cambiar una fuente, editar `inputs/config/data_sources.csv` y
+  volver a correr `add_fuentes_sheet.py --apply` (no editar la hoja a mano: se reescribe entera).
 
 - **A3 regenera los A-O y borra BDS** (y pisa cualquier edición manual de Secondary Techs / Fixed Horizon
   Parameters). Después de A3 hay que re-correr la cadena completa antes de B1.

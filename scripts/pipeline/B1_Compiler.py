@@ -355,6 +355,8 @@ print('4 - Process the model demand.')
 
 Demand = pd.ExcelFile(os.path.join(params['A1_outputs'],A1_PREFIX + '_' + params['xtra_scen']['Main_Scenario'] + params['Print_Demand']))
 param_sheets = Demand.sheet_names # see all sheet names
+if 'Fuentes' in param_sheets:  # hoja documental de fuentes de datos (add_fuentes_sheet.py)
+    param_sheets.remove('Fuentes')
 
 
 
@@ -407,7 +409,7 @@ accumulated_rows_SpecAnnualDemand = []
 accumulated_rows_SpecDemandProfile = []
 #
 for s in range( len( param_sheets ) ):
-    Demand_df = Demand.parse( Demand.sheet_names[s] )
+    Demand_df = Demand.parse( param_sheets[s] )
     list_demand_or_share = Demand_df[ 'Demand/Share' ].tolist()
     #
     list_fuel_or_tech = Demand_df[ 'Fuel/Tech' ].tolist()
@@ -559,6 +561,8 @@ Parametrization = pd.ExcelFile(os.path.join(params['A1_outputs'],A1_PREFIX + '_'
 param_sheets = Parametrization.sheet_names # see all sheet names]
 if 'growth_formula' in param_sheets:
     param_sheets.remove('growth_formula')
+if 'Fuentes' in param_sheets:  # hoja documental de fuentes de datos (add_fuentes_sheet.py)
+    param_sheets.remove('Fuentes')
 #
 params_dict = {}
 params_dict_new = {}
