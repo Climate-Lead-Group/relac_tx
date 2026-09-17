@@ -36,7 +36,7 @@ outputs/Figures/
 | Dashboard solo | `python scripts/figures/dashboard/build_dashboard.py` (todos los charts) o `... 01 03` (un subconjunto, solo para depurar) |
 
 Tiempos medidos el 2026-09-17 (CSV de 6 escenarios, 605 MB): construir el Parquet ~25 s (una vez;
-después se reutiliza), reporte ~14 s (14 figuras), presentación ~13 s (14 figuras), dashboard ~X min.
+después se reutiliza), reporte ~14 s (14 figuras), presentación ~10 s (14 figuras), dashboard ~3,5 min (17 charts + pestañas 16-18; lee el CSV completo). Total run_all ~4,5 min.
 
 ## YAML de encendido/apagado
 

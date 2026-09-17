@@ -41,8 +41,9 @@ The environment installs the following packages:
 | openpyxl | >= 3.1 | Excel file reading |
 | xlsxwriter | >= 3.2.4 | Excel file writing |
 | pyyaml | >= 6.0 | YAML configuration parsing |
-| matplotlib | >= 3.8 | Figures (`scripts/fix_dispatch`, `scripts/tx_chain`) |
-| plotly | >= 5.18, < 7 | Interactive dashboard (`scripts/dashboard/build_dashboard.py`) |
+| matplotlib | >= 3.8 | Figures (`scripts/figures/report`, `scripts/figures/presentation`, `scripts/fix_dispatch`, `scripts/tx_chain`) |
+| plotly | >= 5.18, < 7 | Interactive dashboard (`scripts/figures/dashboard/build_dashboard.py`) |
+| pyarrow | >= 14 | Parquet subset of the combined CSV for the static figures (`scripts/figures/common/dashboard_config.py`) |
 | ruamel.yaml | >= 0.17 | Comment-preserving YAML edits in `B1_Run_Compiler.py` (PyYAML fallback if absent) |
 | scipy | >= 1.11 | Least-squares fit in `scripts/experimental/matriz_balance` |
 | glpk | latest (conda-forge) | GLPK solver, provides the `glpsol` CLI |
