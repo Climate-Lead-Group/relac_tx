@@ -49,6 +49,9 @@ A2_OTOOLE = OUTPUTS / "A2_Outputs_Params_otoole"
 EXECUTABLES = OUTPUTS / "Executables"
 OUTPUT_MODEL = OUTPUTS / "model"
 FIGURES = OUTPUTS / "Figures"
+FIGURES_DASHBOARD = FIGURES / "Dashboard"        # dashboard.html + chart*.png
+FIGURES_REPORT = FIGURES / "Report"              # fig_*.png del reporte
+FIGURES_PRESENTATION = FIGURES / "Presentation"  # fig_*_presentation.png
 LOGS = OUTPUTS / "logs"
 FIX_DISPATCH_OUT = OUTPUTS / "fix_dispatch"
 TX_CHAIN_OUT = OUTPUTS / "tx_chain"
@@ -60,6 +63,7 @@ PIPELINE = SCRIPTS / "pipeline"
 FIX_DISPATCH = SCRIPTS / "fix_dispatch"
 TX_CHAIN = SCRIPTS / "tx_chain"
 TOOLS = SCRIPTS / "tools"
+FIGURES_SCRIPTS = SCRIPTS / "figures"
 
 
 def scenario_dir(scenario: str) -> Path:
@@ -74,5 +78,6 @@ def executables_dir(scenario: str) -> Path:
 
 def ensure_output_dirs() -> None:
     for d in (OUTPUTS, A2_OUTPUT_PARAMS, A2_OTOOLE, EXECUTABLES, OUTPUT_MODEL, FIGURES, LOGS,
-              FIX_DISPATCH_OUT, TX_CHAIN_OUT, EXPERIMENTAL_OUT, TEMPLATES_OUT):
+              FIX_DISPATCH_OUT, TX_CHAIN_OUT, EXPERIMENTAL_OUT, TEMPLATES_OUT,
+              FIGURES_DASHBOARD, FIGURES_REPORT, FIGURES_PRESENTATION):
         d.mkdir(parents=True, exist_ok=True)

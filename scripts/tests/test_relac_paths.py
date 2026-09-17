@@ -25,6 +25,13 @@ def main() -> int:
         print("FALTA:", p)
     assert P.executables_dir("BAU") == P.OUTPUTS / "Executables" / "BAU_0"
     assert P.REPO_ROOT.name == "relac_tx" or (P.REPO_ROOT / "dvc.yaml").is_file()
+    # Figuras (spec 2026-09-16 §4)
+    assert P.FIGURES_DASHBOARD == P.FIGURES / "Dashboard"
+    assert P.FIGURES_REPORT == P.FIGURES / "Report"
+    assert P.FIGURES_PRESENTATION == P.FIGURES / "Presentation"
+    assert P.FIGURES_SCRIPTS == P.SCRIPTS / "figures"
+    P.ensure_output_dirs()
+    assert P.FIGURES_DASHBOARD.is_dir() and P.FIGURES_REPORT.is_dir() and P.FIGURES_PRESENTATION.is_dir()
     print("OK relac_paths" if not missing else f"{len(missing)} rutas faltan")
     return 1 if missing else 0
 
