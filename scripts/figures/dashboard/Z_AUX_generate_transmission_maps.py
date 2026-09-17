@@ -29,11 +29,7 @@ import json
 import os
 import re
 import glob
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
-from common import relac_paths as P
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -82,7 +78,7 @@ def prepare_interconnection_df(df):
     year_split = dict(zip(ys_rows['TIMESLICE'], ys_rows[YEAR_SPLIT_COL]))
 
     mask = df['TECHNOLOGY'].astype(str).apply(
-        lambda t: bool(INTERCONNECTION_PATTERN.match(t))
+        lambda t: bool(INTERCONNECTION_PATTERN.match(t)) if isinstance(t, str) else False
     )
     out = df[mask].copy()
     print(f"  Found {len(out):,} rows with interconnection technologies")
@@ -807,7 +803,7 @@ def prepare_dispatch_df(df):
 
     # Filter: ELC*00/01/02 fuels, non-null production, timeslice present.
     mask = (
-        df['FUEL'].astype(str).apply(lambda f: bool(DISPATCH_FUEL_PATTERN.match(f)))
+        df['FUEL'].astype(str).apply(lambda f: bool(DISPATCH_FUEL_PATTERN.match(f)) if isinstance(f, str) else False)
         & df[PRODUCTION_BY_TIMESLICE_COL].notna()
         & (df[PRODUCTION_BY_TIMESLICE_COL] != 0)
         & df['TIMESLICE'].notna()
@@ -1233,21 +1229,26 @@ window.addEventListener('resize', () => {{
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    # Auto-detect the combined CSV by glob pattern (picks most recent)
-    csv_path = find_combined_csv(P.OUTPUTS)
-    if csv_path is None:
-        raise FileNotFoundError(
-            f"No *_Combined_Inputs_Outputs.csv found in {P.OUTPUTS}")
+    script_dir = Path(__file__).resolve().parent
 
-    centerpoints_path = P.MISCELLANEOUS / 'centerpoints.csv'
-    output_dir = P.FIGURES
+    # Datos desde las rutas canónicas del repo (outputs/, inputs/Miscellaneous).
+    import sys
+    sys.path.insert(0, str(script_dir.parents[1]))  # -> scripts/
+    from figures.common.dashboard_config import CSV_PATH, CENTERPOINTS_PATH, DASHBOARD_DIR
+
+    csv_path = Path(CSV_PATH)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"No existe el CSV combinado: {csv_path}")
+
+    centerpoints_path = Path(CENTERPOINTS_PATH)
+    output_dir = Path(DASHBOARD_DIR)
     output_path = output_dir / 'TransmissionMaps.html'
     dispatch_output_path = output_dir / 'DispatchChart.html'
 
     if not centerpoints_path.exists():
         raise FileNotFoundError(f"Centerpoints file not found: {centerpoints_path}")
 
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Títulos en español, sin el nombre del modelo (antes se anteponía "RELAC TX").
     tx_title = "Mapas de Transmisión"

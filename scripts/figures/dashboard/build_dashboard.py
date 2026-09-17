@@ -2,14 +2,16 @@
 build_dashboard.py — Generador único de todos los gráficos del dashboard
 RELAC_TX.
 
-Cada gráfico es una función `chart_NN()` que escribe un HTML interactivo y un
-PNG en Figures/. Replica la apariencia de los dashboards de Tableau (títulos,
-ejes, colores, leyendas).
+Cada gráfico es una función `chart_NN()` que se integra en UN solo HTML
+combinado (outputs/Figures/Dashboard/dashboard.html) y, con --png, escribe además un
+PNG estático en outputs/Figures/Dashboard/ (DASHBOARD_DIR de dashboard_config).
+Replica la apariencia de los dashboards de Tableau (títulos, ejes, colores,
+leyendas).
 
 Uso:
-    python build_dashboard.py            # genera TODOS los gráficos
-    python build_dashboard.py 01         # solo el gráfico 01
-    python build_dashboard.py 01 03 04   # un subconjunto
+    python scripts/figures/dashboard/build_dashboard.py            # genera TODOS los gráficos
+    python scripts/figures/dashboard/build_dashboard.py 01         # solo el gráfico 01
+    python scripts/figures/dashboard/build_dashboard.py 01 03 04   # un subconjunto
 
 Para añadir un gráfico: escribe una función chart_NN() y regístrala en CHARTS.
 """
@@ -28,11 +30,11 @@ import plotly.io as pio
 from plotly.offline import get_plotlyjs
 from plotly.subplots import make_subplots
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
-from common import relac_paths as P
-from dashboard_config import (  # noqa: E402
-    FIGURES_DIR,
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # -> scripts/ (spec 2026-09-16 §3)
+from figures.common.dashboard_config import (  # noqa: E402
+    DASHBOARD_DIR,
+    CENTERPOINTS_PATH,
+    RES_BASE_YEAR_XLSX,
     OUTPUT_SUFFIX,
     REFERENCE_YEARS,
     ALL_YEARS,
@@ -62,6 +64,7 @@ from dashboard_config import (  # noqa: E402
     COLORS_TECH_TYPE,
     COLORS_SCENARIO,
     COLOR_GW_LINE,
+    load_capacity_and_distances,
     load_column,
 )
 
@@ -200,15 +203,16 @@ _PLOTLY_CONFIG = {
 # ================================================================
 def save_png(fig: go.Figure, name: str, width: int, height: int,
              default_x: list | None = None) -> None:
-    """Guarda un PNG estático del gráfico en Figures/ (sin panel de controles).
+    """Guarda un PNG estático del gráfico en outputs/Figures/Dashboard/ (DASHBOARD_DIR),
+    sin panel de controles.
 
     Si ``default_x`` se pasa, la figura se construye con TODOS los años/periodos
     candidatos pero el PNG se filtra al subconjunto por defecto (mismo JS que el
     dashboard), para que el snapshot coincida con la vista inicial.
     """
-    os.makedirs(FIGURES_DIR, exist_ok=True)
+    os.makedirs(DASHBOARD_DIR, exist_ok=True)
     base = f"{name}{OUTPUT_SUFFIX}"
-    png_path = os.path.join(FIGURES_DIR, f"{base}.png")
+    png_path = os.path.join(DASHBOARD_DIR, f"{base}.png")
 
     static = default_x is None
     clean = fig.to_html(
@@ -403,12 +407,12 @@ _FILTER_JS_FUNCS = r"""
       return { dom: tot > 0 ? auto / tot * 100 : 0, impS: tot > 0 ? imp / tot * 100 : 0 };
     }
     if(k === 'trans04'){
+      // Ecuaciones a VALOR NOMINAL (decisión 2026-08-12, hallazgo D): sin
+      // factores 0.8/1.8. Total = suma de TCA de los 3 grupos.
       var anp = sumC(cm, 'acc_new_plan', si, label, sel), tcp = sumC(cm, 'tca_plan', si, label, sel),
-          tnl = sumC(cm, 'tca_nli', si, label, sel), anr = sumC(cm, 'acc_new_rpo', si, label, sel),
+          tnl = sumC(cm, 'tca_nli', si, label, sel), tcr = sumC(cm, 'tca_rpo', si, label, sel),
           amr = sumC(cm, 'acc_min_rpo', si, label, sel);
-      var repo = anr - amr;
-      var existentes = Math.max((tcp - anp) - repo / 0.8 - amr / 1.8, 0);
-      var arr = [existentes, anp, amr, tnl, repo * (1 + 1 / 0.8)];
+      var arr = [tcp - anp, anp, amr, tnl, tcr - amr];
       var total = 0; arr.forEach(function(v){ total += v; });
       return { arr: arr, total: total };
     }
@@ -884,7 +888,9 @@ _FILTER_JS_FUNCS = r"""
       if(bars.__n === 0){ a.visible = false; return; }
       var total = bars.__total;
       if(kind === 'stackTotal'){
-        a.text = '<b>' + fmtThousand(total) + '</b>'; a.y = total;
+        // stackDecimals: campo dedicado (chart 03, magnitudes chicas); los
+        // charts enteros no lo traen y siguen en fmtThousand.
+        a.text = '<b>' + ((cm && cm.stackDecimals != null) ? fmtDec(total, cm.stackDecimals) : fmtThousand(total)) + '</b>'; a.y = total;
       } else if(kind === 'total'){            // 01/02 — total de la pila (naranja)
         var ren = (cm && bars[cm.series[0]]) || 0;
         // Con 'Renovable' oculto ren=0 dejaría el número pegado a y=0: usar el
@@ -1059,7 +1065,8 @@ _FILTER_JS_FUNCS = r"""
         var tot = 0, nb = 0;
         sumCats.forEach(function(lab){ var b = visibleBarsAt(newData, yk, lab); tot += b.__total; nb += b.__n; });
         if(nb === 0) return;
-        var fmtd = (cm && cm.labelKind === 'single') ? fmtDec(tot, cm.decimals) : fmtThousand(tot);
+        var fmtd = (cm && cm.labelKind === 'single') ? fmtDec(tot, cm.decimals)
+          : ((cm && cm.stackDecimals != null) ? fmtDec(tot, cm.stackDecimals) : fmtThousand(tot));
         // Arriba-izquierda del subplot (esquina vacía en curvas crecientes).
         // yref al DOMINIO de la fila -> se posiciona por subplot sin depender
         // de márgenes ni del ancho (que ahora es responsivo).
@@ -1239,22 +1246,23 @@ _DASHBOARD_SCRIPT = """
       cb.type = 'checkbox'; cb.value = it.value; cb.checked = isCheckedFn(it.value);
       cb.addEventListener('change', function(){ updateBtn(); onChange(); });
       if(TAB){
-        // Estilo Tableau: click simple = sólo ese año; Ctrl/Cmd = alternar uno;
-        // Shift = rango desde el ancla (lastIdx). preventDefault frena el toggle
-        // nativo del checkbox para que no pelee con el estado que fijamos a mano;
-        // como setTo/cb.checked no disparan 'change', el onChange() se llama una
-        // sola vez (un solo Plotly.react aunque el rango mueva muchas casillas).
+        // Click simple = alternar SOLO esa casilla (toggle nativo del checkbox,
+        // igual que los selectores de escenarios/series): así se pueden marcar
+        // años sueltos (p.ej. 2028 y 2030) sin perder lo ya seleccionado.
+        // Shift = rango desde el ancla (lastIdx), con preventDefault para que
+        // el toggle nativo no pelee con setTo; como setTo no dispara 'change',
+        // el onChange() manual corre una sola vez para todo el rango.
+        // (Antes: estilo Tableau — un click dejaba ÚNICAMENTE ese año, lo que
+        // impedía combinar años específicos a mano.)
         w.addEventListener('click', function(e){
-          e.preventDefault();
           if(e.shiftKey && lastIdx >= 0){
+            e.preventDefault();
             var a = Math.min(lastIdx, idx), b = Math.max(lastIdx, idx);
             setTo(items.slice(a, b + 1).map(function(x){ return x.value; }));
-          } else if(e.ctrlKey || e.metaKey){
-            cb.checked = !cb.checked; lastIdx = idx;
-          } else {
-            setTo([it.value]); lastIdx = idx;
+            updateBtn(); onChange();
+            return;
           }
-          updateBtn(); onChange();
+          lastIdx = idx;   // toggle y onChange los hace el 'change' nativo del checkbox
         });
       }
       w.appendChild(cb); w.appendChild(document.createTextNode(' ' + it.label));
@@ -1554,7 +1562,7 @@ _DASHBOARD_SCRIPT = """
 CHART_DESC = {
     "01": "Capacidad de generación eléctrica instalada por año, apilada en renovable y no renovable, con el total y el % renovable.",
     "02": "Generación eléctrica anual por tecnología, apilada en renovable y no renovable, con el total y el % renovable.",
-    "03": "Capacidad instalada de almacenamiento (baterías de corta y larga duración) por año.",
+    "03": "Capacidad instalada de almacenamiento por tipo (SDS = corta duración, LDS = larga duración), apilada por año, con la línea del total.",
     "04": "Capacidad de líneas de transmisión por año, desglosada en existentes, nuevas y repotenciadas (planificadas y no planificadas).",
     "05": "Inversión de capital promedio anual por periodo, apilada por tipo: generación, transmisión y almacenamiento.",
     "06": "Inversión de capital en líneas de transmisión por año, desglosada por grupo de línea.",
@@ -1586,11 +1594,11 @@ def _extra_tab_htmls() -> list:
     cualquier pestaña cuya generación falle (p.ej. falta el XLSX del RES).
     """
     out = []
-    centerpoints_path = str(P.MISCELLANEOUS / "centerpoints.csv")
+    centerpoints_path = CENTERPOINTS_PATH
 
     # --- 16 Mapas de Transmisión + 17 Despacho (mismo CSV, una sola carga) ---
     try:
-        import Z_AUX_generate_transmission_maps as tx
+        from figures.dashboard import Z_AUX_generate_transmission_maps as tx
         df = load_column(
             [tx.CAPACITY_COL, tx.FLOW_COL, tx.PRODUCTION_BY_TIMESLICE_COL,
              tx.CAPACITY_TO_ACTIVITY_COL, tx.YEAR_SPLIT_COL],
@@ -1614,8 +1622,8 @@ def _extra_tab_htmls() -> list:
 
     # --- 18 Diagrama RES (lee su propio XLSX de año base, no el CSV) ---
     try:
-        import Z_AUX_generate_RES_diagram as res
-        xlsx = P.scenario_dir("BAU") / "A-O_AR_Model_Base_Year.xlsx"
+        from figures.dashboard import Z_AUX_generate_RES_diagram as res
+        xlsx = Path(RES_BASE_YEAR_XLSX)
         if not xlsx.exists():
             raise FileNotFoundError(f"falta {xlsx}")
         links = res.load_base_year_data(xlsx)
@@ -1641,13 +1649,14 @@ CHART_PERIOD_AGG = {"10": ["sum", "avg"]}
 
 
 def build_combined_dashboard(items: list) -> None:
-    """Escribe UN solo HTML (Figures/dashboard.html) con todos los gráficos.
+    """Escribe UN solo HTML (outputs/Figures/Dashboard/dashboard.html, DASHBOARD_DIR)
+    con todos los gráficos.
 
     items: lista de tuplas (key, title, fig, name, width, height, default_x).
     """
     import json
-    os.makedirs(FIGURES_DIR, exist_ok=True)
-    out_path = os.path.join(FIGURES_DIR, f"dashboard{OUTPUT_SUFFIX}.html")
+    os.makedirs(DASHBOARD_DIR, exist_ok=True)
+    out_path = os.path.join(DASHBOARD_DIR, f"dashboard{OUTPUT_SUFFIX}.html")
 
     sc_aliases = [SCENARIO_ALIAS.get(s, s) for s in SCENARIOS]
     nav, wraps, defaults, scenarios, countries = [], [], {}, {}, {}
@@ -2329,19 +2338,66 @@ def _single_series_bars(
 
 # ================================================================
 # Chart 03 — Capacidad Instalada de Almacenamiento [GW]
-# Una sola serie (Almacenamiento): tecnologías que contienen PWRSDS o PWRLDS,
-# parámetro TotalCapacityAnnual (una fila por tech-año -> agg="dedup").
+# Barras APILADAS por TIPO de almacenamiento (SDS = corta duración, LDS = larga
+# duración; BDS se incorpora solo si el CSV algún día trae PWRBDS) + línea de
+# total "Almacenamiento" (misma mecánica que 01/02/08B: la línea y sus números
+# siguen a las series visibles; el selector de series permite ver cada tipo por
+# separado o todos juntos). Parámetro TotalCapacityAnnual: una fila por
+# tech-año -> dedup por Scenario/YEAR/TECHNOLOGY antes de sumar.
+# (Antes: una sola serie agregada vía _single_series_bars.)
 # ================================================================
+_STORAGE_TYPES = [
+    # (prefijo TECHNOLOGY, nombre de serie, color de barra)
+    ("PWRSDS", "SDS", COLORS_TECH_TYPE["Almacenamiento"]),   # teal existente
+    ("PWRLDS", "LDS", "#b07aa1"),                            # púrpura
+    ("PWRBDS", "BDS", "#edc948"),                            # amarillo (futuro)
+]
+
+
 def chart_03():
-    fig, name, w, h, cm = _single_series_bars(
-        value_col="TotalCapacityAnnual",
-        tech_contains=["PWRSDS", "PWRLDS"],
-        agg="dedup",
-        scale=1.0,
+    df = load_column(["TotalCapacityAnnual"])
+    df = df.dropna(subset=["TotalCapacityAnnual"])
+    df = df[df["TotalCapacityAnnual"] != 0]
+    pref2name = {p: n for p, n, _ in _STORAGE_TYPES}
+    df["StoreType"] = df["TECHNOLOGY"].str[:6].map(pref2name)
+    df = df[df["StoreType"].notna()]
+    df = df[df["YEAR"].isin(ALL_YEARS)]
+    df = df.drop_duplicates(subset=["Scenario", "YEAR", "TECHNOLOGY"])
+
+    g = (
+        df.groupby(["Scenario", "YEAR", "StoreType"])["TotalCapacityAnnual"]
+        .sum()
+        .reset_index()
+    )
+    pivot = g.pivot_table(
+        index=["Scenario", "YEAR"], columns="StoreType",
+        values="TotalCapacityAnnual", fill_value=0,
+    ).reset_index()
+    pivot.columns.name = None
+    # Solo los tipos PRESENTES en los datos (BDS se omite mientras no exista).
+    categories = [(n, c) for _, n, c in _STORAGE_TYPES if n in pivot.columns]
+
+    # --- Componentes por país (re-agregación en JS) ---
+    df["pais"] = df["TECHNOLOGY"].str[6:9]
+    gcl = (
+        df.groupby(["Scenario", "YEAR", "pais", "StoreType"])["TotalCapacityAnnual"]
+        .sum()
+        .reset_index()
+    )
+    gcl["catlabel"] = gcl["YEAR"].astype(int).astype(str)
+    country_long = gcl.rename(
+        columns={"StoreType": "series", "TotalCapacityAnnual": "val"}
+    )[["Scenario", "catlabel", "pais", "series", "val"]]
+
+    fig, name, w, h, cm = _stacked_categories_chart(
+        pivot=pivot,
+        categories=categories,
         y_title="Capacidad Instalada de<br>Almacenamiento [GW]",
-        series_name="Almacenamiento",
-        color=COLORS_TECH_TYPE["Almacenamiento"],
         output_name="chart03_storage_capacity",
+        x_col="YEAR",
+        show_total_line=True,
+        line_name="Almacenamiento",
+        country_long=country_long,
         decimals=1,
     )
     return fig, name, w, h, [str(y) for y in REFERENCE_YEARS], cm
@@ -2371,6 +2427,7 @@ def _stacked_categories_chart(
     show_total_line: bool = True,
     total_label_color: str | None = None,
     country_long: pd.DataFrame | None = None,
+    decimals: int | None = None,
 ):
     cat_names = [c[0] for c in categories]
     if total_label_color is None:
@@ -2405,6 +2462,11 @@ def _stacked_categories_chart(
             line_total=show_total_line,
             dtick=dtick,
         )
+        # Decimales para las etiquetas de total (magnitudes chicas, p.ej. GW de
+        # almacenamiento). Campo DEDICADO: cm.decimals siempre existe (default 1)
+        # y los charts enteros (04/06/08B/14) deben seguir en fmtThousand.
+        if decimals is not None:
+            country_model["stackDecimals"] = decimals
 
     for i, scenario in enumerate(SCENARIOS):
         row = i + 1
@@ -2451,7 +2513,7 @@ def _stacked_categories_chart(
                 x=pos,
                 y=total,
                 yshift=10,
-                text=f"<b>{_fmt(total)}</b>",
+                text=f"<b>{_fmt_dec(total, decimals) if decimals is not None else _fmt(total)}</b>",
                 showarrow=False,
                 font=dict(color=total_label_color, size=12, family="Arial Black"),
                 name="datalabel",
@@ -2515,13 +2577,91 @@ def _stacked_categories_chart(
     return fig, output_name, 820, _STACK_H, country_model
 
 
+def _warn_chart04_data(per_tech: pd.DataFrame) -> None:
+    """Validaciones de los insumos del gráfico 04. Avisan por consola sin
+    interrumpir el build. Contexto: hallazgos B-D de
+    context_trn_params_review.md (relac_tx)."""
+    amci = "AccumulatedTotalAnnualMinCapacityInvestment"
+    pt = per_tech.fillna(0.0)
+
+    # 1) AMCI es un acumulado: no debería decrecer año a año por tecnología
+    #    (hallazgo C: el CSV pre-fix solo lo traía en los años definidos en el
+    #    txt, ausente -> 0, y el stock "se esfumaba" fuera de esos años).
+    drops = (
+        pt.sort_values(["Scenario", "TECHNOLOGY", "YEAR"])
+        .groupby(["Scenario", "TECHNOLOGY"])[amci]
+        .diff()
+        .lt(-1e-9)
+    )
+    if drops.any():
+        n_techs = pt.loc[drops, "TECHNOLOGY"].nunique()
+        print(
+            f"[chart04][AVISO] {amci} decrece en {int(drops.sum())} tech-años "
+            f"({n_techs} techs): el CSV no persiste el acumulado. "
+            "'Repotenciadas Planificadas' se esfuma en esos años y esos GW "
+            "se reclasifican en 'No Planificadas'."
+        )
+
+    # 2) y 3) Reaplica las ecuaciones del gráfico (valor nominal) en la vista
+    #    regional y en la vista por país (la que recalcula el JS 'trans04').
+    for extra, vista in (([], "regional"), (["pais"], "por país")):
+        d = pt.copy()
+        if extra:
+            d["pais"] = d["TECHNOLOGY"].str[6:9]
+        g = (
+            d.groupby(["Scenario", "YEAR"] + extra + ["LineGroup"])[
+                ["AccumulatedNewCapacity", "TotalCapacityAnnual", amci]
+            ]
+            .sum()
+            .unstack("LineGroup", fill_value=0.0)
+        )
+
+        def col(param, group):
+            return (
+                g[(param, group)]
+                if (param, group) in g.columns
+                else pd.Series(0.0, index=g.index)
+            )
+
+        repo_no_plan = col("TotalCapacityAnnual", "RPO") - col(amci, "RPO")
+        existentes = col("TotalCapacityAnnual", "PLAN") - col(
+            "AccumulatedNewCapacity", "PLAN"
+        )
+        n_neg = int((repo_no_plan < -1e-9).sum())
+        if n_neg:
+            print(
+                f"[chart04][AVISO] 'Repotenciadas No Planificadas' negativa en "
+                f"{n_neg} filas (vista {vista}): AMCI > TotalCapacityAnnual en "
+                "RPO (retiro de vintages y/o desfase txt/solve, cf. hallazgos "
+                "B/C-D); se dibujarían barras negativas."
+            )
+        n_neg_ex = int((existentes < -1e-9).sum())
+        if n_neg_ex:
+            print(
+                f"[chart04][AVISO] 'Líneas Existentes' negativa en {n_neg_ex} "
+                f"filas (vista {vista}): TotalCapacityAnnual < "
+                "AccumulatedNewCapacity en PLAN (dato anómalo)."
+            )
+
+
 # ================================================================
 # Chart 04 — Capacidad Instalada de Transmisión [GW]
 # Barras apiladas con 5 categorías de líneas (existentes + nuevas/repotenciadas
-# × planificadas/no planificadas). Réplica de la hoja Tableau
-# "Capacity_Transmision_GW", que agrupa las TRN/RNW por "Technology Lineas
-# (grupos)" y combina AccumulatedNewCapacity, TotalCapacityAnnual y
-# AccumulatedTotalAnnualMinCapacityInvestment con factores 0.8/1.8 (repotenciado).
+# × planificadas/no planificadas), a VALOR NOMINAL de las variables (decisión
+# 2026-08-12, hallazgo D del md de contexto):
+#   Existentes   = TCA − ANC (PLAN)   [= ResidualCapacity]
+#   NuevasPlan   = ANC (PLAN)
+#   RepoPlan     = AMCI (RPO)
+#   NuevasNoPlan = TCA (NLI)
+#   RepoNoPlan   = TCA − AMCI (RPO)
+# Total = Σ TotalCapacityAnnual de los 3 grupos (cierre exacto). Ya NO replica
+# los factores 0.8/1.8 de la hoja Tableau "Capacity_Transmision_GW" (eran
+# internamente inconsistentes: AMCI y ANC comparten unidades por construcción);
+# Tableau queda pendiente de alinear. Ver _warn_chart04_data().
+#
+# NOTA: muestra el dato CRUDO del modelo, que tiene un error: las líneas RP
+# (grupo RPO) caen en los últimos años de la corrida. La versión con la
+# corrección (cummax por escenario+país) es build_dashboard_tmp.py.
 # ================================================================
 def chart_04():
     cols = [
@@ -2541,6 +2681,7 @@ def chart_04():
         .max()
         .reset_index()
     )
+    _warn_chart04_data(per_tech)
 
     # Suma por grupo de líneas para cada Scenario/YEAR.
     g = (
@@ -2559,31 +2700,28 @@ def chart_04():
         acc_new_plan = val("PLAN", "AccumulatedNewCapacity")
         tca_plan = val("PLAN", "TotalCapacityAnnual")
         tca_nli = val("NLI", "TotalCapacityAnnual")
-        acc_new_rpo = val("RPO", "AccumulatedNewCapacity")
+        tca_rpo = val("RPO", "TotalCapacityAnnual")
         acc_min_rpo = val("RPO", "AccumulatedTotalAnnualMinCapacityInvestment")
-
-        repo_delta = acc_new_rpo - acc_min_rpo
-        existentes = (tca_plan - acc_new_plan) - repo_delta / 0.8 - acc_min_rpo / 1.8
 
         rows.append(
             {
                 "Scenario": scenario,
                 "YEAR": year,
-                "Líneas Existentes": max(existentes, 0.0),
+                "Líneas Existentes": tca_plan - acc_new_plan,
                 "Líneas Nuevas Planificadas": acc_new_plan,
                 "Líneas Repotenciadas Planificadas": acc_min_rpo,
                 "Líneas Nuevas No Planificadas": tca_nli,
-                "Líneas Repotenciadas No Planificadas": repo_delta * (1 + 1 / 0.8),
+                "Líneas Repotenciadas No Planificadas": tca_rpo - acc_min_rpo,
             }
         )
 
     pivot = pd.DataFrame(rows)
 
     # --- Modelo de país (DERIVADO 'trans04'): las 5 categorías son combinaciones
-    # LINEALES de 5 cantidades base por grupo de línea (con un max(·,0) final en
-    # "Existentes"); esas 5 cantidades SÍ son aditivas por país. Embebemos las 5
-    # bases por (escenario, año, país) y el JS reaplica la fórmula sobre los
-    # países sel. País = TECHNOLOGY[6:9] (sin interconectores puros en este chart).
+    # LINEALES de 5 cantidades base por grupo de línea; esas 5 cantidades SÍ son
+    # aditivas por país. Embebemos las 5 bases por (escenario, año, país) y el JS
+    # reaplica la fórmula sobre los países sel. País = TECHNOLOGY[6:9] (sin
+    # interconectores puros en este chart).
     per_tech["pais"] = per_tech["TECHNOLOGY"].str[6:9]
     gc = (
         per_tech.groupby(["Scenario", "YEAR", "pais", "LineGroup"])[cols].sum().reset_index()
@@ -2599,7 +2737,7 @@ def chart_04():
             "acc_new_plan": cval("PLAN", "AccumulatedNewCapacity"),
             "tca_plan": cval("PLAN", "TotalCapacityAnnual"),
             "tca_nli": cval("NLI", "TotalCapacityAnnual"),
-            "acc_new_rpo": cval("RPO", "AccumulatedNewCapacity"),
+            "tca_rpo": cval("RPO", "TotalCapacityAnnual"),
             "acc_min_rpo": cval("RPO", "AccumulatedTotalAnnualMinCapacityInvestment"),
         }
         for sname, v in base.items():
@@ -2614,7 +2752,7 @@ def chart_04():
     dtick4 = _nice_dtick(pivot[cat_names].sum(axis=1).max())
     country_model = _derived_model(
         long, labelKind="trans04",
-        base_series=["acc_new_plan", "tca_plan", "tca_nli", "acc_new_rpo", "acc_min_rpo"],
+        base_series=["acc_new_plan", "tca_plan", "tca_nli", "tca_rpo", "acc_min_rpo"],
         roles_per_scenario=[0, 1, 2, 3, 4],  # índice de categoría (orden de apilado)
         ann_labels_by_si=ann_labels_by_si, ann_kinds=["stackTotal"], dtick=dtick4,
     )
@@ -2641,7 +2779,7 @@ def chart_05():
     df = load_column(["CapitalInvestment"])
     # EXCLUIR BACKSTOP (BCK): su CapitalInvestment/OperatingCost son penalizaciones
     # big-M artificiales (no inversión/costo real); infla los escenarios con Tx
-    # restringida (ETT-MC/ETT-GP). El backstop se contabiliza como energía NO
+    # restringida (ETT/ETT-GP). El backstop se contabiliza como energía NO
     # suministrada al VOLL en los gráficos 14/15. Ver [[backstop-as-unserved-energy]].
     df = df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
     df["TechType"] = df["TECHNOLOGY"].apply(classify_tech_type)
@@ -3132,8 +3270,7 @@ def _load_centerpoints() -> dict:
 
     Las regiones son del tipo 'ARGXX' (código país de 3 letras + 'XX').
     """
-    path = str(P.MISCELLANEOUS / "centerpoints.csv")
-    cp = pd.read_csv(path)
+    cp = pd.read_csv(CENTERPOINTS_PATH)
     out = {}
     for _, r in cp.iterrows():
         code = str(r["region"])[:3]
@@ -3322,10 +3459,7 @@ def chart_10():
     )
     per = per.dropna(subset=["NewCapacity", "Country"])
 
-    cd_path = str(P.DATA / "CapacityAndDistances.xlsx")
-    cd = pd.read_excel(cd_path)[
-        ["Scenario", "Country", "Capacity", "Distance RNW", "Distance NRNW"]
-    ]
+    cd = load_capacity_and_distances()
     per = per.merge(cd, on=["Scenario", "Country"], how="inner")
 
     is_rnw = per["TECHNOLOGY"].str.startswith("RNW")
@@ -3495,21 +3629,32 @@ def chart_11():
 # ================================================================
 # Chart 12 — Seguridad Energética (Importado vs Autóctono) [%]
 # ----------------------------------------------------------------
-# Indicador de seguridad energética. El DENOMINADOR (por país) suma:
+# Indicador de seguridad energética. Por país entran TRES flujos:
 #   - el COMBUSTIBLE consumido por la generación fósil/nuclear
-#     (UseByTechnology de NON_RENEWABLE_CODES, incluye nuclear URN), y
+#     (UseByTechnology de NON_RENEWABLE_CODES, incluye nuclear URN),
 #   - la ELECTRICIDAD renovable generada (ProductionByTechnology de
-#     RENEWABLE_CODES).
+#     RENEWABLE_CODES), y
+#   - el INTERCAMBIO por interconexiones internacionales TRN<A>XX<B>XX.
 # El fósil se reparte en importado/local con las cuotas REALES de importación
 # de los balances OLADE/sieLAC (load_fossil_import_shares), por país y
 # combustible — NO con la convención del modelo (que enruta todo por *INT y
 # daría 100% importado). La renovable es 100% autóctona.
-#   Importado = Σ_fuel  use_fósil · cuota_import
+# Interconexiones — la dirección se lee del FUEL, sin MODE_OF_OPERATION:
+# las líneas retiran SIEMPRE de ELC<P>XX03 (Use = exportación de P) e
+# inyectan SIEMPRE en ELC<P>XX04 (Production = importación de P, ya neta de
+# pérdidas de línea); verificado en Input/OutputActivityRatio de todo el
+# modelo. Las TRN domésticas (TRNNLI/TRNRPO, nodos 01→02) quedan excluidas.
+# Método alternativo por TotalAnnualTechnologyActivityByMode (importación
+# bruta) guardado como respaldo en compare_chart12_interconexiones.py;
+# difiere <=0.42 pp país/año (pérdidas de línea).
+#   Importado = Σ_fuel  use_fósil · cuota_import + elec_importada
 #   Autóctono = renovable + Σ_fuel use_fósil · (1 − cuota_import)
-# Se AGREGA sumando sobre países por escenario/año y se normaliza a 100%.
-# Sólo la barra inferior (Autóctono, verde) lleva etiqueta; la otra es 100−x.
-# Nota de unidades: el fósil entra a nivel combustible (con pérdidas térmicas)
-# y la renovable a nivel electricidad; convención aceptada por el usuario.
+#               − elec_exportada   (supuesto: lo exportado es autóctono
+#               primero — parque exportador mayormente renovable; piso en 0)
+# Se AGREGA sumando los componentes por país (escenario/año) y se normaliza
+# a 100%. Sólo la barra inferior (Autóctono, verde) lleva etiqueta.
+# Nota de unidades: el fósil entra a nivel combustible (con pérdidas térmicas);
+# la renovable y el intercambio, a nivel electricidad; convención aceptada.
 # ================================================================
 def chart_12():
     df = load_column(["UseByTechnology", "ProductionByTechnology"],
@@ -3547,39 +3692,52 @@ def chart_12():
     fos_g["imported"] = fos_g["UseByTechnology"] * fos_g["imp_share"]
     fos_g["local"] = fos_g["UseByTechnology"] - fos_g["imported"]
 
-    # Agregado regional: suma sobre países por escenario/año.
-    fos_agg = (
-        fos_g.groupby(["Scenario", "YEAR"])[["imported", "local"]]
-        .sum()
-        .reset_index()
+    # Intercambio eléctrico por interconexiones (ver cabecera): el país se lee
+    # del FUEL (fuel[3:6]); Use@...03 = exportación, Production@...04 =
+    # importación neta de pérdidas. El lookahead excluye TRNNLI/TRNRPO.
+    trn = df[df["TECHNOLOGY"].str.match(r"^TRN(?!NLI|RPO)", na=False)].copy()
+    trn["fuelstr"] = trn["FUEL"].astype(str)
+    trn["pais"] = trn["fuelstr"].str[3:6]
+    elec_exp = (
+        trn[trn["fuelstr"].str[-2:] == "03"]
+        .dropna(subset=["UseByTechnology"])
+        .groupby(["Scenario", "YEAR", "pais"])["UseByTechnology"]
+        .sum().reset_index().rename(columns={"UseByTechnology": "elec_exp"})
     )
-    ren_agg = (
-        ren_g.groupby(["Scenario", "YEAR"])["ProductionByTechnology"]
-        .sum()
-        .reset_index()
-        .rename(columns={"ProductionByTechnology": "ren"})
+    elec_imp = (
+        trn[trn["fuelstr"].str[-2:] == "04"]
+        .dropna(subset=["ProductionByTechnology"])
+        .groupby(["Scenario", "YEAR", "pais"])["ProductionByTechnology"]
+        .sum().reset_index().rename(columns={"ProductionByTechnology": "elec_imp"})
     )
-    pivot = fos_agg.merge(ren_agg, on=["Scenario", "YEAR"], how="outer").fillna(0)
-    pivot["Importado"] = pivot["imported"]
-    pivot["Autóctono"] = pivot["local"] + pivot["ren"]
+
+    # --- Modelo de país: importado/autóctono son ADITIVOS por país; el JS
+    # re-normaliza los shares (DomShare/ImpShare) sobre los países sel. ---
+    fos_c = (
+        fos_g.groupby(["Scenario", "YEAR", "pais"])[["imported", "local"]]
+        .sum().reset_index()
+    )
+    sec = (
+        fos_c.merge(
+            ren_g.rename(columns={"ProductionByTechnology": "ren"}),
+            on=["Scenario", "YEAR", "pais"], how="outer",
+        )
+        .merge(elec_imp, on=["Scenario", "YEAR", "pais"], how="outer")
+        .merge(elec_exp, on=["Scenario", "YEAR", "pais"], how="outer")
+        .fillna(0)
+    )
+    sec["imp"] = sec["imported"] + sec["elec_imp"]
+    sec["auto"] = (sec["local"] + sec["ren"] - sec["elec_exp"]).clip(lower=0)
+
+    # Agregado regional: suma de los componentes por país por escenario/año.
+    pivot = sec.groupby(["Scenario", "YEAR"])[["imp", "auto"]].sum().reset_index()
+    pivot["Importado"] = pivot["imp"]
+    pivot["Autóctono"] = pivot["auto"]
     pivot["Total"] = pivot["Importado"] + pivot["Autóctono"]
     pivot = pivot[pivot["Total"] > 0]
     # Shares EXACTOS para que las barras sumen 100 (la etiqueta sí se redondea).
     pivot["DomShare"] = pivot["Autóctono"] / pivot["Total"] * 100
     pivot["ImpShare"] = pivot["Importado"] / pivot["Total"] * 100
-
-    # --- Modelo de país (DERIVADO): importado/autóctono son ADITIVOS por país;
-    # el JS re-normaliza los shares (DomShare/ImpShare) sobre los países sel. ---
-    fos_c = (
-        fos_g.groupby(["Scenario", "YEAR", "pais"])[["imported", "local"]]
-        .sum().reset_index()
-    )
-    sec = fos_c.merge(
-        ren_g.rename(columns={"ProductionByTechnology": "ren"}),
-        on=["Scenario", "YEAR", "pais"], how="outer",
-    ).fillna(0)
-    sec["imp"] = sec["imported"]
-    sec["auto"] = sec["local"] + sec["ren"]
     sec["catlabel"] = sec["YEAR"].astype(int).astype(str)
     long = pd.concat([
         sec.assign(series="imp", val=sec["imp"]),
@@ -3822,13 +3980,27 @@ def chart_13():
         ),
         margin=dict(l=90, r=150, t=30, b=60),
     )
+    # Ejes más finos para análisis: etiquetas a 1 decimal cada 0,5 (o cada 1 si
+    # el rango es amplio) y marcas menores intermedias. El rango se mantiene
+    # anclado en cero porque el filtro de país del JS conserva el rango de
+    # Python y los valores por país pueden ser mucho menores que los del
+    # sistema completo.
+    y_dtick = 0.5 if res["Eff"].max() <= 10 else 1.0
     fig.update_yaxes(
         title_text="Nº efectivo de fuentes (1/HHI)",
         title_font=dict(size=11),
         gridcolor="#e0e0e0",
         rangemode="tozero",
+        dtick=y_dtick,
+        tickformat=".1f",
+        tickfont=dict(size=10),
+        minor=dict(dtick=y_dtick / 2, showgrid=True, gridcolor="#f2f2f2",
+                   ticklen=3),
     )
-    fig.update_xaxes(type="category", tickfont=dict(size=11), tickangle=-45)
+    # dtick=1 en eje categórico: fuerza la etiqueta de TODOS los años (sin
+    # auto-raleo de Plotly), para poder leer cualquier año directamente.
+    fig.update_xaxes(type="category", tickfont=dict(size=10), tickangle=-45,
+                     dtick=1)
     return (fig, "chart13_resilience_hhi", 940, 520,
             [str(y) for y in range(2025, 2051)], country_model)
 

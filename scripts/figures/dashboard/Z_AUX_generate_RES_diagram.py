@@ -23,13 +23,9 @@ Author: Climate Lead Group
 import pandas as pd
 import json
 import re
-import sys
 import yaml
 from pathlib import Path
 from openpyxl import load_workbook
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
-from common import relac_paths as P
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +33,12 @@ from common import relac_paths as P
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-with open(P.CONFIG_COUNTRY_CODES, 'r', encoding='utf-8') as _f:
+# Datos desde las rutas canónicas del repo (ver dashboard_config).
+import sys  # noqa: E402
+sys.path.insert(0, str(SCRIPT_DIR.parents[1]))  # -> scripts/
+from figures.common.dashboard_config import COUNTRY_CODES_YAML, RES_BASE_YEAR_XLSX, DASHBOARD_DIR  # noqa: E402
+
+with open(COUNTRY_CODES_YAML, 'r', encoding='utf-8') as _f:
     _CONFIG = yaml.safe_load(_f)
 
 COUNTRY_NAME_MAP = {
@@ -865,8 +866,9 @@ def main():
     import time
     t0 = time.time()
 
-    xlsx_path = P.scenario_dir('BAU') / 'A-O_AR_Model_Base_Year.xlsx'
-    output_path = P.FIGURES / 'RES_Diagram.html'
+    xlsx_path = Path(RES_BASE_YEAR_XLSX)
+    output_path = Path(DASHBOARD_DIR) / 'RES_Diagram.html'
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print("OSTRAM RES Diagram Generator")
     print("=" * 50)
