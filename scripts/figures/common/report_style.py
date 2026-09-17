@@ -88,6 +88,22 @@ CORE_SCENARIOS = ["BAC", "ISR"]
 # Figures_Presentation/*_presentation.py usan esta misma lista (alias por compatibilidad).
 PRESENTATION_SCENARIOS = CORE_SCENARIOS
 
+
+def load(columns: list[str], extra_dims: list[str] | None = None,
+         scenarios: list[str] | None = None):
+    """Datos para una figura estática. Envoltorio de dashboard_config.load_column.
+
+    ``scenarios`` por defecto = CORE_SCENARIOS (BAC+ISR) -> lee el subconjunto
+    Parquet (outputs/Figures/_subset_BAC-ISR.parquet). Las figuras pasan los
+    escenarios que reciben por CLI (``--scenarios``) para que la decisión
+    Parquet-vs-CSV dependa de lo que realmente se pidió: con un escenario fuera
+    del subconjunto (p.ej. --scenarios BAC OPC) cae al CSV completo con aviso.
+    """
+    from . import dashboard_config as cfg
+    if scenarios is None:
+        scenarios = CORE_SCENARIOS
+    return cfg.load_column(columns, extra_dims, scenarios=list(scenarios))
+
 # Segunda línea bajo el código de escenario en el eje X — DESACTIVADA (dict vacío
 # a propósito): las figuras de reporte ya no muestran sublabel, solo el alias de
 # SCENARIO_ALIAS en una línea. Se deja el nombre/dict (vacío) en vez de borrarlo

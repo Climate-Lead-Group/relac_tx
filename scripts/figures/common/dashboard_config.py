@@ -492,35 +492,160 @@ FOSSIL_FUEL_CATEGORIES = [
 # ================================================================
 # Data loading helpers
 # ================================================================
-# Caché en memoria: el CSV (308 MB) se lee como mucho una vez por conjunto de
-# columnas durante la ejecución (útil al renderizar varios gráficos seguidos).
-_LOAD_CACHE: dict[tuple[str, ...], pd.DataFrame] = {}
+# Caché en memoria por (fuente, columnas): el CSV/Parquet se lee como mucho una
+# vez por conjunto de columnas durante la ejecución (los maestros corren todas
+# las figuras en un proceso).
+_LOAD_CACHE: dict[tuple, pd.DataFrame] = {}
+
+# ================================================================
+# Subconjunto Parquet de escenarios (figuras estáticas) — spec 2026-09-16 §7
+# ----------------------------------------------------------------
+# Las figuras de reporte/presentación solo usan BAC+ISR; releer el CSV completo
+# (14 escenarios, ~1,4 GB) por cada conjunto de columnas es lento. Se guarda UNA
+# vez un Parquet con TODAS las columnas y solo las filas de esos escenarios
+# (outputs/Figures/_subset_BAC-ISR.parquet + sidecar .json con la firma del CSV)
+# y se reconstruye cuando el CSV cambia (mtime o size), igual que .scenarios_cache.
+# El dashboard NO lo usa (necesita todos los escenarios).
+# ================================================================
+SUBSET_DIR = str(P.FIGURES)
+# Subconjunto canónico que usa load_column(scenarios=...). Debe coincidir con
+# report_style.CORE_SCENARIOS (lo comprueba scripts/tests/test_scenario_subset.py).
+SUBSET_SCENARIOS = ["BAC", "ISR"]
+# Columnas de dimensión (texto/categoría) del CSV combinado; el resto son valores
+# numéricos con NaN. Parquet exige UN tipo por columna: las dimensiones de tipo
+# object se guardan como texto con nulos; las demás se fuerzan a numérico y, si
+# no se puede (texto mezclado con números), a texto.
+DIM_COLS = ["Future", "Scenario", "REGION", "TECHNOLOGY", "FUEL", "EMISSION",
+            "MODE_OF_OPERATION", "TIMESLICE", "STORAGE", "SEASON", "DAYTYPE",
+            "DAILYTIMEBRACKET"]
+_CHUNK_ROWS = 500_000
 
 
-def load_column(columns: list[str], extra_dims: list[str] | None = None) -> pd.DataFrame:
-    """Lee columnas de valor del CSV combinado.
+def subset_paths(scenarios) -> tuple[str, str]:
+    """(parquet, sidecar json) para esos escenarios: _subset_<S1>-<S2>-...  (orden alfabético)."""
+    key = "-".join(sorted(set(scenarios)))
+    base = os.path.join(SUBSET_DIR, f"_subset_{key}")
+    return base + ".parquet", base + ".json"
 
-    Siempre devuelve las dimensiones Scenario/YEAR/TECHNOLOGY. Usa
-    ``extra_dims`` (p.ej. ["FUEL", "TIMESLICE", "MODE_OF_OPERATION"]) cuando un
-    gráfico necesite columnas índice adicionales. YEAR se castea a int. El
-    resultado se cachea por conjunto de columnas durante la ejecución.
+
+def _csv_signature() -> dict:
+    st = os.stat(CSV_PATH)
+    return {"csv_mtime": st.st_mtime, "csv_size": st.st_size}
+
+
+def subset_is_current(scenarios) -> bool:
+    """True si existen Parquet+sidecar y la firma (mtime/size) del sidecar es la del CSV actual."""
+    import json
+    pq, side = subset_paths(scenarios)
+    if not (os.path.exists(pq) and os.path.exists(side) and os.path.exists(CSV_PATH)):
+        return False
+    try:
+        meta = json.load(open(side, encoding="utf-8"))
+    except Exception:
+        return False
+    sig = _csv_signature()
+    return (meta.get("csv_mtime") == sig["csv_mtime"] and meta.get("csv_size") == sig["csv_size"]
+            and meta.get("scenarios") == sorted(set(scenarios)))
+
+
+def _to_text(s: pd.Series) -> pd.Series:
+    return s.map(lambda v: None if pd.isna(v) else str(v)).astype(object)
+
+
+def _harmonize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """Un tipo por columna para pyarrow (ver DIM_COLS). YEAR ya viene como int."""
+    for col in df.columns:
+        if col == "YEAR" or df[col].dtype != object:
+            continue
+        if col not in DIM_COLS:
+            try:
+                df[col] = pd.to_numeric(df[col], errors="raise")
+                continue
+            except (ValueError, TypeError):
+                pass
+        df[col] = _to_text(df[col])
+    return df
+
+
+def ensure_scenario_subset(scenarios, verbose: bool = True) -> str:
+    """Devuelve la ruta del Parquet con TODAS las columnas del CSV y solo las filas de
+    `scenarios`; lo construye si falta o si el CSV cambió. Lee el CSV por chunks."""
+    import json
+    import time
+    scen = sorted(set(scenarios))
+    pq, side = subset_paths(scen)
+    if subset_is_current(scen):
+        if verbose:
+            print(f"[subset] reutilizado {pq}")
+        return pq
+    t0 = time.perf_counter()
+    sig = _csv_signature()   # ANTES de leer: si el CSV cambia durante la lectura, queda no vigente
+    parts = []
+    for chunk in pd.read_csv(CSV_PATH, chunksize=_CHUNK_ROWS):
+        part = chunk[chunk["Scenario"].isin(scen)]
+        if len(part):
+            parts.append(part)
+    if not parts:
+        raise ValueError(f"El CSV {CSV_PATH} no tiene filas de los escenarios {scen}")
+    df = pd.concat(parts, ignore_index=True)
+    df = df.dropna(subset=["YEAR"])
+    df["YEAR"] = df["YEAR"].astype("int64")
+    df = _harmonize_dtypes(df)
+    os.makedirs(SUBSET_DIR, exist_ok=True)
+    tmp = pq + ".tmp"
+    df.to_parquet(tmp, engine="pyarrow", index=False)
+    os.replace(tmp, pq)
+    meta = {**sig, "scenarios": scen, "rows": int(len(df)),
+            "built_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with open(side, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=1)
+    if verbose:
+        print(f"[subset] reconstruido {pq}: {len(df):,} filas en {time.perf_counter() - t0:.1f} s")
+    return pq
+
+
+def load_column(columns: list[str], extra_dims: list[str] | None = None,
+                scenarios: list[str] | None = None) -> pd.DataFrame:
+    """Lee columnas de valor del CSV combinado (o del subconjunto Parquet).
+
+    Siempre devuelve las dimensiones Scenario/YEAR/TECHNOLOGY (+ ``extra_dims``,
+    p.ej. ["FUEL", "TIMESLICE", "MODE_OF_OPERATION"]). YEAR es int sin NaN. El
+    resultado se cachea en memoria por (fuente, conjunto de columnas).
+
+    ``scenarios=None`` -> CSV completo (todos los escenarios; lo usa el dashboard).
+    ``scenarios=[...]`` -> si todos están en SUBSET_SCENARIOS, lee el Parquet
+    canónico _subset_BAC-ISR (construyéndolo si hace falta) y devuelve las filas de
+    ESOS escenarios del subconjunto (la figura filtra los suyos, como con el CSV).
+    Si alguno queda fuera del subconjunto, avisa y cae al CSV completo.
+
+    NOTA CSV: low_memory=False agota memoria con el CSV de 14 escenarios (~1,4 GB;
+    límite del parser C, no del sistema); el default por chunks funciona y solo
+    emite un DtypeWarning inofensivo en columnas con NaN mezclado con números.
     """
     always = ["Scenario", "YEAR", "TECHNOLOGY"] + (extra_dims or [])
     usecols = list(dict.fromkeys(always + columns))
-    cache_key = tuple(usecols)
+    use_subset = False
+    if scenarios:
+        outside = sorted(set(scenarios) - set(SUBSET_SCENARIOS))
+        if outside:
+            print(f"[aviso] escenarios fuera del subconjunto Parquet ({outside}); leyendo CSV completo")
+        else:
+            use_subset = True
+    cache_key = (tuple(SUBSET_SCENARIOS) if use_subset else None, tuple(usecols))
     if cache_key in _LOAD_CACHE:
         return _LOAD_CACHE[cache_key].copy()
 
-    # low_memory=False fuerza al parser C a bufferizar el archivo completo para
-    # inferir un dtype consistente por columna; con el CSV actual (~1,4 GB,
-    # ~9,17M filas) eso agota memoria (pandas.errors.ParserError: "out of
-    # memory") aunque haya RAM libre de sobra -- es un límite del parser, no
-    # del sistema. El default (low_memory=True, lectura por chunks) sí
-    # funciona; el único costo es un DtypeWarning inofensivo en columnas con
-    # NaN mezclado con números, que igual se castean/filtran más abajo.
-    df = pd.read_csv(CSV_PATH, usecols=usecols)
-    df = df.dropna(subset=["YEAR"])
-    df["YEAR"] = df["YEAR"].astype(int)
+    if use_subset:
+        import pyarrow.parquet as pq_
+        path = ensure_scenario_subset(SUBSET_SCENARIOS)
+        df = pd.read_parquet(path, columns=usecols)
+        # mismo orden de columnas que devolvería pd.read_csv(usecols=...) (orden del archivo)
+        order = [c for c in pq_.read_schema(path).names if c in usecols]
+        df = df[order]
+    else:
+        df = pd.read_csv(CSV_PATH, usecols=usecols)
+        df = df.dropna(subset=["YEAR"])
+        df["YEAR"] = df["YEAR"].astype("int64")
     _LOAD_CACHE[cache_key] = df
     return df.copy()
 
