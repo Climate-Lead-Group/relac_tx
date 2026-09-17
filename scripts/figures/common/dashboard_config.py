@@ -10,17 +10,38 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
-from common import relac_paths as P
+# Rutas canónicas del repo (inputs/, outputs/) vía scripts/common/relac_paths.
+# Este módulo vive en scripts/figures/common/ -> parents[2] es scripts/, el
+# ÚNICO directorio que entra en sys.path; todo se importa como paquete
+# (common.relac_paths, figures.common.dashboard_config, ...). Spec 2026-09-16 §3.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from common import relac_paths as P  # noqa: E402
 
 # ================================================================
 # Paths
 # ================================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# CSV combinado que produce B2 (outputs/RELAC_TX_Combined_Inputs_Outputs.csv).
 CSV_PATH = str(P.OUTPUTS / "RELAC_TX_Combined_Inputs_Outputs.csv")
-FIGURES_DIR = str(P.FIGURES)
+# Capacidad/distancia de líneas por país (chart_10, fig_km_lineas*).
+CAPACITY_DISTANCES_PATH = str(P.DATA / "CapacityAndDistances.xlsx")
+# Centroides por región para los mapas de transmisión (pestañas 16/17).
+CENTERPOINTS_PATH = str(P.MISCELLANEOUS / "centerpoints.csv")
+# Año base BAU con datos reales de Primary/Secondary/Demand Techs (pestaña 18, RES).
+RES_BASE_YEAR_XLSX = str(P.A1_OUTPUTS / "A1_Outputs_BAU" / "A-O_AR_Model_Base_Year.xlsx")
+# Códigos/nombres de país (Z_AUX_generate_RES_diagram).
+COUNTRY_CODES_YAML = str(P.CONFIG_COUNTRY_CODES)
+# Salidas (spec 2026-09-16 §5.1): todo bajo outputs/Figures/ vía relac_paths.
+# Los nombres se conservan porque los usan los 40 fig_*.py y build_dashboard.py.
+FIGURES_DIR = str(P.FIGURES_REPORT)                     # fig_*.py de scripts/figures/report/
+FIGURES_PRESENTATION_DIR = str(P.FIGURES_PRESENTATION)  # fig_*_presentation.py (letra grande,
+                                                        # grupos juntos, leyenda en una fila)
+DASHBOARD_DIR = str(P.FIGURES_DASHBOARD)                # dashboard.html + chart*.png (--png)
+# Caché de escenarios autodetectados del CSV (antes vivía en Figures/).
+SCENARIOS_CACHE = os.path.join(str(P.FIGURES), ".scenarios_cache.json")
 # Balance energético anual OLADE/sieLAC (cuotas de importación, gráfico 12).
-OLADE_BALANCE_PATH = str(P.MATRIZ_BALANCE / "OLADE - Matriz de balance energético - Anual.xlsx")
+OLADE_BALANCE_PATH = str(
+    P.MATRIZ_BALANCE / "OLADE - Matriz de balance energético - Anual.xlsx"
+)
 
 # Sufijo opcional para los nombres de archivo generados (vacío = sin sufijo).
 OUTPUT_SUFFIX = ""
@@ -31,16 +52,109 @@ OUTPUT_SUFFIX = ""
 REFERENCE_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
 # Todos los años del horizonte del CSV (candidatos del selector dinámico).
 ALL_YEARS = list(range(2023, 2051))
-# VGB va justo después de INV para que VEGETATIVO A (INV) y VEGETATIVO B (VGB)
-# queden adyacentes en filas/columnas/líneas de todos los gráficos.
-SCENARIOS = ["BAU", "INV", "VGB", "OPT"]
-# Alias de DISPLAY de los escenarios (los datos siguen usando BAU/INV/VGB/OPT).
+# Los escenarios se AUTODETECTAN de la columna Scenario del CSV combinado, para
+# que CUALQUIER escenario nuevo aparezca solo en los menús sin tocar el código.
+# Orden: los preferidos primero (2026-09-16: el orden de la tabla de los 14
+# escenarios de la corrida — familia OPT (B**), familia ETT (I**), PLAN, ETT-GP;
+# después los códigos legados por si reaparecen), el resto alfabético. Se cachea
+# por mtime del CSV (.scenarios_cache.json) para no releer ~1 GB en cada import;
+# si el CSV falta o falla, cae a los 14 de la corrida.
+_SCEN_14 = [
+    "BAC", "BFA", "BFB", "BRA", "BRB", "BSR",
+    "ISR", "IFA", "IFB", "INV", "IRA", "IRB",
+    "OPC", "VSR",
+]
+_SCEN_PREFERRED = _SCEN_14 + [
+    # legados (corridas anteriores a 2026-09-16)
+    "BAU", "VGB", "OPT", "BCR", "OCR", "BCL", "OCL",
+    "ICL", "ICR", "VCL", "VCR",
+]
+
+
+def _detect_scenarios() -> list:
+    try:
+        import json
+        cache = SCENARIOS_CACHE
+        mt = os.path.getmtime(CSV_PATH)
+        if os.path.exists(cache):
+            c = json.load(open(cache, encoding="utf-8"))
+            if c.get("mtime") == mt and c.get("scen"):
+                return c["scen"]
+        found = (
+            pd.read_csv(CSV_PATH, usecols=["Scenario"])["Scenario"]
+            .dropna().astype(str).unique().tolist()
+        )
+        ordered = [s for s in _SCEN_PREFERRED if s in found]
+        ordered += sorted(s for s in found if s not in _SCEN_PREFERRED)
+        ordered = ordered or list(_SCEN_14)
+        try:
+            os.makedirs(os.path.dirname(cache), exist_ok=True)
+            json.dump({"mtime": mt, "scen": ordered}, open(cache, "w", encoding="utf-8"))
+        except Exception:
+            pass
+        return ordered
+    except Exception:
+        return list(_SCEN_14)
+
+
+SCENARIOS = _detect_scenarios()
+# Alias de DISPLAY de los escenarios (lo que VE el usuario; la clave es el
+# CÓDIGO de la columna Scenario del CSV). Cualquier código sin alias se muestra
+# tal cual (fallback SCENARIO_ALIAS.get(sc, sc)).
+#
+# 2026-09-16: tabla de los 14 escenarios de la corrida. Familias:
+#   B** = OPT  (BAC base; BSR = sin repotenciación; BF*/BR* = sensibilidades)
+#   I** = ETT  (ISR base; INV = con repotenciación; IF*/IR* = sensibilidades)
+#   OPC = PLAN ; VSR = ETT-GP.
+#   *FA/*FB = mayor/menor costo de combustible (fósil); *RA/*RB = mayor/menor
+#   costo de renovables.
 SCENARIO_ALIAS = {
-    "BAU": "REFERENCIA",
-    "OPT": "OPTIMO",
-    "INV": "VEGETATIVO A",
-    "VGB": "VEGETATIVO B",
+    # --- familia OPT ---
+    "BAC": "OPT",
+    "BFA": "OPT mayor costo combustible",
+    "BFB": "OPT menor costo combustible",
+    "BRA": "OPT mayor costo renovables",
+    "BRB": "OPT menor costo renovables",
+    "BSR": "OPT sin repotenciación",
+    # --- familia ETT ---
+    "ISR": "ETT",
+    "IFA": "ETT mayor costo combustible",
+    "IFB": "ETT menor costo combustible",
+    "INV": "ETT con repotenciación",
+    "IRA": "ETT mayor costo renovables",
+    "IRB": "ETT menor costo renovables",
+    # --- otros ---
+    "OPC": "PLAN",
+    "VSR": "ETT-GP",
+    # --- LEGADO (códigos que ya no vienen en la corrida 2026-09-16; se conservan
+    # por si se abre un CSV viejo). Ninguno choca con los 14 alias de arriba. ---
+    "VGB": "ETT-GP-OLD",       # Tx restringida, generación planificada / PEGs (= OPT)
+    "OPT": "OPT-output",       # OPT crudo (sin tope) — distinto del alias de BAC ("OPT")
+    "BCR": "OPT menor costo renovables (legado)",             # BAU: renovables ×0.6, combustible ×1.7
+    "OCR": "PLAN menor costo renovables",
+    "BCL": "OPT menor costo combustibles fósiles",   # BAU: combustible fósil más barato
+    "OCL": "PLAN menor costo combustibles fósiles",
+    "ICR": "ETT-MC menor costo renovables",
+    "ICL": "ETT-MC menor costo combustibles fósiles",
+    "VCR": "ETT-GP menor costo renovables",
+    "VCL": "ETT-GP menor costo combustibles fósiles",
 }
+# HISTORIA:
+# - 2026-08-18: BAU (sin tope) dejó de llevar alias de reporte — BAC (con tope)
+#   pasó a ser la referencia de reporte. BAU queda con su código crudo en
+#   cualquier figura donde aparezca (p.ej. fig_costo_no_inversion_tope.py).
+#   OPT (sin tope) lleva alias propio ("OPT-output") desde 2026-08-19 para no
+#   chocar con el alias "OPT" de BAC.
+# - 2026-08-19: ICL/ICR/VCL/VCR = variantes de menor-costo de INV (ETT-MC) y
+#   VGB (ETT-GP), análogas a BCL/BCR (BAC) y OCL/OCR (OPC). "combustible(s)" en
+#   todos estos alias significa siempre combustibles FÓSILES.
+# - 2026-08-27: variantes "SR" (BSR/ISR/VSR) como escenarios de origen de
+#   Figures_Presentation; entonces se mostraban con el MISMO nombre que
+#   BAC/INV/VGB (BSR="OPT", ISR="ETT-MC", VSR="ETT-GP").
+# - 2026-09-16: renombre para la corrida de 14 escenarios: ISR pasa a ser el
+#   ETT base ("ETT"), INV = "ETT con repotenciación" (antes "ETT-MC-OLD"),
+#   BSR = "OPT sin repotenciación" (antes "OPT", que chocaba con BAC). "BCR"
+#   legado lleva sufijo "(legado)" para no chocar con BRB.
 
 # ================================================================
 # Technology Generation Group classification
@@ -69,7 +183,7 @@ def classify_tech_generation(tech: str) -> str | None:
 
 
 # ================================================================
-# Origen del combustible (gráfico 12 — Seguridad Energética)
+# Origen del combustible (gráfico 15 — Seguridad Energética)
 # ----------------------------------------------------------------
 # Indicador de seguridad energética: energía primaria importada vs autóctona.
 #   Importado : MIN*INT*  (extracción "minera" de fuente internacional)
@@ -142,13 +256,46 @@ COLORS_TECH_GROUP = {
 COLOR_GW_LINE = "#ED7D31"
 
 # Color por escenario (gráficos 8, 11 y 13). Definidos por el usuario.
-# VGB (VEGETATIVO B) deriva de INV; se le da un violeta distinto para que las
-# líneas/barras por escenario sean legibles junto al rojo de INV.
+# Color por escenario. Los conocidos llevan color fijo; cualquier escenario
+# nuevo (autodetectado) recibe uno de la paleta de reserva por índice, así
+# ningún gráfico de líneas revienta por KeyError al crecer la lista.
+#
+# 2026-09-16 — 14 escenarios de la corrida, SIN duplicados entre ellos:
+#   familia OPT (B**) en tonos FRÍOS (gris/azules/teal/verde) alrededor del gris
+#   de BAC; familia ETT (I**) en tonos CÁLIDOS (rojos/rosas/marrón/ocre)
+#   alrededor del rojo de INV/ISR; OPC naranja y VSR violeta (como el VGB del
+#   que deriva). BAC/OPC/INV conservan su color histórico.
+_KNOWN_SCEN_COLORS = {
+    # --- familia OPT (fríos) ---
+    "BAC": "#bab0ac",   # gris (color histórico de reporte)
+    "BFA": "#1f77b4",   # azul
+    "BFB": "#a0cbe8",   # azul claro
+    "BRA": "#0f8b8d",   # teal oscuro
+    "BRB": "#86bcb6",   # teal claro
+    "BSR": "#2ca02c",   # verde
+    # --- familia ETT (cálidos) ---
+    "ISR": "#8b1a1a",   # granate (ETT base)
+    "INV": "#e15759",   # rojo (color histórico)
+    "IFA": "#ff9da7",   # rosa claro
+    "IFB": "#d37295",   # rosa oscuro / magenta
+    "IRA": "#9c755f",   # marrón
+    "IRB": "#b6992d",   # ocre
+    # --- otros ---
+    "OPC": "#f28e2b",   # naranja (color histórico)
+    "VSR": "#9467bd",   # violeta
+    # --- LEGADO (corridas anteriores; pueden repetir color con los 14 de
+    # arriba, solo importa si coexisten en el mismo CSV). BAC/OPC tomaron en
+    # 2026-08-18 los colores que antes tenían BAU/OPT y viceversa. ---
+    "BAU": "#4e79a7", "VGB": "#b07aa1", "OPT": "#59a14f",
+    "BCR": "#76b7b2", "OCR": "#edc948", "BCL": "#ff9da7", "OCL": "#9c755f",
+}
+_SCEN_FALLBACK_PALETTE = [
+    "#4e79a7", "#59a14f", "#76b7b2", "#edc948", "#ff9da7",
+    "#9c755f", "#b6992d", "#86bcb6", "#d37295", "#a0cbe8",
+]
 COLORS_SCENARIO = {
-    "BAU": "#bab0ac",
-    "INV": "#e15759",
-    "VGB": "#b07aa1",
-    "OPT": "#f28e2b",
+    sc: _KNOWN_SCEN_COLORS.get(sc, _SCEN_FALLBACK_PALETTE[i % len(_SCEN_FALLBACK_PALETTE)])
+    for i, sc in enumerate(SCENARIOS)
 }
 
 # Paleta OFICIAL por tipo de tecnología — consistente en TODO el dashboard.
@@ -364,11 +511,76 @@ def load_column(columns: list[str], extra_dims: list[str] | None = None) -> pd.D
     if cache_key in _LOAD_CACHE:
         return _LOAD_CACHE[cache_key].copy()
 
-    df = pd.read_csv(CSV_PATH, usecols=usecols, low_memory=False)
+    # low_memory=False fuerza al parser C a bufferizar el archivo completo para
+    # inferir un dtype consistente por columna; con el CSV actual (~1,4 GB,
+    # ~9,17M filas) eso agota memoria (pandas.errors.ParserError: "out of
+    # memory") aunque haya RAM libre de sobra -- es un límite del parser, no
+    # del sistema. El default (low_memory=True, lectura por chunks) sí
+    # funciona; el único costo es un DtypeWarning inofensivo en columnas con
+    # NaN mezclado con números, que igual se castean/filtran más abajo.
+    df = pd.read_csv(CSV_PATH, usecols=usecols)
     df = df.dropna(subset=["YEAR"])
     df["YEAR"] = df["YEAR"].astype(int)
     _LOAD_CACHE[cache_key] = df
     return df.copy()
+
+
+# ================================================================
+# CapacityAndDistances.xlsx — capacidad/distancia por país (chart_10 /
+# fig_km_lineas_acumulados.py)
+# ----------------------------------------------------------------
+# El xlsx nunca se actualizó con los códigos "con tope" BAC/OPC (2026-08-18,
+# ver SCENARIO_ALIAS más arriba): solo trae BAU, OPT, INV, VGB y las variantes
+# NDC* / BAU_SinInterconexiones (verificado 2026-08-19: NO trae BCR/BCL ni
+# ninguna sensibilidad de costo). Como chart_10 y fig_km_lineas_acumulados.py
+# cruzan por Scenario+Country con un merge "inner", las filas BAC/OPC no
+# encontraban match y se descartaban SIN error ni warning -- la figura salía
+# con solo 2 de 4 escenarios (ETT-MC/ETT-GP), faltando OPT/PLAN. BAC es la
+# variante con tope de BAU y OPC la de OPT (misma topología de red/país; el
+# tope solo limita la rampa de inversión en Tx, no la geografía), así que
+# reusar las filas Capacity/Distance de BAU/OPT bajo BAC/OPC es correcto, no
+# un dato inventado. Mismo argumento para las sensibilidades de costo
+# BCR/BCL (de BAC), OCR/OCL (de OPC), ICR/ICL (de INV) y VCR/VCL (de VGB):
+# solo cambian costos (renovables/combustible fósil más baratos), no la
+# geografía de la red -> caen al escenario base que SÍ está en el xlsx.
+# 2026-09-16: misma lógica para la corrida de 14 escenarios: la familia OPT
+# (BAC/BSR/BFA/BFB/BRA/BRB) cae a BAU y la familia ETT (ISR/INV/IFA/IFB/IRA/IRB)
+# a INV; OPC -> OPT y VSR -> VGB. Solo se duplica si el código NO está ya en
+# el xlsx (ver load_capacity_and_distances).
+# ================================================================
+CD_SCENARIO_FALLBACK = {
+    "BAC": "BAU", "OPC": "OPT",
+    "BCR": "BAU", "BCL": "BAU",   # sensibilidades de BAC (base xlsx: BAU) — legado
+    "OCR": "OPT", "OCL": "OPT",   # sensibilidades de OPC (base xlsx: OPT) — legado
+    "ICR": "INV", "ICL": "INV",   # sensibilidades de INV — legado
+    "VCR": "VGB", "VCL": "VGB",   # sensibilidades de VGB — legado
+    "BSR": "BAU", "ISR": "INV", "VSR": "VGB",   # set "SR" (2026-08-27): base xlsx de BAC/INV/VGB
+    # Corrida 2026-09-16 (sensibilidades de costo FA/FB/RA/RB):
+    "BFA": "BAU", "BFB": "BAU", "BRA": "BAU", "BRB": "BAU",   # familia OPT
+    "IFA": "INV", "IFB": "INV", "IRA": "INV", "IRB": "INV",   # familia ETT
+}
+
+
+def load_capacity_and_distances() -> pd.DataFrame:
+    """Lee CapacityAndDistances.xlsx con fallback de escenario BAC/OPC -> BAU/OPT.
+
+    Devuelve columnas Scenario/Country/Capacity/Distance RNW/Distance NRNW,
+    duplicando las filas de BAU/OPT bajo BAC/OPC cuando el xlsx no trae esos
+    códigos directamente (ver CD_SCENARIO_FALLBACK).
+    """
+    cd = pd.read_excel(CAPACITY_DISTANCES_PATH)[
+        ["Scenario", "Country", "Capacity", "Distance RNW", "Distance NRNW"]
+    ]
+    present = set(cd["Scenario"].unique())
+    extra = []
+    for new_sc, base_sc in CD_SCENARIO_FALLBACK.items():
+        if new_sc not in present and base_sc in present:
+            dup = cd[cd["Scenario"] == base_sc].copy()
+            dup["Scenario"] = new_sc
+            extra.append(dup)
+    if extra:
+        cd = pd.concat([cd] + extra, ignore_index=True)
+    return cd
 
 
 # ================================================================
