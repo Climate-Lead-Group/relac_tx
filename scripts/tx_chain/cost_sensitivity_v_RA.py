@@ -10,9 +10,9 @@ solar, wind and battery storage, writes a new datafile. Only VALUES change; stru
 untouched -> feasibility preserved. Backstop is left AS-IS in the solve.
 
 Multipliers (PLACEHOLDER = RB; PENDIENTE CALIBRAR Renovables Altos):
-  - PWRSPV/PWRCSP x0.60 (NREL ATB 2024 PV Moderate; EIA AEO2025 Low Zero-Carbon Tech Cost)
-  - PWRWON/PWRWOF x0.75 (NREL ATB 2024 land-based wind Moderate [EST]; shallower than PV)
-  - PWRSDS x0.50 (NREL ATB 2024 utility battery Moderate)
+  - PWRSPV/PWRCSP x1.33 (NREL ATB 2024 PV Moderate; EIA AEO2025 Low Zero-Carbon Tech Cost)
+  - PWRWON/PWRWOF x1.17 (NREL ATB 2024 land-based wind Moderate [EST]; shallower than PV)
+  - PWRSDS x1.49 (NREL ATB 2024 utility battery Moderate)
   - PWRLDS EXCLUDED (no literature basis; base trajectory already declines 56%)
   - fossil MIN* VariableCost UNCHANGED (that is the FA/FB scripts)
 Pairs: BAC->BRA, INV->IRA.
@@ -47,9 +47,9 @@ def LOCAL(s):
 PAIRS={"BAC":"BRA", "INV":"IRA"}
 
 # ----- tunable knobs ----- PENDIENTE: calibrar Renovables Altos (valores actuales = RB)
-VRE_MULT   = 0.6                       # solar CapitalCost x0.6
-WIND_MULT  = 0.75                      # wind CapitalCost x0.75 (shallower decline than PV)
-STO_MULT   = 0.5                       # battery storage CapitalCost x0.5
+VRE_MULT   = 1.33                       # solar CapitalCost x0.6
+WIND_MULT  = 1.17                      # wind CapitalCost x0.75 (shallower decline than PV)
+STO_MULT   = 1.49                       # battery storage CapitalCost x0.5
 VRE_FAMS   = {"PWRSPV","PWRCSP"}       # the genuinely-declining solar
 WIND_FAMS  = {"PWRWON","PWRWOF"}
 STO_FAMS   = {"PWRSDS"}                # batteries only; PWRLDS excluded (no literature basis)
