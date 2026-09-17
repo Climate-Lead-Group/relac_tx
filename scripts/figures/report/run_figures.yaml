@@ -1,0 +1,26 @@
+# Figuras de REPORTE (scripts/figures/report/). true = generar, false = omitir.
+# Orden = orden de ejecución. Salida: outputs/Figures/Report/.
+# Forma larga para pasar argumentos:
+#   fig_almacenamiento_2050: {enabled: true, args: ["--years", "2030", "2050"]}
+# Los *_tmp (figuras exploratorias / con ENS) arrancan apagados.
+fig_almacenamiento_2050: true
+fig_capacidad_generacion_2050: true
+fig_capacidad_transmision_2050: true
+fig_capacidad_transmision_2050_tmp: false
+fig_combustibles_fosiles_2050: true
+fig_combustibles_fosiles_ens_tmp: false
+fig_costo_no_inversion: true
+fig_costo_no_inversion_ens_tmp: false
+fig_costo_no_inversion_tope: true
+fig_costo_unitario: true
+fig_costo_unitario_ens_tmp: false
+fig_diversidad_fuentes: true
+fig_ens_2041_vs_demanda_tmp: false
+fig_ens_tmp: false
+fig_generacion_anual_2050: true
+fig_inversion_transmision_acumulada: true
+fig_km_lineas_acumulados: true
+fig_km_lineas_existentes_tmp: false
+fig_participacion_renovable: true
+fig_seguridad_energetica_2050: true
+fig_seguridad_energetica_trayectoria: true

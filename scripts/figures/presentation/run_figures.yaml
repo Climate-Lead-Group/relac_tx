@@ -1,0 +1,24 @@
+# Figuras de PRESENTACIÓN (scripts/figures/presentation/). true = generar, false = omitir.
+# Orden = orden de ejecución. Salida: outputs/Figures/Presentation/.
+# Forma larga para pasar argumentos:
+#   fig_almacenamiento_2050_presentation: {enabled: true, args: ["--years", "2030", "2050"]}
+# Los *_tmp arrancan apagados.
+fig_almacenamiento_2050_presentation: true
+fig_capacidad_generacion_2050_presentation: true
+fig_capacidad_generacion_tecnologia_2050_presentation: true
+fig_capacidad_transmision_2050_presentation: true
+fig_capacidad_transmision_2050_presentation_tmp: false
+fig_combustibles_fosiles_2050_presentation: true
+fig_combustibles_fosiles_ens_presentation_tmp: false
+fig_costo_no_inversion_ens_presentation_tmp: false
+fig_costo_no_inversion_presentation: true
+fig_costo_unitario_ens_presentation_tmp: false
+fig_costo_unitario_presentation: true
+fig_diversidad_fuentes_presentation: true
+fig_ens_presentation_tmp: false
+fig_generacion_anual_2050_presentation: true
+fig_inversion_transmision_acumulada_presentation: true
+fig_km_lineas_acumulados_presentation: true
+fig_participacion_renovable_presentation: true
+fig_seguridad_energetica_2050_presentation: true
+fig_seguridad_energetica_trayectoria_presentation: true
