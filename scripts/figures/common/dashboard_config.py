@@ -581,7 +581,10 @@ def ensure_scenario_subset(scenarios, verbose: bool = True) -> str:
     t0 = time.perf_counter()
     sig = _csv_signature()   # ANTES de leer: si el CSV cambia durante la lectura, queda no vigente
     parts = []
-    for chunk in pd.read_csv(CSV_PATH, chunksize=_CHUNK_ROWS):
+    # low_memory=False por chunk: cada chunk (500k filas) cabe en memoria y así el
+    # parser no emite un DtypeWarning por chunk (la tipificación final la hace
+    # _harmonize_dtypes de todos modos).
+    for chunk in pd.read_csv(CSV_PATH, chunksize=_CHUNK_ROWS, low_memory=False):
         part = chunk[chunk["Scenario"].isin(scen)]
         if len(part):
             parts.append(part)
