@@ -17,6 +17,9 @@ MUST_EXIST = [
     P.OUTPUT_MODEL / "osemosys_fast_preprocessed_storage_delay.txt",
     P.PIPELINE / "B2_Executing_OG_Model.py", P.FIX_DISPATCH / "write_floors.py",
     P.TX_CHAIN / "veg_tx_constraints.py", P.TOOLS / "concatenate_relac.py",
+    P.FIGURES_SCRIPTS / "run_all.py", P.FIGURES_SCRIPTS / "run_all.yaml",
+    P.FIGURES_SCRIPTS / "report" / "run_figures.yaml", P.FIGURES_SCRIPTS / "presentation" / "run_figures.yaml",
+    P.FIGURES_SCRIPTS / "dashboard" / "build_dashboard.py", P.FIGURES_SCRIPTS / "common" / "dashboard_config.py",
 ]
 
 def main() -> int:
