@@ -34,7 +34,7 @@ iteration_time: 20000
 cbc_random_seed: 12345        # Random seed for reproducibility
 
 # For CPLEX use
-cplex_threads: 12
+cplex_threads: 7
 cplex_random_seed: 12345      # Random seed for reproducibility
 
 # For Gurobi use
@@ -48,11 +48,11 @@ del_files: False
 only_main_scenario: False
 
 # Paralle scenarios
-parallel: False
+parallel: True
 # Number of scenario per run
 # Recomendacion: cplex_threads x max_x_per_iter <= nucleos fisicos de la maquina
 # (cada proceso en paralelo lanza su propia instancia de cplex_threads hilos)
-max_x_per_iter: 4
+max_x_per_iter: 7
 
 # Write A2 otoole outputs
 A2_otoole_outputs: True
