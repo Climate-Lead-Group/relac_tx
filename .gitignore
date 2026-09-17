@@ -99,6 +99,8 @@ outputs/Figures/Report/
 outputs/Figures/Presentation/
 outputs/Figures/_subset_*
 outputs/Figures/.scenarios_cache.json
+outputs/Figures/Tablas_Completas_Resultados*.xlsx
+outputs/Figures/.tablas_xlsx_reduced.pkl
 
 # Bytecode (al FINAL: debe ir despues de la excepcion !scripts/** para que gane)
 __pycache__/

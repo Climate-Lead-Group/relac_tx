@@ -1,13 +1,18 @@
 """
-run_all.py — maestro total de figuras: report -> presentation -> dashboard según run_all.yaml.
+run_all.py — maestro total de figuras: report -> presentation -> dashboard -> tablas
+según run_all.yaml.
 
 Paso 0: construir/reutilizar el subconjunto Parquet BAC+ISR. Después, en este orden
-fijo y en el mismo proceso, cada rama encendida:
+fijo, cada rama encendida:
   report        -> scripts/figures/report/run_figures.py       (outputs/Figures/Report/)
   presentation  -> scripts/figures/presentation/run_figures.py (outputs/Figures/Presentation/)
   dashboard     -> figures.dashboard.build_dashboard.main([..]) (outputs/Figures/Dashboard/dashboard.html)
-Una rama que falle no detiene a las demás; al final imprime un resumen por rama y
-devuelve 1 si alguna falló.
+  tablas        -> scripts/figures/Z_AUX_make_tablas_xlsx.py   (outputs/Figures/Tablas_Completas_Resultados.xlsx)
+Las tres primeras corren en el mismo proceso; `tablas` va en un subproceso (PYTHONUTF8=1)
+porque el script trabaja al importarse y reduce el CSV completo por chunks — así libera
+esa memoria al terminar y nunca se solapa con los fig_*.py (el script advierte OOM si
+corre en paralelo). Una rama que falle no detiene a las demás; al final imprime un
+resumen por rama y devuelve 1 si alguna falló.
 
 Uso:
     python scripts/figures/run_all.py
@@ -15,6 +20,8 @@ Uso:
     python scripts/figures/run_all.py --only report presentation
 """
 import argparse
+import os
+import subprocess
 import sys
 import time
 import traceback
@@ -26,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
 from figures.common import fig_runner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-ORDER = ["report", "presentation", "dashboard"]
+ORDER = ["report", "presentation", "dashboard", "tablas"]
 
 
 def run_report() -> int:
@@ -45,7 +52,16 @@ def run_dashboard() -> int:
     return 0
 
 
-RUNNERS = {"report": run_report, "presentation": run_presentation, "dashboard": run_dashboard}
+def run_tablas() -> int:
+    # Subproceso: el script es un módulo con código de nivel superior (no expone main())
+    # y lee el CSV completo (~1,5 GB) por chunks; aislarlo devuelve la RAM al terminar.
+    env = {**os.environ, "PYTHONUTF8": "1"}
+    proc = subprocess.run([sys.executable, str(HERE / "Z_AUX_make_tablas_xlsx.py")], env=env)
+    return proc.returncode
+
+
+RUNNERS = {"report": run_report, "presentation": run_presentation,
+           "dashboard": run_dashboard, "tablas": run_tablas}
 
 
 def read_config(path: Path) -> dict[str, bool]:

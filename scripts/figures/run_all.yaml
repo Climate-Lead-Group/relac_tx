@@ -1,6 +1,8 @@
-# Maestro total (scripts/figures/run_all.py). Orden fijo: report -> presentation -> dashboard.
+# Maestro total (scripts/figures/run_all.py). Orden fijo: report -> presentation -> dashboard -> tablas.
 # true = correr esa rama, false = omitirla. El dashboard SIEMPRE se construye completo
 # (todos los charts + pestañas 16-18); nunca se le pasa un subconjunto desde aquí.
 report: true
 presentation: true
 dashboard: true
+# Tablas_Completas_Resultados.xlsx (14 escenarios, nivel regional) via Z_AUX_make_tablas_xlsx.py.
+tablas: true

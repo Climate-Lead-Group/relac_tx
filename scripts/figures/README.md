@@ -5,7 +5,9 @@ Código de las figuras del reporte/presentación y del dashboard. Salidas en `ou
 
 ```
 scripts/figures/
-├─ run_all.py / run_all.yaml        maestro total: report -> presentation -> dashboard
+├─ run_all.py / run_all.yaml        maestro total: report -> presentation -> dashboard -> tablas
+├─ Z_AUX_make_tablas_xlsx.py        Tablas_Completas_Resultados.xlsx (T1-T9 + Resumen, 14 escenarios,
+│                                   nivel regional); rama `tablas` de run_all, corre en subproceso
 ├─ common/
 │   ├─ dashboard_config.py          datos (CSV combinado), rutas, alias y colores de escenarios,
 │   │                               load_column(scenarios=), subconjunto Parquet (ensure_scenario_subset)
@@ -19,6 +21,8 @@ outputs/Figures/
 ├─ Dashboard/                       dashboard.html (+ chart*.png con --png)
 ├─ Report/                          fig_*.png (+ fig_km_lineas_existentes_tmp_*.csv)
 ├─ Presentation/                    fig_*.png
+├─ Tablas_Completas_Resultados.xlsx tablas regionales del reporte (rama `tablas`)
+├─ .tablas_xlsx_reduced.pkl         caché de la reducción del CSV para las tablas (por mtime del CSV)
 ├─ _subset_BAC-ISR.parquet/.json    subconjunto del CSV para las figuras estáticas (se regenera solo)
 └─ .scenarios_cache.json            escenarios autodetectados del CSV
 ```
@@ -34,9 +38,12 @@ outputs/Figures/
 | Solo algunas figuras | `python scripts/figures/report/run_figures.py --only fig_almacenamiento_2050 fig_costo_unitario` |
 | Una figura suelta | `python scripts/figures/report/fig_almacenamiento_2050.py [--years ...] [--scenarios BAC ISR] [--out base]` |
 | Dashboard solo | `python scripts/figures/dashboard/build_dashboard.py` (todos los charts) o `... 01 03` (un subconjunto, solo para depurar) |
+| Tablas xlsx solo | `python scripts/figures/run_all.py --only tablas` o `PYTHONUTF8=1 python scripts/figures/Z_AUX_make_tablas_xlsx.py` |
 
 Tiempos medidos el 2026-09-17 (CSV de 6 escenarios, 605 MB): construir el Parquet ~25 s (una vez;
 después se reutiliza), reporte ~14 s (14 figuras), presentación ~10 s (14 figuras), dashboard ~3,5 min (17 charts + pestañas 16-18; lee el CSV completo). Total run_all ~4,5 min.
+Tablas xlsx (CSV de 17 escenarios, 1,5 GB): ~5 min la primera vez (reduce el CSV por chunks y lo
+cachea en `.tablas_xlsx_reduced.pkl`), segundos las siguientes hasta que cambie el CSV.
 
 ## YAML de encendido/apagado
 
@@ -54,7 +61,7 @@ El maestro avisa si una clave no tiene `.py` o si hay un `fig_*.py` en disco que
 Al final imprime una tabla `script | estado (OK/AVISO/ERROR/OMITIDO) | segundos | salida` y devuelve
 código 1 si hubo algún ERROR (un `SystemExit("Sin datos ...")` cuenta como AVISO).
 
-`run_all.yaml`: `report`, `presentation`, `dashboard` → `true|false`.
+`run_all.yaml`: `report`, `presentation`, `dashboard`, `tablas` → `true|false`.
 
 ## Escenarios
 
