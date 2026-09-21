@@ -105,3 +105,10 @@ outputs/Figures/.tablas_xlsx_reduced.pkl
 # Bytecode (al FINAL: debe ir despues de la excepcion !scripts/** para que gane)
 __pycache__/
 *.py[cod]
+
+# Planes/specs de trabajo local (no se publican)
+docs/superpowers/
+.superpowers/
+# Sphinx
+docs/_build/
+docs/locale/**/*.mo
