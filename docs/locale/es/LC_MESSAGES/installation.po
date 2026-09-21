@@ -21,383 +21,382 @@ msgstr ""
 
 #: ../../installation.md:1
 msgid "Installation"
-msgstr ""
+msgstr "Instalación"
 
 #: ../../installation.md:3
 msgid ""
 "This guide covers the full setup process for running RELAC TX on a "
 "Windows machine."
-msgstr ""
+msgstr "Esta guía cubre el proceso completo de configuración para ejecutar RELAC TX en una máquina Windows."
 
 #: ../../installation.md:5
 msgid "System Requirements"
-msgstr ""
+msgstr "Requisitos del sistema"
 
 #: ../../installation.md:7
 msgid "**Operating System:** Windows 10 or higher"
-msgstr ""
+msgstr "**Sistema operativo:** Windows 10 o superior"
 
 #: ../../installation.md:8
 msgid "**Git:** [Git for Windows](https://gitforwindows.org/) (version 2.40+)"
-msgstr ""
+msgstr "**Git:** [Git for Windows](https://gitforwindows.org/) (versión 2.40+)"
 
 #: ../../installation.md:9
 msgid ""
 "**Python distribution:** "
 "[Miniconda](https://docs.conda.io/en/latest/miniconda.html) or "
 "[Anaconda](https://www.anaconda.com/download)"
-msgstr ""
+msgstr "**Distribución de Python:** [Miniconda](https://docs.conda.io/en/latest/miniconda.html) o [Anaconda](https://www.anaconda.com/download)"
 
 #: ../../installation.md:10
 msgid "**Solver:** At least one of the following LP/MIP solvers:"
-msgstr ""
+msgstr "**Solver:** Al menos uno de los siguientes solvers LP/MIP:"
 
 #: ../../installation.md:11
 msgid ""
 "[GLPK](https://www.gnu.org/software/glpk/) (open source, **installed "
 "automatically** with the Conda environment)"
-msgstr ""
+msgstr "[GLPK](https://www.gnu.org/software/glpk/) (código abierto, **se instala automáticamente** con el entorno Conda)"
 
 #: ../../installation.md:12
 msgid ""
 "[CBC](https://github.com/coin-or/Cbc) (open source, **installed "
 "automatically** with the Conda environment)"
-msgstr ""
+msgstr "[CBC](https://github.com/coin-or/Cbc) (código abierto, **se instala automáticamente** con el entorno Conda)"
 
 #: ../../installation.md:13
 msgid ""
 "[CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio) "
 "(commercial, IBM)"
-msgstr ""
+msgstr "[CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio) (comercial, IBM)"
 
 #: ../../installation.md:14
 msgid "[Gurobi](https://www.gurobi.com/) (commercial, free academic license)"
-msgstr ""
+msgstr "[Gurobi](https://www.gurobi.com/) (comercial, licencia académica gratuita)"
 
 #: ../../installation.md:16
 msgid "Clone the Repository"
-msgstr ""
+msgstr "Clonar el repositorio"
 
 #: ../../installation.md:23
 msgid "Conda Environment"
-msgstr ""
+msgstr "Entorno Conda"
 
 #: ../../installation.md:25
 msgid ""
 "RELAC TX uses a Conda environment defined in `environment.yaml`. The "
 "`run.py` launcher automatically creates it if it does not exist, but you "
 "can also create it manually:"
-msgstr ""
+msgstr "RELAC TX usa un entorno Conda definido en `environment.yaml`. El lanzador `run.py` lo crea automáticamente si no existe, pero también puede crearlo manualmente:"
 
 #: ../../installation.md:32
 msgid "Environment Dependencies"
-msgstr ""
+msgstr "Dependencias del entorno"
 
 #: ../../installation.md:34
 msgid "The environment installs the following packages:"
-msgstr ""
+msgstr "El entorno instala los siguientes paquetes:"
 
 #: ../../installation.md
 msgid "Package"
-msgstr ""
+msgstr "Paquete"
 
 #: ../../installation.md
 msgid "Version"
-msgstr ""
+msgstr "Versión"
 
 #: ../../installation.md
 msgid "Purpose"
-msgstr ""
+msgstr "Propósito"
 
 #: ../../installation.md
 msgid "Python"
-msgstr ""
+msgstr "Python"
 
 #: ../../installation.md
 msgid "3.10"
-msgstr ""
+msgstr "3.10"
 
 #: ../../installation.md
 msgid "Runtime"
-msgstr ""
+msgstr "Tiempo de ejecución"
 
 #: ../../installation.md
 msgid "pandas"
-msgstr ""
+msgstr "pandas"
 
 #: ../../installation.md
 msgid ">= 2.1"
-msgstr ""
+msgstr ">= 2.1"
 
 #: ../../installation.md
 msgid "Data manipulation"
-msgstr ""
+msgstr "Manipulación de datos"
 
 #: ../../installation.md
 msgid "numpy"
-msgstr ""
+msgstr "numpy"
 
 #: ../../installation.md
 msgid ">= 1.26"
-msgstr ""
+msgstr ">= 1.26"
 
 #: ../../installation.md
 msgid "Numerical computation"
-msgstr ""
+msgstr "Cálculo numérico"
 
 #: ../../installation.md
 msgid "openpyxl"
-msgstr ""
+msgstr "openpyxl"
 
 #: ../../installation.md
 msgid ">= 3.1"
-msgstr ""
+msgstr ">= 3.1"
 
 #: ../../installation.md
 msgid "Excel file reading"
-msgstr ""
+msgstr "Lectura de archivos Excel"
 
 #: ../../installation.md
 msgid "xlsxwriter"
-msgstr ""
+msgstr "xlsxwriter"
 
 #: ../../installation.md
 msgid ">= 3.2.4"
-msgstr ""
+msgstr ">= 3.2.4"
 
 #: ../../installation.md
 msgid "Excel file writing"
-msgstr ""
+msgstr "Escritura de archivos Excel"
 
 #: ../../installation.md
 msgid "pyyaml"
-msgstr ""
+msgstr "pyyaml"
 
 #: ../../installation.md
 msgid ">= 6.0"
-msgstr ""
+msgstr ">= 6.0"
 
 #: ../../installation.md
 msgid "YAML configuration parsing"
-msgstr ""
+msgstr "Análisis de configuración YAML"
 
 #: ../../installation.md
 msgid "matplotlib"
-msgstr ""
+msgstr "matplotlib"
 
 #: ../../installation.md
 msgid ">= 3.8"
-msgstr ""
+msgstr ">= 3.8"
 
 #: ../../installation.md
 msgid ""
 "Figures (`scripts/figures/report`, `scripts/figures/presentation`, "
 "`scripts/fix_dispatch`, `scripts/tx_chain`)"
-msgstr ""
+msgstr "Figuras (`scripts/figures/report`, `scripts/figures/presentation`, `scripts/fix_dispatch`, `scripts/tx_chain`)"
 
 #: ../../installation.md
 msgid "plotly"
-msgstr ""
+msgstr "plotly"
 
 #: ../../installation.md
 msgid ">= 5.18, < 7"
-msgstr ""
+msgstr ">= 5.18, < 7"
 
 #: ../../installation.md
 msgid "Interactive dashboard (`scripts/figures/dashboard/build_dashboard.py`)"
-msgstr ""
+msgstr "Panel interactivo (`scripts/figures/dashboard/build_dashboard.py`)"
 
 #: ../../installation.md
 msgid "pyarrow"
-msgstr ""
+msgstr "pyarrow"
 
 #: ../../installation.md
 msgid ">= 14"
-msgstr ""
+msgstr ">= 14"
 
 #: ../../installation.md
 msgid ""
 "Parquet subset of the combined CSV for the static figures "
 "(`scripts/figures/common/dashboard_config.py`)"
-msgstr ""
+msgstr "Subconjunto Parquet del CSV combinado para las figuras estáticas (`scripts/figures/common/dashboard_config.py`)"
 
 #: ../../installation.md
 msgid "ruamel.yaml"
-msgstr ""
+msgstr "ruamel.yaml"
 
 #: ../../installation.md
 msgid ">= 0.17"
-msgstr ""
+msgstr ">= 0.17"
 
 #: ../../installation.md
 msgid ""
 "Comment-preserving YAML edits in `B1_Run_Compiler.py` (PyYAML fallback if"
 " absent)"
-msgstr ""
+msgstr "Ediciones YAML que preservan comentarios en `B1_Run_Compiler.py` (usa PyYAML como respaldo si no está presente)"
 
 #: ../../installation.md
 msgid "scipy"
-msgstr ""
+msgstr "scipy"
 
 #: ../../installation.md
 msgid ">= 1.11"
-msgstr ""
+msgstr ">= 1.11"
 
 #: ../../installation.md
 msgid "Least-squares fit in `scripts/experimental/matriz_balance`"
-msgstr ""
+msgstr "Ajuste de mínimos cuadrados en `scripts/experimental/matriz_balance`"
 
 #: ../../installation.md
 msgid "glpk"
-msgstr ""
+msgstr "glpk"
 
 #: ../../installation.md
 msgid "latest (conda-forge)"
-msgstr ""
+msgstr "última versión (conda-forge)"
 
 #: ../../installation.md
 msgid "GLPK solver, provides the `glpsol` CLI"
-msgstr ""
+msgstr "Solver GLPK, provee la CLI `glpsol`"
 
 #: ../../installation.md
 msgid "coincbc"
-msgstr ""
+msgstr "coincbc"
 
 #: ../../installation.md
 msgid "CBC solver, provides the `cbc` CLI (metapackage for `coin-or-cbc`)"
-msgstr ""
+msgstr "Solver CBC, provee la CLI `cbc` (metapaquete de `coin-or-cbc`)"
 
 #: ../../installation.md
 msgid "git"
-msgstr ""
+msgstr "git"
 
 #: ../../installation.md
 msgid ">= 2.40"
-msgstr ""
+msgstr ">= 2.40"
 
 #: ../../installation.md
 msgid "Version control"
-msgstr ""
+msgstr "Control de versiones"
 
 #: ../../installation.md
 msgid "dvc"
-msgstr ""
+msgstr "dvc"
 
 #: ../../installation.md
 msgid "latest"
-msgstr ""
+msgstr "última versión"
 
 #: ../../installation.md
 msgid "Data Version Control pipeline"
-msgstr ""
+msgstr "Pipeline de Data Version Control"
 
 #: ../../installation.md
 msgid "otoole"
-msgstr ""
+msgstr "otoole"
 
 #: ../../installation.md
 msgid ">= 1.1.1"
-msgstr ""
+msgstr ">= 1.1.1"
 
 #: ../../installation.md
 msgid "OSeMOSYS data format conversion"
-msgstr ""
+msgstr "Conversión de formato de datos de OSeMOSYS"
 
 #: ../../installation.md:55
 msgid "Solver Setup"
-msgstr ""
+msgstr "Configuración del solver"
 
 #: ../../installation.md:57
 msgid "GLPK and CBC (included in the environment)"
-msgstr ""
+msgstr "GLPK y CBC (incluidos en el entorno)"
 
 #: ../../installation.md:59
 msgid ""
 "Both open-source solvers are declared in `environment.yaml` (`glpk` and "
 "`coincbc`), so they are installed together with the Conda environment. No"
 " extra step is needed for a fresh environment."
-msgstr ""
+msgstr "Ambos solvers de código abierto están declarados en `environment.yaml` (`glpk` y `coincbc`), por lo que se instalan junto con el entorno Conda. No se necesita ningún paso adicional para un entorno nuevo."
 
 #: ../../installation.md:61
 msgid ""
 "If your `OG-MOMF-env` was created before the solvers were added, `run.py`"
 " detects the missing `glpsol`/`cbc` binaries and installs them on its "
 "next run. You can also do it manually:"
-msgstr ""
+msgstr "Si su `OG-MOMF-env` se creó antes de que se agregaran los solvers, `run.py` detecta los binarios `glpsol`/`cbc` faltantes y los instala en su siguiente ejecución. También puede hacerlo manualmente:"
 
 #: ../../installation.md:67
 msgid ""
 "Note: the binaries live inside the environment (`...\\envs\\OG-MOMF-"
 "env\\Library\\bin`), so they are only on `PATH` when the environment is "
 "active (or when running through `conda run`, as `run.py` does)."
-msgstr ""
+msgstr "Nota: los binarios residen dentro del entorno (`...\\envs\\OG-MOMF-env\\Library\\bin`), por lo que solo están en `PATH` cuando el entorno está activo (o al ejecutarse mediante `conda run`, como hace `run.py`)."
 
 #: ../../installation.md:69
 msgid "CPLEX"
-msgstr ""
+msgstr "CPLEX"
 
 #: ../../installation.md:71
 msgid ""
 "Install IBM ILOG CPLEX Optimization Studio from the [IBM "
 "website](https://www.ibm.com/products/ilog-cplex-optimization-studio)."
-msgstr ""
+msgstr "Instale IBM ILOG CPLEX Optimization Studio desde el [sitio web de IBM](https://www.ibm.com/products/ilog-cplex-optimization-studio)."
 
 #: ../../installation.md:72
 msgid "Ensure the `cplex` binary is available on your system `PATH`."
-msgstr ""
+msgstr "Asegúrese de que el binario `cplex` esté disponible en el `PATH` de su sistema."
 
 #: ../../installation.md:73
 msgid "Set `solver: 'cplex'` in `inputs/config/Config_MOMF_T1_AB.yaml`."
-msgstr ""
+msgstr "Configure `solver: 'cplex'` en `inputs/config/Config_MOMF_T1_AB.yaml`."
 
 #: ../../installation.md:75
 msgid "Gurobi"
-msgstr ""
+msgstr "Gurobi"
 
 #: ../../installation.md:77
 msgid ""
 "Install Gurobi from the [Gurobi "
 "website](https://www.gurobi.com/downloads/)."
-msgstr ""
+msgstr "Instale Gurobi desde el [sitio web de Gurobi](https://www.gurobi.com/downloads/)."
 
 #: ../../installation.md:78
 msgid "Activate your license (`grbgetkey <license-key>`)."
-msgstr ""
+msgstr "Active su licencia (`grbgetkey <license-key>`)."
 
 #: ../../installation.md:79
 msgid "Ensure the `gurobi` binary is available on your system `PATH`."
-msgstr ""
+msgstr "Asegúrese de que el binario `gurobi` esté disponible en el `PATH` de su sistema."
 
 #: ../../installation.md:80
 msgid "Set `solver: 'gurobi'` in `inputs/config/Config_MOMF_T1_AB.yaml`."
-msgstr ""
+msgstr "Configure `solver: 'gurobi'` en `inputs/config/Config_MOMF_T1_AB.yaml`."
 
 #: ../../installation.md:82
 msgid "Verify Installation"
-msgstr ""
+msgstr "Verificar la instalación"
 
 #: ../../installation.md:84
 msgid "After setup, verify that the environment works:"
-msgstr ""
+msgstr "Después de la configuración, verifique que el entorno funcione:"
 
 #: ../../installation.md:91
 msgid "To verify your solver:"
-msgstr ""
+msgstr "Para verificar su solver:"
 
 #: ../../installation.md:107
 msgid "DVC Setup (Optional)"
-msgstr ""
+msgstr "Configuración de DVC (opcional)"
 
 #: ../../installation.md:109
 msgid ""
 "RELAC TX uses [DVC](https://dvc.org/) (Data Version Control) to manage "
 "the pipeline. The `run.py` script handles DVC commands automatically, but"
 " if you want to run stages manually:"
-msgstr ""
+msgstr "RELAC TX usa [DVC](https://dvc.org/) (Data Version Control) para gestionar el pipeline. El script `run.py` maneja los comandos de DVC automáticamente, pero si desea ejecutar las etapas manualmente:"
 
 #: ../../installation.md:116
 msgid ""
 "This will execute all pipeline stages that have outdated outputs based on"
 " dependency tracking."
-msgstr ""
-
+msgstr "Esto ejecutará todas las etapas del pipeline cuyas salidas estén desactualizadas según el seguimiento de dependencias."

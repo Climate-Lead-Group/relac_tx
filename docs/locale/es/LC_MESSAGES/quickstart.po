@@ -21,251 +21,250 @@ msgstr ""
 
 #: ../../quickstart.md:1
 msgid "Quick Start"
-msgstr ""
+msgstr "Inicio rápido"
 
 #: ../../quickstart.md:3
 msgid "This page walks you through running RELAC TX for the first time."
-msgstr ""
+msgstr "Esta página lo guía a través de la ejecución de RELAC TX por primera vez."
 
 #: ../../quickstart.md:5
 msgid "1. Run the Full Pipeline"
-msgstr ""
+msgstr "1. Ejecutar el pipeline completo"
 
 #: ../../quickstart.md:7
 msgid "From an **Anaconda Prompt** (or any terminal with conda available):"
-msgstr ""
+msgstr "Desde un **Anaconda Prompt** (o cualquier terminal con conda disponible):"
 
 #: ../../quickstart.md:14
 msgid "The `run.py` launcher automatically:"
-msgstr ""
+msgstr "El lanzador `run.py` automáticamente:"
 
 #: ../../quickstart.md:16
 msgid "Creates the Conda environment (`OG-MOMF-env`) if it does not exist."
-msgstr ""
+msgstr "Crea el entorno Conda (`OG-MOMF-env`) si no existe."
 
 #: ../../quickstart.md:17
 msgid "Installs any missing dependencies."
-msgstr ""
+msgstr "Instala las dependencias faltantes."
 
 #: ../../quickstart.md:18
 msgid "Injects today's date into the DVC pipeline for date-stamped output files."
-msgstr ""
+msgstr "Inserta la fecha actual en el pipeline de DVC para los archivos de salida con marca de fecha."
 
 #: ../../quickstart.md:19
 msgid "Runs `dvc repro` to execute all pipeline stages."
-msgstr ""
+msgstr "Ejecuta `dvc repro` para correr todas las etapas del pipeline."
 
 #: ../../quickstart.md:20
 msgid "Restores the original `dvc.yaml` after completion."
-msgstr ""
+msgstr "Restaura el `dvc.yaml` original al finalizar."
 
 #: ../../quickstart.md:22
 msgid "Command-Line Options"
-msgstr ""
+msgstr "Opciones de línea de comandos"
 
 #: ../../quickstart.md
 msgid "Flag"
-msgstr ""
+msgstr "Opción"
 
 #: ../../quickstart.md
 msgid "Default"
-msgstr ""
+msgstr "Valor por defecto"
 
 #: ../../quickstart.md
 msgid "Description"
-msgstr ""
+msgstr "Descripción"
 
 #: ../../quickstart.md
 msgid "`--env-name`"
-msgstr ""
+msgstr "`--env-name`"
 
 #: ../../quickstart.md
 msgid "Read from YAML (`OG-MOMF-env`)"
-msgstr ""
+msgstr "Se lee del YAML (`OG-MOMF-env`)"
 
 #: ../../quickstart.md
 msgid "Conda environment name"
-msgstr ""
+msgstr "Nombre del entorno Conda"
 
 #: ../../quickstart.md
 msgid "`--env-file`"
-msgstr ""
+msgstr "`--env-file`"
 
 #: ../../quickstart.md
 msgid "`environment.yaml`"
-msgstr ""
+msgstr "`environment.yaml`"
 
 #: ../../quickstart.md
 msgid "Path to the Conda environment file"
-msgstr ""
+msgstr "Ruta al archivo del entorno Conda"
 
 #: ../../quickstart.md
 msgid "`--dvc-file`"
-msgstr ""
+msgstr "`--dvc-file`"
 
 #: ../../quickstart.md
 msgid "`dvc.yaml`"
-msgstr ""
+msgstr "`dvc.yaml`"
 
 #: ../../quickstart.md
 msgid "Path to the DVC pipeline file"
-msgstr ""
+msgstr "Ruta al archivo del pipeline de DVC"
 
 #: ../../quickstart.md
 msgid "`--date`"
-msgstr ""
+msgstr "`--date`"
 
 #: ../../quickstart.md
 msgid "Today (`YYYY-MM-DD`)"
-msgstr ""
+msgstr "Hoy (`YYYY-MM-DD`)"
 
 #: ../../quickstart.md
 msgid "Date stamp for output files"
-msgstr ""
+msgstr "Marca de fecha para los archivos de salida"
 
 #: ../../quickstart.md:31
 msgid "Example with a custom date:"
-msgstr ""
+msgstr "Ejemplo con una fecha personalizada:"
 
 #: ../../quickstart.md:37
 msgid "2. Pipeline Stages"
-msgstr ""
+msgstr "2. Etapas del pipeline"
 
 #: ../../quickstart.md:39
 msgid "The DVC pipeline has two stages that run in sequence:"
-msgstr ""
+msgstr "El pipeline de DVC tiene dos etapas que se ejecutan en secuencia:"
 
 #: ../../quickstart.md:41
 msgid "Stage 1: Preprocess (Compile)"
-msgstr ""
+msgstr "Etapa 1: Preprocesar (Compilar)"
 
 #: ../../quickstart.md:47
 msgid ""
 "Reads the Excel model files in `A1_Outputs/` and compiles them into "
 "OSeMOSYS-compatible CSV parameter files in `A2_Output_Params/`."
-msgstr ""
+msgstr "Lee los archivos Excel del modelo en `A1_Outputs/` y los compila en archivos CSV de parámetros compatibles con OSeMOSYS en `A2_Output_Params/`."
 
 #: ../../quickstart.md:49
 msgid "Stage 2: Execute"
-msgstr ""
+msgstr "Etapa 2: Ejecutar"
 
 #: ../../quickstart.md:55
 msgid ""
 "Converts CSVs to the solver's data format, runs the optimization, and "
 "produces combined result files."
-msgstr ""
+msgstr "Convierte los CSV al formato de datos del solver, ejecuta la optimización y produce archivos de resultados combinados."
 
 #: ../../quickstart.md:57
 msgid "3. Output Files"
-msgstr ""
+msgstr "3. Archivos de salida"
 
 #: ../../quickstart.md:59
 msgid "After a successful run, results are generated in `outputs/`:"
-msgstr ""
+msgstr "Después de una ejecución exitosa, los resultados se generan en `outputs/`:"
 
 #: ../../quickstart.md
 msgid "File"
-msgstr ""
+msgstr "Archivo"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Inputs.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Inputs.csv`"
 
 #: ../../quickstart.md
 msgid "Compiled model inputs (all scenarios)"
-msgstr ""
+msgstr "Entradas del modelo compiladas (todos los escenarios)"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Outputs.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Outputs.csv`"
 
 #: ../../quickstart.md
 msgid "Optimization results (all scenarios)"
-msgstr ""
+msgstr "Resultados de la optimización (todos los escenarios)"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Combined_Inputs_Outputs.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Combined_Inputs_Outputs.csv`"
 
 #: ../../quickstart.md
 msgid "Merged inputs and outputs"
-msgstr ""
+msgstr "Entradas y salidas combinadas"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Inputs_YYYY-MM-DD.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Inputs_YYYY-MM-DD.csv`"
 
 #: ../../quickstart.md
 msgid "Date-stamped copy of inputs"
-msgstr ""
+msgstr "Copia con marca de fecha de las entradas"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Outputs_YYYY-MM-DD.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Outputs_YYYY-MM-DD.csv`"
 
 #: ../../quickstart.md
 msgid "Date-stamped copy of outputs"
-msgstr ""
+msgstr "Copia con marca de fecha de las salidas"
 
 #: ../../quickstart.md
 msgid "`RELAC_TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv`"
-msgstr ""
+msgstr "`RELAC_TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv`"
 
 #: ../../quickstart.md
 msgid "Date-stamped combined file"
-msgstr ""
+msgstr "Archivo combinado con marca de fecha"
 
 #: ../../quickstart.md:70
 msgid ""
 "Date-stamped files preserve a complete execution history so you can "
 "compare runs over time."
-msgstr ""
+msgstr "Los archivos con marca de fecha preservan un historial de ejecución completo para poder comparar corridas a lo largo del tiempo."
 
 #: ../../quickstart.md:72
 msgid "4. Directory Structure Overview"
-msgstr ""
+msgstr "4. Resumen de la estructura de directorios"
 
 #: ../../quickstart.md:100
 msgid "5. Typical Workflow"
-msgstr ""
+msgstr "5. Flujo de trabajo típico"
 
 #: ../../quickstart.md:102
 msgid "A typical modeling workflow follows these steps:"
-msgstr ""
+msgstr "Un flujo de trabajo de modelado típico sigue estos pasos:"
 
 #: ../../quickstart.md:104
 msgid "**Configure countries and technologies** in `Config_country_codes.yaml`."
-msgstr ""
+msgstr "**Configurar países y tecnologías** en `Config_country_codes.yaml`."
 
 #: ../../quickstart.md:105
 msgid "**Generate the Tech-Country Matrix** (`A0`)."
-msgstr ""
+msgstr "**Generar la matriz Tech-Country** (`A0`)."
 
 #: ../../quickstart.md:106
 msgid "**Preprocess raw CSVs into Excel model files** (`A1`)."
-msgstr ""
+msgstr "**Preprocesar los CSV crudos en archivos Excel del modelo** (`A1`)."
 
 #: ../../quickstart.md:107
 msgid "**Add transmission technologies** (`A2`)."
-msgstr ""
+msgstr "**Agregar tecnologías de transmisión** (`A2`)."
 
 #: ../../quickstart.md:108
 msgid "**Optionally edit secondary technologies** (`D1` + manual editing + `D2`)."
-msgstr ""
+msgstr "**Editar opcionalmente las tecnologías secundarias** (`D1` + edición manual + `D2`)."
 
 #: ../../quickstart.md:109
 msgid ""
 "**Run the full pipeline** with `python run.py` (this executes stages "
 "**B1** and **B2** only -- data preparation stages A0--A2 and the "
 "secondary techs editor D1/D2 must be run separately beforehand)."
-msgstr ""
+msgstr "**Ejecutar el pipeline completo** con `python run.py` (esto ejecuta únicamente las etapas **B1** y **B2** -- las etapas de preparación de datos A0--A2 y el editor de tecnologías secundarias D1/D2 deben ejecutarse por separado de antemano)."
 
 #: ../../quickstart.md:110
 msgid "**Analyze results** using the output CSVs or the interactive dashboards."
-msgstr ""
+msgstr "**Analizar los resultados** usando los CSV de salida o los paneles interactivos."
 
 #: ../../quickstart.md:112
 #, python-brace-format
 msgid "See {doc}`pipeline` for a detailed walkthrough of each stage."
-msgstr ""
-
+msgstr "Consulte {doc}`pipeline` para un recorrido detallado de cada etapa."
