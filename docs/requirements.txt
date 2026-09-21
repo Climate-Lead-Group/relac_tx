@@ -1,0 +1,4 @@
+sphinx>=8,<10
+myst-parser>=4,<6
+sphinx-rtd-theme>=3,<4
+sphinx-intl>=2.1,<3
