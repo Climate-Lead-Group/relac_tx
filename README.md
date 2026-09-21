@@ -72,8 +72,6 @@ sphinx-build -b html docs docs/_build/html
 
 y abrir `docs/_build/html/index.html`. La versión publicada en ReadTheDocs se enlaza aquí cuando el proyecto quede registrado (ver `docs/dev/publishing.md`).
 
-Guía rápida en español: `RELAC_TX_Guia_instalacion_ejecucion.md`.
-
 ## Estructura de Archivos de Salida
 
 Los resultados se generan en `outputs/` con los siguientes archivos:
