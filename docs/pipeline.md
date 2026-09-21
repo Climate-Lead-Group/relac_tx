@@ -16,7 +16,7 @@ RELAC TX processes energy system data through a multi-stage pipeline. This page 
 │   ↓                                                                  │
 │  (Optional) A3: Migrate Old Inputs                                   │
 │   ↓                                                                  │
-│  (Optional) A3_process: LID rule → extend lowerlimits → B1b         │
+│  (Optional) A3_process: LID → lowerlimits → B1b → BAU sync          │
 │   ↓                                                                  │
 │  (Optional) D1 → Manual Editing → D2: Secondary Techs Editing       │
 │   ↓                                                                  │
@@ -236,11 +236,12 @@ If the `Old_Inputs/` folder does not exist, the script will exit with an error.
 
 **Script:** [`A3_process.py`](../scripts/pipeline/A3_process.py)
 
-An orchestrator that applies a set of post-A1/A2 calibration rules to each scenario's `A-O_Parametrization.xlsx`. For every scenario folder under `A1_Outputs/A1_Outputs_<scenario>/` it runs three steps in order:
+An orchestrator that applies a set of post-A1/A2 calibration rules to each scenario's `A-O_Parametrization.xlsx`. For every scenario folder under `A1_Outputs/A1_Outputs_<scenario>/` it runs three per-scenario steps in order, followed by one global harmonization pass:
 
 1. **LID rule** ([`A3_process/rules_scripts/add_max_cap_investment_lid_rule.py`](../scripts/pipeline/A3_process/rules_scripts/add_max_cap_investment_lid_rule.py)) — fills `TotalAnnualMaxCapacityInvestment` placeholders with calibrated "lid" values, configured in [`lid_rule.yaml`](../inputs/config/A3_process/lid_rule.yaml).
 2. **Extend lower limits** ([`A3_process/rules_scripts/extend_lowerlimits_pwr.py`](../scripts/pipeline/A3_process/rules_scripts/extend_lowerlimits_pwr.py)) — extends the 2024 value of `TotalTechnologyAnnualActivityLowerLimit` for PWR techs flat through 2050 in the **Secondary Techs** sheet, so the calibration floor does not expire and the optimizer cannot dump thermal generation in 2025+.
 3. **Pre-solver validation** — runs `B1b_Pre_solver_validation.py --auto-fix-all` to reconcile any residual inconsistencies (see below).
+4. **Historical sync to BAU (global, after all scenarios)** — for every scenario listed under `historical_sync_through` in [`lid_rule.yaml`](../inputs/config/A3_process/lid_rule.yaml), runs [`sync_historical_from_bau.py`](../scripts/pipeline/sync_historical_from_bau.py) `--apply --scenarios <S> --years 2023,…,<through_year>`. It copies the year cells 2023..`<through_year>` from the current BAU workbook into the target scenario so that all scenarios share the same historical/near-term values (shipped: INV 2030, OPT 2026, VGB 2030). Two per-scenario refinements are forwarded from the same YAML: `historical_sync_protect_from_2026` (parameters passed as `--protect-params`, which are *not* snapped back to BAU for years ≥ 2027 — shipped for VGB: `TotalTechnologyAnnualActivityLowerLimit`, `TotalAnnualMinCapacityInvestment`, `TotalAnnualMaxCapacityInvestment`) and `historical_sync_tx_follow_bau` (scenarios passed `--no-protect-tx`, whose transmission `TotalAnnualMaxCapacityInvestment` *is* synced to BAU across the whole window — shipped: OPT). BAU is always the source and never a target. The sync aborts on any structural mismatch between workbooks (row order, sheet names), which stops A3 with a non-zero exit.
 
 ### Usage
 
@@ -250,6 +251,8 @@ python scripts/pipeline/A3_process.py --scenario BAU   # one scenario
 python scripts/pipeline/A3_process.py --scenario BAU,INV
 python scripts/pipeline/A3_process.py --list           # list discovered scenarios
 python scripts/pipeline/A3_process.py --skip-validation # skip the B1b auto-fix step
+python scripts/pipeline/A3_process.py --skip-historical-sync  # skip the final BAU harmonization pass
+python scripts/pipeline/A3_process.py --scenario INV --force-overwrite  # re-run the lid over existing lid values
 ```
 
 ### Command-Line Options
@@ -259,7 +262,9 @@ python scripts/pipeline/A3_process.py --skip-validation # skip the B1b auto-fix 
 | `--scenario` | Comma-separated scenario name(s); default = all discovered |
 | `--rules-script` | Override the rules script path |
 | `--list` | Show discovered scenarios and exit |
-| `--skip-validation` | Skip the final B1b auto-fix step |
+| `--skip-validation` | Skip the B1b auto-fix step (step 3) |
+| `--force-overwrite` | Forwarded to the lid script: overwrite prior positive lid values in `TotalAnnualMaxCapacityInvestment` cells (use when iterating on the lid schedule without restoring the xlsx) |
+| `--skip-historical-sync` | Skip the final BAU harmonization pass (step 4) |
 
 :::{note}
 The LID script writes a JSON change log (`lid_rule_changes_<timestamp>.json`) inside each scenario directory but does **not** make a folder-level backup — recovery is via git. B1b makes its own timestamped backup of the xlsx before writing.
@@ -299,6 +304,8 @@ python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --report-onl
 | `--non-interactive` | Do not prompt; fail on issues |
 | `--auto-fix-all` | Apply every fix without prompting |
 | `--report-only` | Write the report only; do not modify the xlsx |
+| `--skip-v3` | Skip the V3 `TotalTechnologyAnnualActivityLowerLimit` fixes; V1/V2 still apply (used by A3_process to gate LowerLimit changes) |
+| `--modify-from-year` | Only apply fixes for years ≥ this year; earlier issues are reported but not fixed, so historical cells synced from BAU stay untouched. Default: no cutoff |
 
 :::{note}
 `--non-interactive`, `--auto-fix-all`, and `--report-only` are mutually exclusive. B1b creates a timestamped backup of the workbook before applying any fix.
@@ -363,7 +370,7 @@ python -u scripts/pipeline/B2_Executing_OG_Model.py
 2. **Preprocessing** -- runs the OSeMOSYS preprocessor.
 3. **Patcher chain** -- rewrites parameter blocks directly in the GMPL `.txt` to apply the reserve-margin and storage features plus feasibility safeguards (DaysInDayType, storage-delay, PWRBCK caps, reserve margin, activity upper limits, dispatch floors). See {doc}`solver-patchers` for the full chain.
 4. **Sync patched CSVs** -- overwrites the affected otoole CSVs in place so the combined input/output files reflect the patched values the solver consumed.
-5. **Tx chain (FLOORED → VEGCON → scenario transforms)** -- see subsection below; produces the derived scenarios (BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF, plus INVWF/VGBWF) that the rest of the pipeline treats like any other scenario.
+5. **Tx chain (FLOORED → VEGCON → scenario transforms)** -- see subsection below; produces the 17 derived scenarios (BAC, OPC, INVWF, VGBWF, BSR, ISR, VSR, ISRWF, VSRWF, BFA, IFA, BFB, IFB, BRB, IRB, BRA, IRA) that the rest of the pipeline treats like any other scenario.
 6. **Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi) over the configured `solve_scenarios` universe (base + derived).
 7. **Result extraction** -- converts solver output back to CSV, using each derived scenario's base A2 as the otoole-results reference (derived scenarios share sets with their base; only values differ).
 8. **Post-processing** -- input re-sync from the final `.txt` (fixes stale-input bug for derived scenarios), capital annualization, scenario concatenation.
@@ -386,8 +393,29 @@ Extensibility: a new constraint script or derived scenario is added entirely in 
 
 Solve universe: `solve_universe()` resolves `solve_scenarios` from the YAML (defaulting to the base scenarios) and validates each has its final datafile before the solver stage runs; `scenario_base()` maps a derived scenario back to the base whose A2/sets it reuses for otoole results.
 
+#### Scenario codes (shipped `Config_MOMF_T1_AB.yaml`, 2026-09-17)
+
+Base scenarios are the four `A1_Outputs_<S>/` folders: **BAU, INV, OPT, VGB**. Every other code is derived by the Tx chain. Reading a code: first letter `B` = optimal family (built on BAU/BAC), `I` = trend family (built on INV/ISR); suffixes `SR` = no repowering, `FA`/`FB` = fossil fuel cost high/low, `RA`/`RB` = renewables cost high/low, `WF` = water-fill NLI weights. Report names (see {doc}`study/scenarios`): OPT = BAC, ETT = ISR, PLAN = OPC, ETT-GP = VSR.
+
+| Derived code | Base (A2 sets reused) | Produced by | Notes |
+|---|---|---|---|
+| BAC | BAU | etapa C (`veg_tx_constraints.py`, NLI mode `ramp`) | reporting base of the OPT family |
+| OPC | OPT | etapa C (`ramp`) | PLAN |
+| INVWF | INV | etapa C (water-fill) | parent of ISRWF; not solved |
+| VGBWF | VGB | etapa C (water-fill) | parent of VSRWF; not solved |
+| BSR | BAU | `cost_sensitivity_v_SR_WF.py` | OPT without repowering |
+| ISR | INV | `cost_sensitivity_v_SR_WF.py` + `nli_sr_recompute.py` | reporting base of the ETT family |
+| VSR | VGB | `cost_sensitivity_v_SR_WF.py` + `nli_sr_recompute.py` | ETT-GP |
+| ISRWF, VSRWF | INV, VGB | `cost_sensitivity_v_SR_WF.py` + `nli_sr_recompute.py` | not solved |
+| BFA, IFA | BAU, INV | `cost_sensitivity_v_FA.py` | fossil `VariableCost` ×1.70 (applied on BAC / INV VEGCON files) |
+| BFB, IFB | BAU, INV | `cost_sensitivity_v_FB.py` | fossil `VariableCost` ×0.52 |
+| BRB, IRB | BAU, INV | `cost_sensitivity_v_RB.py` | `CapitalCost` solar ×0.60, wind ×0.75, batteries ×0.50 |
+| BRA, IRA | BAU, INV | `cost_sensitivity_v_RA.py` | renewables high; **multipliers pending calibration** (currently equal to RB) |
+
+Shipped `solve_scenarios` (14, solved in this order when `parallel: False`): `BAC, OPC, BSR, BFA, BFB, BRA, BRB, ISR, IFA, IFB, INV, IRA, IRB, VSR`. INV is solved as-is (its VEGCON file) and reported as "ETT with repowering".
+
 :::{note}
-Validated end-to-end (golden run, 2026-09-03): all 13 scenarios (11 in `solve_scenarios` + INVWF/VGBWF) reach VEGCON with `preflight_separation` PASS and `veg_tx` PASS=35/FAIL=0; a 2-scenario solver smoke test (BAC, ISR, parallel) both reached CPLEX optimal. See the plan's own validation log for the two issues this surfaced and fixed: a chain-suffix `upto=` omission in `run_dispatch_floors_patcher`, and the `outputs_BSR/NewCapacity.csv` revealed-need pin (documented as Risk R3) needing to exist before the VEGCON barrier can process the derived scenarios.
+The chain was validated end-to-end on 2026-09-03 with the then-current 9 derived scenarios (all reached VEGCON with `preflight_separation` PASS and `veg_tx` PASS=35/FAIL=0; BAC and ISR reached CPLEX optimal). The four cost-sensitivity transforms (FA/FB/RA/RB) were added on 2026-09-16/17 and follow the same mechanism. Two prerequisites surfaced by that validation still hold: the chain suffix must equal `StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED` before VEGCON (B2 asserts it), and `inputs/tx_chain/outputs_BSR/NewCapacity.csv` (`veg_tx_needs_csv`) must exist before the VEGCON barrier runs.
 :::
 
 ### Solver Configuration
@@ -413,7 +441,7 @@ max_x_per_iter: 4  # Max scenarios per batch
 
 | Directory/File | Content |
 |----------------|---------|
-| `A2_Outputs_Params_otoole/{scenario}/` | otoole-format CSVs (one per parameter); for derived scenarios (BAC, OPC, BSR, ISR, VSR, ISRWF, VSRWF) this is a copy of the base scenario's folder, re-synced from that derived scenario's own final `.txt` |
+| `A2_Outputs_Params_otoole/{scenario}/` | otoole-format CSVs (one per parameter); for derived scenarios (see the scenario-code table above) this is a copy of the base scenario's folder, re-synced from that derived scenario's own final `.txt` |
 | `Executables/{scenario}_0/` | Compiled solver data files -- one folder per scenario, base or derived; derived scenarios' folders are created by the Tx chain (etapas C/D), not by A1/A2 |
 | `RELAC_TX_Inputs.csv` | Combined inputs (all scenarios) |
 | `RELAC_TX_Outputs.csv` | Combined outputs (all scenarios) |
