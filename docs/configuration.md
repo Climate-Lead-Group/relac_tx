@@ -196,6 +196,22 @@ template_generation:
 | `centerpoint_lat` / `centerpoint_lon` | Latitude/longitude of the country centerpoint (used for map placement) |
 | `interconnections` | List of neighbor country codes for TRN links. Empty list = no interconnections; omit the key to copy the reference country's topology |
 
+### `enable_dsptrn`
+
+```yaml
+enable_dsptrn: True
+```
+
+When `True`, A2_AddTx adds the `DSPTRN` dispatch technology and uses 4-tier ELC routing (`ELC00/01/02/03`), rewriting TRN interconnection fuels to `ELC03`. When `False`, it keeps 3-tier routing (`ELC00/01/02`) without DSPTRN.
+
+### `force_empty_max_capacity_investment_pwr`
+
+```yaml
+force_empty_max_capacity_investment_pwr: true
+```
+
+When `true`, forces `Projection.Mode = "EMPTY"` for `TotalAnnualMaxCapacityInvestment` on every PWR technology (the lid rule of A3_process fills those cells later). When `false`, the auto-detected `Projection.Mode` is kept.
+
 ### Transmission Technology Parameters
 
 Seven sections define default parameters for transmission and dispatch technologies:
@@ -355,6 +371,26 @@ annualize_capital: True
 | `prefix_final_files` | `"RELAC_TX_"` | Prefix for final output file names |
 | `osemosys_model` | `"osemosys_fast_preprocessed.txt"` | OSeMOSYS model file (GMPL) |
 
+### Paths and File-Name Plumbing
+
+All paths are relative to the repository root. Values shown are the shipped ones (`inputs/config/Config_MOMF_T1_AB.yaml` lines 4–24).
+
+| Key | Value | Description |
+|-----|-------|-------------|
+| `A2_output` | `outputs/A2_Output_Params` | A2 parameter CSVs per scenario |
+| `A2_output_otoole` | `outputs/A2_Outputs_Params_otoole` | otoole-format twin of `A2_output`; the folder the patched CSVs are synced back into |
+| `Miscellaneous` | `inputs/Miscellaneous` | Folder holding `conversion_format.yaml` and the otoole templates |
+| `templates` | `templates` | otoole template folder name (under `Miscellaneous`) |
+| `executables` | `outputs/Executables` | Where per-scenario `<S>_0/` datafiles are written |
+| `outputs` | `Outputs` | Solver output sub-folder name inside each `<S>_0/` |
+| `concatenate_folder` | `scripts/tools` | Folder of the CSV concatenation helper |
+| `concat_csvs` | `concatenate_relac.py` | Concatenation helper script |
+| `otoole_config` / `conv_format` | `conversion_format.yaml` | otoole conversion format (both keys point to the same file) |
+| `preprocess_data` | `preprocess_data.py` | OSeMOSYS preprocessor script |
+| `preprocess_data_name` | `Pre_processed_` | Prefix of the preprocessed datafile |
+| `output_files` | `_output` | Suffix of solver output files |
+| `inputs_file` / `outputs_file` | `Inputs.csv` / `Outputs.csv` | Base names of the combined CSVs (prefixed by `prefix_final_files`); the merged file is `<prefix>Combined_Inputs_Outputs.csv` |
+
 ### Solver Patcher Chain
 
 `Config_MOMF_T1_AB.yaml` also contains the settings for the **Stage B2 patcher chain** — the reserve-margin and storage features applied to the GMPL `.txt` before the solver runs. Each patcher has an `*_active` master switch; the shipped configuration enables several of them.
@@ -366,9 +402,42 @@ annualize_capital: True
 | `open_pwrbck_active` | `True` | Reopen PWRBCK* backstop capacity caps |
 | `reserve_margin_xlsx_active` | `True` | Careful reserve-margin repair from `firm_capacity_fallbacks_by_cr.xlsx` |
 | `activity_upper_limit_active` | `False` | Cap `TotalTechnologyAnnualActivityUpperLimit` from demand fractions |
-| `sync_patched_csvs_active` | `True` | Sync patched values back into the otoole CSVs |
+| `dispatch_floors_active` | `True` | Write fossil dispatch floors (`FLOORED`) per base scenario, gated by `preflight_separation_active` |
+| `veg_tx_active` | `True` | Cross-scenario transmission constraints (`VEGCON`); creates BAC/OPC/INVWF/VGBWF |
+| `sync_patched_csvs_active` | `True` | Sync patched values back into the otoole CSVs (`sync_patched_csvs_params` lists the parameter blocks copied) |
 
 See {doc}`solver-patchers` for the full chain, execution order, and every per-patcher parameter.
+
+### Tx Chain: Derived Scenarios
+
+Three blocks at the end of `Config_MOMF_T1_AB.yaml` drive the Tx chain that B2 runs after VEGCON (see the Tx-chain subsection of {doc}`pipeline`). Adding a constraint script or a derived scenario is done **only** here; B2 needs no code change.
+
+```yaml
+scenario_transforms:
+  - name: cost_sensitivity
+    script: "scripts/tx_chain/cost_sensitivity_v_SR_WF.py"
+    produces: {BSR: BAU, ISR: INV, VSR: VGB, ISRWF: INVWF, VSRWF: VGBWF}
+  - name: nli_sr_recompute
+    script: "scripts/tx_chain/nli_sr_recompute.py"
+    in_place: [ISR, VSR, ISRWF, VSRWF]
+  - name: cost_sensitivity_FA
+    script: "scripts/tx_chain/cost_sensitivity_v_FA.py"
+    produces: {BFA: BAC, IFA: INV}
+
+derived_scenarios:
+  BAC: BAU
+  ISR: INV
+
+solve_scenarios: [BAC, OPC, BSR, BFA, BFB, BRA, BRB, ISR, IFA, IFB, INV, IRA, IRB, VSR]
+```
+
+| Key | Description |
+|-----|-------------|
+| `scenario_transforms` | Ordered list. Each entry runs its `script` once with `--executables-dir Executables`. `produces: {NEW: SOURCE}` creates `Executables/NEW_0/` from `SOURCE`'s final datafile; `in_place: [S, …]` edits existing datafiles. |
+| `derived_scenarios` | Map `derived → base` telling B2 which base scenario's A2 sets/templates to reuse for otoole results (transforms change values, never sets). Every code in `produces` must appear here. |
+| `solve_scenarios` | The universe actually sent to the solver (etapa E). Order = execution order when `parallel: False`. Comment out codes to skip them. Default when absent: the four base scenarios. |
+
+Shipped transforms (2026-09-17): `cost_sensitivity` (SR/WF variants), `nli_sr_recompute`, `cost_sensitivity_FA` (fossil `VariableCost` ×1.70), `cost_sensitivity_FB` (×0.52), `cost_sensitivity_RB` (`CapitalCost` solar ×0.60, wind ×0.75, batteries ×0.50), `cost_sensitivity_RA` (renewables high; multipliers pending calibration).
 
 ---
 
@@ -383,6 +452,14 @@ Controls optional consolidation of sub-regional data into unified country-level 
 ```yaml
 enabled: false
 ```
+
+### `pwrbck_output_to_elc02`
+
+```yaml
+pwrbck_output_to_elc02: true
+```
+
+When `true`, remaps the `OutputActivityRatio` fuel of every `PWRBCK*` (backstop) technology from `ELC{ISO3}XX01` to `ELC{ISO3}XX02`. Applied at CSV-load time, so it propagates to all downstream sheets (Secondary Techs, Model Base Year Secondary, Projection Secondary). Independent of `enabled`.
 
 ### Country Definitions
 
