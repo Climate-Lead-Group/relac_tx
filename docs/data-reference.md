@@ -90,7 +90,7 @@ Both families exist for the 19 modelled countries. The Stage B2 storage-delay pa
 
 SET files define the elements of each OSeMOSYS set. They have a single column:
 
-```csv
+```text
 VALUE
 MINCOAARG
 MINCOABOL
@@ -119,7 +119,7 @@ Parameter files contain data values indexed by OSeMOSYS dimensions. The column s
 
 **4-column format** (Region, Technology, Year, Value):
 
-```csv
+```text
 REGION,TECHNOLOGY,YEAR,VALUE
 GLOBAL,PWRBCKARGXX,2023,999999.0
 GLOBAL,PWRBIOARGXX,2023,1500.0
@@ -129,7 +129,7 @@ Used by: `CapitalCost`, `FixedCost`, `VariableCost`, `ResidualCapacity`, `TotalA
 
 **6-column format** (Region, Technology, Fuel, Mode, Year, Value):
 
-```csv
+```text
 REGION,TECHNOLOGY,FUEL,MODE_OF_OPERATION,YEAR,VALUE
 GLOBAL,PWRBIOARGXX,BIOARGXX,1,2023,3.67
 ```
