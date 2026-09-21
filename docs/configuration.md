@@ -435,7 +435,7 @@ solve_scenarios: [BAC, OPC, BSR, BFA, BFB, BRA, BRB, ISR, IFA, IFB, INV, IRA, IR
 |-----|-------------|
 | `scenario_transforms` | Ordered list. Each entry runs its `script` once with `--executables-dir Executables`. `produces: {NEW: SOURCE}` creates `Executables/NEW_0/` from `SOURCE`'s final datafile; `in_place: [S, …]` edits existing datafiles. |
 | `derived_scenarios` | Map `derived → base` telling B2 which base scenario's A2 sets/templates to reuse for otoole results (transforms change values, never sets). Every code in `produces` must appear here. |
-| `solve_scenarios` | The universe actually sent to the solver (etapa E). Order = execution order when `parallel: False`. Comment out codes to skip them. Default when absent: the four base scenarios. |
+| `solve_scenarios` | The universe actually sent to the solver (the solver stage). Order = execution order when `parallel: False`. Comment out codes to skip them. Default when absent: the four base scenarios. |
 
 Shipped transforms (2026-09-17): `cost_sensitivity` (SR/WF variants), `nli_sr_recompute`, `cost_sensitivity_FA` (fossil `VariableCost` ×1.70), `cost_sensitivity_FB` (×0.52), `cost_sensitivity_RB` (`CapitalCost` solar ×0.60, wind ×0.75, batteries ×0.50), `cost_sensitivity_RA` (renewables high; multipliers pending calibration).
 

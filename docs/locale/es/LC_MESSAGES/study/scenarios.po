@@ -195,6 +195,6 @@ msgstr ""
 "escenarios y un registro de transformaciones de escenario que crea las "
 "variantes cambiando únicamente valores de parámetros. El mapeo completo "
 "de cada código a su libro base y script generador, junto con la lista de"
-" escenarios efectivamente resueltos, está en la tabla *Scenario codes* "
-"de {doc}`../pipeline`."
+" escenarios efectivamente resueltos, está en la tabla *Códigos de "
+"escenario* de {doc}`../pipeline`."
 

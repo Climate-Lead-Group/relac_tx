@@ -54,6 +54,12 @@ inputs/A1_Outputs/secondary_techs_update_log_*.txt
 # Excepcion: A2_Output_Params se versiona completo (sus CSV "Technology*" caen en *log* por core.ignorecase)
 !outputs/A2_Output_Params/**
 !outputs/A2_Outputs_Params_otoole/**
+# Excepcion: contenido publicado de docs/ cae en *log* por core.ignorecase (p.ej. "methodology"
+# contiene "log"); esto ya provoco que se perdiera silenciosamente docs/study/methodology.md y su
+# .po dos veces. docs/superpowers/ y los .mo compilados siguen ignorados mas abajo (reglas
+# posteriores y mas especificas ganan sobre esta excepcion).
+!docs/study/**
+!docs/locale/**
 
 # All files containing "_audit" in their name
 *_audit*
