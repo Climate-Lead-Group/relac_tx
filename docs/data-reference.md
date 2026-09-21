@@ -69,14 +69,18 @@ Example: `CO2ARG` = CO2 emissions for Argentina.
 
 ### Storage Codes
 
+Storage is modelled as power technologies with the `PWR` prefix:
+
 ```
-{TYPE}{COUNTRY}{REGION}{NN}
+PWR{SDS|LDS}{COUNTRY}{REGION}{NN}
 ```
 
 | Code | Meaning |
 |------|---------|
-| `LDSARGXX01` | Long Duration Storage, Argentina |
-| `SDSARGXX01` | Short Duration Storage, Argentina |
+| `PWRSDSARGXX01` | Short Duration Storage (batteries), Argentina |
+| `PWRLDSARGXX01` | Long Duration Storage (pumped hydro), Argentina |
+
+Both families exist for the 19 modelled countries. The Stage B2 storage-delay patcher (see {doc}`solver-patchers`) blocks their builds for the first N years using the prefixes in `storage_delay_storage_prefixes`.
 
 ---
 
@@ -180,12 +184,17 @@ The main parameter file per scenario. Contains multiple sheets:
 
 | Sheet | Content |
 |-------|---------|
-| Fixed Horizon Parameters | CapacityToActivityUnit, OperationalLife |
-| Secondary Techs | Cost and capacity parameters for power technologies |
-| Demand Techs | Parameters for demand technologies |
-| Capacities | ResidualCapacity, TotalAnnualMaxCapacity, etc. |
-| VariableCost | Variable cost data |
-| TotalAnnualMaxCapacityInvestment | Investment limits |
+| Fixed Horizon Parameters | Non-yearly parameters: `CapacityToActivityUnit`, `OperationalLife`, … |
+| Primary Techs | Yearly parameters of primary-supply technologies (`MIN*`, imports) |
+| Secondary Techs | Yearly cost, capacity and activity-limit parameters of power technologies (`PWR*`), including `TotalAnnualMaxCapacityInvestment` and `TotalTechnologyAnnualActivityLowerLimit`; column G `Projection.Mode` decides which rows are used |
+| Capacities | `ResidualCapacity`, `TotalAnnualMaxCapacity`, … |
+| Yearsplit | `YearSplit` per timeslice |
+| DaySplit | `DaySplit` per timeslice |
+| VariableCost | `VariableCost` per technology and mode |
+| Other_Techs | Auxiliary technologies outside the PWR/Demand families |
+| Demand Techs | Parameters for demand and transmission technologies (`DSP*`, `TRN*`) |
+| Vehicle Techs, Vehicle Groups, Transport Fuel Distribution | Transport-sector blocks kept from the OSeMOSYS-CLG template (not used by the electricity model) |
+| Fuentes | Documentation sheet: data source, origin file/sheet and transformation per data block (added 2026-09-14 by `scripts/tools/data_patches/add_fuentes_sheet.py`). No year columns; `B1_Compiler.py` and `sync_historical_from_bau.py` skip it |
 
 ### A-O_Demand.xlsx
 
@@ -193,8 +202,9 @@ Demand data per scenario:
 
 | Sheet | Content |
 |-------|---------|
-| Demand_Projection | SpecifiedAnnualDemand values |
-| Profiles | SpecifiedDemandProfile timeslice distribution |
+| Demand_Projection | `SpecifiedAnnualDemand` values |
+| Profiles | `SpecifiedDemandProfile` timeslice distribution |
+| Fuentes | Documentation sheet (data provenance), same convention as in `A-O_Parametrization.xlsx` |
 
 ### A-O_AR_Model_Base_Year.xlsx
 
