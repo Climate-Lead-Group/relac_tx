@@ -48,7 +48,7 @@ Las rutas de los archivos YAML de configuración son siempre relativas a la raí
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/clg-admin/relac_tx.git
+git clone https://github.com/Climate-Lead-Group/relac_tx.git
 cd relac_tx
 
 # Ejecutar el modelo (desde Anaconda Prompt)
@@ -63,8 +63,16 @@ El script `run.py` gestiona automáticamente:
 
 ## Documentación
 
-Para instrucciones detalladas de instalación y configuración, consulta la guía completa:
-- **Guía de Instalación y Ejecución**: `RELAC_TX_Guia_instalacion_ejecucion.md`
+La documentación completa (estudio, instalación, pipeline, configuración y referencia de datos) vive en `docs/` y se compila con Sphinx en inglés y español. Para verla localmente:
+
+```bash
+pip install -r docs/requirements.txt
+sphinx-build -b html docs docs/_build/html
+```
+
+y abrir `docs/_build/html/index.html`. La versión publicada en ReadTheDocs se enlaza aquí cuando el proyecto quede registrado (ver `docs/dev/publishing.md`).
+
+Guía rápida en español: `RELAC_TX_Guia_instalacion_ejecucion.md`.
 
 ## Estructura de Archivos de Salida
 

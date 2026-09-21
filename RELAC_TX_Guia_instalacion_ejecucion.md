@@ -110,7 +110,7 @@
 
 2. Clonar el repositorio (en **Git Bash**):
    ```bash
-   git clone https://github.com/clg-admin/relac_tx.git
+   git clone https://github.com/Climate-Lead-Group/relac_tx.git
    ```
 
 ### 3.2 Configuración del Solver (opcional)
