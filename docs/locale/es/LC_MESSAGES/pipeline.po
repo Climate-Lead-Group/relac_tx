@@ -186,7 +186,7 @@ msgstr "OIL"
 
 #: ../../pipeline.md
 msgid "Oil"
-msgstr "Petróleo crudo"
+msgstr "Fuel oil"
 
 #: ../../pipeline.md
 msgid "OTH"
@@ -202,7 +202,7 @@ msgstr "PET"
 
 #: ../../pipeline.md
 msgid "Petroleum"
-msgstr "Derivados de petróleo"
+msgstr "Diesel"
 
 #: ../../pipeline.md
 msgid "SDS"
