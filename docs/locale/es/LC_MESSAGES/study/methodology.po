@@ -1,0 +1,78 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../study/methodology.md:1
+msgid "Methodology"
+msgstr "Metodología"
+
+#: ../../study/methodology.md:3
+msgid ""
+"The study applies a regional modelling framework using OSeMOSYS to "
+"evaluate long-term electricity system expansion strategies across the "
+"Latin American and Caribbean countries represented in the model. A "
+"harmonised dataset was developed to ensure comparability and consistency "
+"among national models. Calibration relied on official national planning "
+"documents, transmission expansion plans and investment roadmaps, "
+"supported by data from national system operators and international "
+"databases."
+msgstr ""
+"El estudio aplica un marco de modelación regional utilizando OSeMOSYS "
+"para evaluar estrategias de expansión del sistema eléctrico a largo "
+"plazo en los países de América Latina y el Caribe representados en el "
+"modelo. Se desarrolló un conjunto de datos armonizado para garantizar la "
+"comparabilidad y consistencia entre los modelos nacionales. La "
+"calibración se basó en documentos oficiales de planificación nacional, "
+"planes de expansión de la transmisión y hojas de ruta de inversión, con "
+"el respaldo de datos de los operadores nacionales del sistema y bases de "
+"datos internacionales."
+
+#: ../../study/methodology.md:5
+#, python-brace-format, python-format
+msgid ""
+"The scenario families described in {doc}`scenarios` explore the system's "
+"behaviour under different levels of climate ambition, renewable energy "
+"penetration, repowering strategies and cost assumptions. The model "
+"estimates generation and transmission expansion needs, focusing on cross-"
+"border interconnections, system flexibility and infrastructure "
+"bottlenecks. These country-level insights are synthesised into regional "
+"strategies that support RELAC's 2030 target of 80% renewable electricity "
+"generation."
+msgstr ""
+"Las familias de escenarios descritas en {doc}`scenarios` exploran el "
+"comportamiento del sistema bajo distintos niveles de ambición climática, "
+"penetración de energía renovable, estrategias de repotenciación y "
+"supuestos de costos. El modelo estima las necesidades de expansión de "
+"generación y transmisión, con énfasis en las interconexiones "
+"transfronterizas, la flexibilidad del sistema y los cuellos de botella "
+"de infraestructura. Estos hallazgos a nivel país se sintetizan en "
+"estrategias regionales que respaldan la meta de RELAC de alcanzar el 80%"
+" de generación eléctrica renovable para 2030."
+
+#: ../../study/methodology.md:7
+msgid ""
+"The modelling tool itself, its data pipeline and its configuration are "
+"documented in the *Getting started*, *Pipeline* and *Reference* sections "
+"of this site."
+msgstr ""
+"La propia herramienta de modelación, su pipeline de datos y su "
+"configuración se documentan en las secciones *Primeros pasos*, "
+"*Pipeline* y *Referencia* de este sitio."
+

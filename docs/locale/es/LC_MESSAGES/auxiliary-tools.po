@@ -1,0 +1,327 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../auxiliary-tools.md:1
+msgid "Auxiliary Tools"
+msgstr ""
+
+#: ../../auxiliary-tools.md:3
+msgid ""
+"RELAC TX includes several utility scripts (prefixed with `Z_`) for data "
+"maintenance, visualization, and support tasks."
+msgstr ""
+
+#: ../../auxiliary-tools.md:5
+msgid "Configuration Loader"
+msgstr ""
+
+#: ../../auxiliary-tools.md:7
+msgid "**Script:** `scripts/common/Z_AUX_config_loader.py`"
+msgstr ""
+
+#: ../../auxiliary-tools.md:9
+msgid ""
+"A centralized module (not run directly) that provides cached access to "
+"`Config_country_codes.yaml`. All other scripts import functions from this"
+" module instead of reading the YAML directly."
+msgstr ""
+
+#: ../../auxiliary-tools.md:11
+msgid "Available Functions"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Function"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Returns"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Description"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_countries()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`list[str]`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Sorted list of active country codes"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_country_names()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`dict[str, str]`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+#, python-brace-format
+msgid "`{iso3: english_name}`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_iso_country_map()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+#, python-brace-format
+msgid "`{iso3: english_name}` including special entries"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_olade_country_mapping()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+#, python-brace-format
+msgid "`{olade_name: iso3}`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_olade_country_mapping_normalized()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Accent-stripped version of the above"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_first_year()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`int`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Model start year (default: 2023)"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_pwr_cleanup_mode()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`str | bool`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`\"drop\"`, `\"merge\"`, or `False`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_code_to_energy()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+#, python-brace-format
+msgid "`{tech_code: description}`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_renewable_fuels()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`set[str]`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Set of renewable fuel codes"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_add_missing_countries_from_olade()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`bool`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Whether to fill from OLADE source data"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_olade_tech_mapping()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "OLADE tech name to model code mapping"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_shares_tech_mapping()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "Shares file name to model code mapping"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`get_raw_config()`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "`dict`"
+msgstr ""
+
+#: ../../auxiliary-tools.md
+msgid "The full raw YAML dictionary"
+msgstr ""
+
+#: ../../auxiliary-tools.md:29
+msgid "Usage in Scripts"
+msgstr ""
+
+#: ../../auxiliary-tools.md:40
+msgid "Demand Profile Normalizer"
+msgstr ""
+
+#: ../../auxiliary-tools.md:42
+msgid "**Script:** `scripts/tools/Z_AUX_fix_excel_profiles.py`"
+msgstr ""
+
+#: ../../auxiliary-tools.md:44
+msgid ""
+"Fixes rounding drift in SpecifiedDemandProfile sheets that can cause "
+"OSeMOSYS model errors. Profiles must sum to exactly 1.0 per "
+"fuel/technology per year."
+msgstr ""
+
+#: ../../auxiliary-tools.md:46 ../../auxiliary-tools.md:75
+msgid "Usage"
+msgstr ""
+
+#: ../../auxiliary-tools.md:52 ../../auxiliary-tools.md:99
+msgid "What It Does"
+msgstr ""
+
+#: ../../auxiliary-tools.md:54
+msgid ""
+"Iterates over all scenario directories (`A1_Outputs_BAU`, "
+"`A1_Outputs_INV`, `A1_Outputs_OPT`)."
+msgstr ""
+
+#: ../../auxiliary-tools.md:55
+msgid "Opens each `A-O_Demand.xlsx` file."
+msgstr ""
+
+#: ../../auxiliary-tools.md:56
+msgid ""
+"For each profile sheet, normalizes values so that each fuel/technology "
+"column sums to exactly 1.0 per year."
+msgstr ""
+
+#: ../../auxiliary-tools.md:57
+msgid "Creates a **timestamped backup** before modifying any file."
+msgstr ""
+
+#: ../../auxiliary-tools.md:59
+msgid "Tolerance"
+msgstr ""
+
+#: ../../auxiliary-tools.md:61
+msgid ""
+"Values within `0.0001` of 1.0 are considered acceptable. Values outside "
+"this range are corrected by proportional scaling."
+msgstr ""
+
+#: ../../auxiliary-tools.md:65
+msgid "Region Consolidation (Brazil)"
+msgstr ""
+
+#: ../../auxiliary-tools.md:67
+msgid "**Script:** `scripts/tools/Z_AUX_united_regions.py`"
+msgstr ""
+
+#: ../../auxiliary-tools.md:69
+msgid ""
+"A specialized, manually-configured script for consolidating Brazilian "
+"sub-regions (CN, NW, NE, CW, SO, SE, WE) into a unified XX region."
+msgstr ""
+
+#: ../../auxiliary-tools.md:72
+#, python-brace-format
+msgid ""
+"This is a legacy script with hardcoded Brazil-specific logic. For general"
+" region consolidation, use the configurable system in "
+"`Config_region_consolidation.yaml` (see {doc}`country-management`)."
+msgstr ""
+
+#: ../../auxiliary-tools.md:77
+msgid ""
+"The script uses boolean flags at the top of the file to control which "
+"files to process:"
+msgstr ""
+
+#: ../../auxiliary-tools.md:85
+msgid "Processing Rules"
+msgstr ""
+
+#: ../../auxiliary-tools.md:87
+msgid ""
+"**Cost parameters** (CapitalCost, FixedCost, VariableCost): Averaged "
+"across regions."
+msgstr ""
+
+#: ../../auxiliary-tools.md:88
+msgid ""
+"**Capacity parameters** (ResidualCapacity, TotalAnnualMaxCapacity): "
+"Summed across regions."
+msgstr ""
+
+#: ../../auxiliary-tools.md:89
+msgid ""
+"**Interconnections**: TRN codes are normalized to alphabetical country-"
+"pair ordering."
+msgstr ""
+
+#: ../../auxiliary-tools.md:93
+msgid "Capital Annualization"
+msgstr ""
+
+#: ../../auxiliary-tools.md:95
+msgid "**Script:** `scripts/pipeline/Z_AUX_capital_annualization_script.py`"
+msgstr ""
+
+#: ../../auxiliary-tools.md:97
+msgid ""
+"Post-processing script that annualizes capital costs in the model "
+"results. Runs automatically as part of the B2 execution stage when "
+"`annualize_capital: True` in `Config_MOMF_T1_AB.yaml`."
+msgstr ""
+
+#: ../../auxiliary-tools.md:101
+msgid ""
+"Calculates `AccumulatedTotalAnnualMinCapacityInvestment` via cumulative "
+"sum of annual capacity investments, converting lump-sum capital costs "
+"into annualized values."
+msgstr ""
+

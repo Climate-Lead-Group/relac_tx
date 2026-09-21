@@ -1,0 +1,83 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../study/introduction.md:1
+msgid "Introduction"
+msgstr "Introducción"
+
+#: ../../study/introduction.md:3
+#, python-format
+msgid ""
+"The RELAC initiative (Renewables in Latin America and the Caribbean) "
+"seeks to promote climate action by increasing the share of renewable "
+"energy in the region's power systems. Originally aiming for 70% renewable"
+" electricity generation across its member countries, the goal was later "
+"raised to 80% of total electricity generation and 73% of installed "
+"capacity by 2030."
+msgstr ""
+"La iniciativa RELAC (Renovables en América Latina y el Caribe) busca "
+"promover la acción climática aumentando la participación de la energía "
+"renovable en los sistemas eléctricos de la región. Originalmente se "
+"apuntaba a un 70% de generación eléctrica renovable en sus países "
+"miembros; la meta se elevó después al 80% de la generación eléctrica "
+"total y al 73% de la capacidad instalada para 2030."
+
+#: ../../study/introduction.md:5
+msgid ""
+"In this context, the Inter-American Development Bank (IDB) commissioned "
+"Climate Lead Group to carry out a prospective regional analysis of "
+"transmission needs to support RELAC's enhanced renewable energy targets. "
+"While previous studies confirmed the technical and economic feasibility "
+"of reaching these levels of renewable generation, they did not assess "
+"whether the planned transmission infrastructure could accommodate such "
+"growth."
+msgstr ""
+"En este contexto, el Banco Interamericano de Desarrollo (BID) encargó a "
+"Climate Lead Group un análisis prospectivo regional de las necesidades de"
+" transmisión para respaldar las metas de energía renovable ampliadas de "
+"RELAC. Si bien estudios previos confirmaron la viabilidad técnica y "
+"económica de alcanzar estos niveles de generación renovable, no "
+"evaluaron si la infraestructura de transmisión planificada podría "
+"acomodar dicho crecimiento."
+
+#: ../../study/introduction.md:7
+msgid ""
+"This study addresses that gap by evaluating whether existing and planned "
+"transmission networks can effectively support the enhanced renewable and "
+"electrification targets. It further identifies the additional "
+"infrastructure needed, such as new lines, grid repowering and energy "
+"storage, to enable the secure and efficient integration of renewable "
+"generation. The findings aim to inform strategic decision-making by "
+"pinpointing investment priorities, resolving potential grid bottlenecks, "
+"and identifying opportunities to lower system costs and accelerate the "
+"energy transition."
+msgstr ""
+"Este estudio aborda esa brecha evaluando si las redes de transmisión "
+"existentes y planificadas pueden respaldar eficazmente las metas "
+"ampliadas de energía renovable y electrificación. Además, identifica la "
+"infraestructura adicional necesaria, como nuevas líneas, repotenciación "
+"de la red y almacenamiento de energía, para permitir la integración "
+"segura y eficiente de la generación renovable. Los hallazgos buscan "
+"orientar la toma de decisiones estratégicas al señalar prioridades de "
+"inversión, resolver posibles cuellos de botella en la red, e identificar "
+"oportunidades para reducir los costos del sistema y acelerar la "
+"transición energética."
+

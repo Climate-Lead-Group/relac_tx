@@ -1,0 +1,478 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../figures.md:1
+msgid "Figures and Dashboard"
+msgstr ""
+
+#: ../../figures.md:3
+msgid ""
+"All result graphics are produced from the final combined CSV "
+"(`outputs/RELAC_TX_Combined_Inputs_Outputs.csv`) by the scripts under "
+"`scripts/figures/`. Nothing here is part of the DVC pipeline: run it "
+"after B2 has finished."
+msgstr ""
+
+#: ../../figures.md:5
+msgid "Layout"
+msgstr ""
+
+#: ../../figures.md
+msgid "Folder"
+msgstr ""
+
+#: ../../figures.md
+msgid "Contents"
+msgstr ""
+
+#: ../../figures.md
+msgid "Output (`outputs/Figures/`)"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/report/`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"`fig_*.py` static report figures (Entregable 2) + `run_figures.py` + "
+"`run_figures.yaml`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`Report/fig_*.png`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/presentation/`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Same figures in presentation style + `run_figures.py` + `run_figures.yaml`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`Presentation/fig_*_presentation.png`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/dashboard/`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"`build_dashboard.py` (interactive Plotly dashboard), "
+"`Z_AUX_generate_transmission_maps.py`, `Z_AUX_generate_RES_diagram.py`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`Dashboard/dashboard.html`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/common/`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"`dashboard_config.py` (scenario aliases, colours, families), "
+"`fig_runner.py`, `report_style.py`"
+msgstr ""
+
+#: ../../figures.md
+msgid "—"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/Z_AUX_make_tablas_xlsx.py`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Regional result tables for the 14 solved scenarios"
+msgstr ""
+
+#: ../../figures.md
+msgid "`Tablas_Completas_Resultados.xlsx`"
+msgstr ""
+
+#: ../../figures.md
+msgid "`scripts/figures/run_all.py` + `run_all.yaml`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Master runner: report → presentation → dashboard → tablas"
+msgstr ""
+
+#: ../../figures.md
+msgid "all of the above"
+msgstr ""
+
+#: ../../figures.md:16
+msgid ""
+"Paths are centralised in `scripts/common/relac_paths.py` (`FIGURES`, "
+"`FIGURES_REPORT`, `FIGURES_PRESENTATION`, `FIGURES_DASHBOARD`, "
+"`FIGURES_SCRIPTS`). Everything under `outputs/Figures/Dashboard/`, "
+"`Report/` and `Presentation/` is regenerable and git-ignored."
+msgstr ""
+
+#: ../../figures.md:18
+msgid "Running"
+msgstr ""
+
+#: ../../figures.md:29
+msgid ""
+"`run_all.py` first builds (or reuses) a Parquet subset of the combined "
+"CSV for the BAC and ISR scenarios; report, presentation and dashboard "
+"then run in-process, and `tablas` runs in a subprocess because it streams"
+" the full CSV in chunks. A failing branch does not stop the others; the "
+"exit code is 1 if any branch failed."
+msgstr ""
+
+#: ../../figures.md:31
+msgid ""
+"`run_all.yaml` switches whole branches (`report`, `presentation`, "
+"`dashboard`, `tablas`: `true`/`false`). Each `run_figures.yaml` switches "
+"individual figures; the long form passes arguments:"
+msgstr ""
+
+#: ../../figures.md:37
+msgid ""
+"Figures ending in `_tmp` are exploratory (energy-not-served variants) and"
+" ship disabled."
+msgstr ""
+
+#: ../../figures.md:39
+msgid "Report figures (`report/run_figures.yaml`, shipped enabled)"
+msgstr ""
+
+#: ../../figures.md
+msgid "Script"
+msgstr ""
+
+#: ../../figures.md
+msgid "Figure"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_capacidad_generacion_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"Installed generation capacity by scenario in 2030/2040/2050 [GW], "
+"renewable vs non-renewable"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_generacion_anual_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Annual generation by scenario in 2030/2040/2050 [TWh] and renewable share"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_participacion_renovable`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Renewable share of generation [%], 2025–2050"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_capacidad_transmision_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"Installed transmission capacity in 2030/2040/2050 [GW], stacked by line "
+"group"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_km_lineas_acumulados`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Cumulative transmission kilometres to 2030/2040/2050 [km], by line group"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_inversion_transmision_acumulada`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Cumulative transmission investment per period [MUSD]"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_almacenamiento_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Installed storage capacity in 2030/2040/2050 [GW]"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_combustibles_fosiles_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Fossil fuel consumption, cumulative per period [million BOE]"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_costo_no_inversion`"
+msgstr ""
+
+#: ../../figures.md
+msgid ""
+"Total system cost and \"cost of non-investment\", cumulative per period "
+"[billion USD]"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_costo_no_inversion_tope`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Same, including the transmission-cap (\"tope\") case"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_costo_unitario`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Unit system cost [MUSD/TWh] (static version of dashboard chart 11)"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_diversidad_fuentes`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Effective number of generation sources (1/HHI) in 2030/2040/2050"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_seguridad_energetica_2050`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Energy security in 2030/2040/2050: domestic vs imported primary energy [%]"
+msgstr ""
+
+#: ../../figures.md
+msgid "`fig_seguridad_energetica_trayectoria`"
+msgstr ""
+
+#: ../../figures.md
+msgid "Domestic energy share [%], trajectory 2025–2050"
+msgstr ""
+
+#: ../../figures.md:58
+msgid "Dashboard charts"
+msgstr ""
+
+#: ../../figures.md:60
+#, python-brace-format
+msgid ""
+"`dashboard.html` is a single self-contained Plotly page with scenario, "
+"country and period filters. Scenarios are auto-detected from the "
+"`Scenario` column of the combined CSV; display names come from "
+"`SCENARIO_ALIAS` in `dashboard_config.py` (see {doc}`study/scenarios`)."
+msgstr ""
+
+#: ../../figures.md
+msgid "Tab"
+msgstr ""
+
+#: ../../figures.md
+msgid "Title"
+msgstr ""
+
+#: ../../figures.md
+msgid "01"
+msgstr ""
+
+#: ../../figures.md
+msgid "Installed generation capacity [GW]"
+msgstr ""
+
+#: ../../figures.md
+msgid "02"
+msgstr ""
+
+#: ../../figures.md
+msgid "Annual generation [TWh]"
+msgstr ""
+
+#: ../../figures.md
+msgid "03"
+msgstr ""
+
+#: ../../figures.md
+msgid "Installed storage capacity [GW]"
+msgstr ""
+
+#: ../../figures.md
+msgid "04"
+msgstr ""
+
+#: ../../figures.md
+msgid "Installed transmission capacity [GW]"
+msgstr ""
+
+#: ../../figures.md
+msgid "05"
+msgstr ""
+
+#: ../../figures.md
+msgid "Total investment [MUSD]"
+msgstr ""
+
+#: ../../figures.md
+msgid "06"
+msgstr ""
+
+#: ../../figures.md
+msgid "Investment in lines [MUSD]"
+msgstr ""
+
+#: ../../figures.md
+msgid "07"
+msgstr ""
+
+#: ../../figures.md
+msgid "Average annual cost CAPEX+OPEX [MUSD/yr]"
+msgstr ""
+
+#: ../../figures.md
+msgid "08"
+msgstr ""
+
+#: ../../figures.md
+msgid "CO₂ emissions [Mt]"
+msgstr ""
+
+#: ../../figures.md
+msgid "08A"
+msgstr ""
+
+#: ../../figures.md
+msgid "Fossil fuel consumption [PJ]"
+msgstr ""
+
+#: ../../figures.md
+msgid "08B"
+msgstr ""
+
+#: ../../figures.md
+msgid "Fossil fuel consumption by fuel type [PJ]"
+msgstr ""
+
+#: ../../figures.md
+msgid "09"
+msgstr ""
+
+#: ../../figures.md
+msgid "Average annual capital investment by country [MUSD/yr] (maps)"
+msgstr ""
+
+#: ../../figures.md
+msgid "10"
+msgstr ""
+
+#: ../../figures.md
+msgid "Transmission line kilometres [km]"
+msgstr ""
+
+#: ../../figures.md
+msgid "11"
+msgstr ""
+
+#: ../../figures.md
+msgid "Annualised cost per unit of energy [MUSD/TWh]"
+msgstr ""
+
+#: ../../figures.md
+msgid "12"
+msgstr ""
+
+#: ../../figures.md
+msgid "Energy security — imported vs domestic [%]"
+msgstr ""
+
+#: ../../figures.md
+msgid "13"
+msgstr ""
+
+#: ../../figures.md
+msgid "Resilience — effective number of sources (1/HHI)"
+msgstr ""
+
+#: ../../figures.md
+msgid "14"
+msgstr ""
+
+#: ../../figures.md
+msgid "Total system cost including fuel [MUSD/yr]"
+msgstr ""
+
+#: ../../figures.md
+msgid "15"
+msgstr ""
+
+#: ../../figures.md
+msgid "Energy not served [MUSD] (backstop output valued at 1500 USD/MWh)"
+msgstr ""
+
+#: ../../figures.md
+msgid "16"
+msgstr ""
+
+#: ../../figures.md
+msgid "Transmission maps (iframe)"
+msgstr ""
+
+#: ../../figures.md
+msgid "17"
+msgstr ""
+
+#: ../../figures.md
+msgid "Dispatch (iframe)"
+msgstr ""
+
+#: ../../figures.md
+msgid "18"
+msgstr ""
+
+#: ../../figures.md
+msgid "RES diagram (iframe)"
+msgstr ""
+
+#: ../../figures.md:85
+msgid ""
+"Colours are fixed per technology type across the whole dashboard: "
+"generation blue `#4e79a7`, transmission `#e15759`, storage `#76b7b2`."
+msgstr ""
+

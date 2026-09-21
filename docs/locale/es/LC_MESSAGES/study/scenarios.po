@@ -1,0 +1,200 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../study/scenarios.md:1
+msgid "Scenarios"
+msgstr "Escenarios"
+
+#: ../../study/scenarios.md:3
+msgid ""
+"The analysis is organised in four **scenario families**. Each family has "
+"a base scenario and, for the two main families, a set of sensitivity "
+"variants on repowering and on cost assumptions. Model codes (the "
+"identifiers used in configuration files and result CSVs) are shown in "
+"monospace."
+msgstr ""
+"El análisis se organiza en cuatro **familias de escenarios**. Cada "
+"familia tiene un escenario base y, para las dos familias principales, un "
+"conjunto de variantes de sensibilidad sobre repotenciación y sobre "
+"supuestos de costos. Los códigos del modelo (los identificadores usados "
+"en los archivos de configuración y en los CSV de resultados) se muestran"
+" en fuente monoespaciada."
+
+#: ../../study/scenarios.md
+msgid "Family"
+msgstr "Familia"
+
+#: ../../study/scenarios.md
+msgid "Meaning"
+msgstr "Significado"
+
+#: ../../study/scenarios.md
+msgid "Base scenario"
+msgstr "Escenario base"
+
+#: ../../study/scenarios.md
+msgid "Variants"
+msgstr "Variantes"
+
+#: ../../study/scenarios.md
+msgid "**OPT**"
+msgstr "**OPT**"
+
+#: ../../study/scenarios.md
+msgid "Optimal expansion"
+msgstr "Expansión óptima"
+
+#: ../../study/scenarios.md
+msgid "`BAC`"
+msgstr "`BAC`"
+
+#: ../../study/scenarios.md
+msgid ""
+"`BSR` without repowering · `BFA` / `BFB` fossil-fuel cost high / low · "
+"`BRA` / `BRB` renewables cost high / low"
+msgstr ""
+"`BSR` sin repotenciación · `BFA` / `BFB` costo de combustible fósil alto"
+" / bajo · `BRA` / `BRB` costo de renovables alto / bajo"
+
+#: ../../study/scenarios.md
+msgid "**ETT**"
+msgstr "**ETT**"
+
+#: ../../study/scenarios.md
+msgid "Trend (*tendencial*) expansion"
+msgstr "Expansión tendencial"
+
+#: ../../study/scenarios.md
+msgid "`ISR`"
+msgstr "`ISR`"
+
+#: ../../study/scenarios.md
+msgid ""
+"`INV` with repowering · `IFA` / `IFB` fossil-fuel cost high / low · `IRA`"
+" / `IRB` renewables cost high / low"
+msgstr ""
+"`INV` con repotenciación · `IFA` / `IFB` costo de combustible fósil alto"
+" / bajo · `IRA` / `IRB` costo de renovables alto / bajo"
+
+#: ../../study/scenarios.md
+msgid "**PLAN**"
+msgstr "**PLAN**"
+
+#: ../../study/scenarios.md
+msgid "Planned expansion (national plans only)"
+msgstr "Expansión planificada (solo planes nacionales)"
+
+#: ../../study/scenarios.md
+msgid "`OPC`"
+msgstr "`OPC`"
+
+#: ../../study/scenarios.md
+msgid "—"
+msgstr "—"
+
+#: ../../study/scenarios.md
+msgid "**ETT-GP**"
+msgstr "**ETT-GP**"
+
+#: ../../study/scenarios.md
+msgid "Trend expansion with planned generation"
+msgstr "Expansión tendencial con generación planificada"
+
+#: ../../study/scenarios.md
+msgid "`VSR`"
+msgstr "`VSR`"
+
+#: ../../study/scenarios.md:12
+msgid "Reading a scenario code"
+msgstr "Cómo leer un código de escenario"
+
+#: ../../study/scenarios.md:14
+msgid "**First letter:** `B` = optimal family (OPT), `I` = trend family (ETT)."
+msgstr ""
+"**Primera letra:** `B` = familia óptima (OPT), `I` = familia tendencial "
+"(ETT)."
+
+#: ../../study/scenarios.md:15
+msgid "**Suffixes:**"
+msgstr "**Sufijos:**"
+
+#: ../../study/scenarios.md:16
+msgid "`SR` — without repowering (*sin repotenciación*)."
+msgstr "`SR` — sin repotenciación."
+
+#: ../../study/scenarios.md:17
+msgid "`FA` — fossil-fuel cost **high** (*combustible fósil alto*)."
+msgstr "`FA` — costo de combustible fósil **alto**."
+
+#: ../../study/scenarios.md:18
+msgid "`FB` — fossil-fuel cost **low** (*combustible fósil bajo*)."
+msgstr "`FB` — costo de combustible fósil **bajo**."
+
+#: ../../study/scenarios.md:19
+msgid "`RA` — renewables cost **high** (*renovables alto*)."
+msgstr "`RA` — costo de renovables **alto**."
+
+#: ../../study/scenarios.md:20
+msgid "`RB` — renewables cost **low** (*renovables bajo*)."
+msgstr "`RB` — costo de renovables **bajo**."
+
+#: ../../study/scenarios.md:21
+msgid ""
+"`INV` is the trend family **with** repowering (the ETT base `ISR` is "
+"`INV` without repowering)."
+msgstr ""
+"`INV` es la familia tendencial **con** repotenciación (la base de ETT, "
+"`ISR`, es `INV` sin repotenciación)."
+
+#: ../../study/scenarios.md:24
+msgid ""
+"The multipliers of the renewables-high variants (`BRA`, `IRA`) are "
+"pending calibration; in the current configuration they equal those of "
+"`BRB` / `IRB`. Their results should be read as provisional."
+msgstr ""
+"Los multiplicadores de las variantes de renovables alto (`BRA`, `IRA`) "
+"están pendientes de calibración; en la configuración actual son iguales "
+"a los de `BRB` / `IRB`. Sus resultados deben leerse como provisionales."
+
+#: ../../study/scenarios.md:27
+msgid "How the scenarios are built"
+msgstr "Cómo se construyen los escenarios"
+
+#: ../../study/scenarios.md:29
+#, python-brace-format
+msgid ""
+"The four families derive from four input workbooks (`BAU`, `INV`, `OPT`, "
+"`VGB`) through the transmission-constraint chain of Stage B2: dispatch "
+"floors, cross-scenario transmission constraints and a registry of "
+"scenario transforms that create the variants by changing parameter values"
+" only. The full mapping from each code to its base workbook and "
+"generating script, together with the list of scenarios actually solved, "
+"is in the *Scenario codes* table of {doc}`../pipeline`."
+msgstr ""
+"Las cuatro familias derivan de cuatro libros de entrada (`BAU`, `INV`, "
+"`OPT`, `VGB`) a través de la cadena de restricciones de transmisión de "
+"la Etapa B2: pisos de despacho, restricciones de transmisión entre "
+"escenarios y un registro de transformaciones de escenario que crea las "
+"variantes cambiando únicamente valores de parámetros. El mapeo completo "
+"de cada código a su libro base y script generador, junto con la lista de"
+" escenarios efectivamente resueltos, está en la tabla *Scenario codes* "
+"de {doc}`../pipeline`."
+

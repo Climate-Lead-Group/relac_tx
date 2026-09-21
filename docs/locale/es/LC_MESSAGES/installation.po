@@ -1,0 +1,403 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../installation.md:1
+msgid "Installation"
+msgstr ""
+
+#: ../../installation.md:3
+msgid ""
+"This guide covers the full setup process for running RELAC TX on a "
+"Windows machine."
+msgstr ""
+
+#: ../../installation.md:5
+msgid "System Requirements"
+msgstr ""
+
+#: ../../installation.md:7
+msgid "**Operating System:** Windows 10 or higher"
+msgstr ""
+
+#: ../../installation.md:8
+msgid "**Git:** [Git for Windows](https://gitforwindows.org/) (version 2.40+)"
+msgstr ""
+
+#: ../../installation.md:9
+msgid ""
+"**Python distribution:** "
+"[Miniconda](https://docs.conda.io/en/latest/miniconda.html) or "
+"[Anaconda](https://www.anaconda.com/download)"
+msgstr ""
+
+#: ../../installation.md:10
+msgid "**Solver:** At least one of the following LP/MIP solvers:"
+msgstr ""
+
+#: ../../installation.md:11
+msgid ""
+"[GLPK](https://www.gnu.org/software/glpk/) (open source, **installed "
+"automatically** with the Conda environment)"
+msgstr ""
+
+#: ../../installation.md:12
+msgid ""
+"[CBC](https://github.com/coin-or/Cbc) (open source, **installed "
+"automatically** with the Conda environment)"
+msgstr ""
+
+#: ../../installation.md:13
+msgid ""
+"[CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio) "
+"(commercial, IBM)"
+msgstr ""
+
+#: ../../installation.md:14
+msgid "[Gurobi](https://www.gurobi.com/) (commercial, free academic license)"
+msgstr ""
+
+#: ../../installation.md:16
+msgid "Clone the Repository"
+msgstr ""
+
+#: ../../installation.md:23
+msgid "Conda Environment"
+msgstr ""
+
+#: ../../installation.md:25
+msgid ""
+"RELAC TX uses a Conda environment defined in `environment.yaml`. The "
+"`run.py` launcher automatically creates it if it does not exist, but you "
+"can also create it manually:"
+msgstr ""
+
+#: ../../installation.md:32
+msgid "Environment Dependencies"
+msgstr ""
+
+#: ../../installation.md:34
+msgid "The environment installs the following packages:"
+msgstr ""
+
+#: ../../installation.md
+msgid "Package"
+msgstr ""
+
+#: ../../installation.md
+msgid "Version"
+msgstr ""
+
+#: ../../installation.md
+msgid "Purpose"
+msgstr ""
+
+#: ../../installation.md
+msgid "Python"
+msgstr ""
+
+#: ../../installation.md
+msgid "3.10"
+msgstr ""
+
+#: ../../installation.md
+msgid "Runtime"
+msgstr ""
+
+#: ../../installation.md
+msgid "pandas"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 2.1"
+msgstr ""
+
+#: ../../installation.md
+msgid "Data manipulation"
+msgstr ""
+
+#: ../../installation.md
+msgid "numpy"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 1.26"
+msgstr ""
+
+#: ../../installation.md
+msgid "Numerical computation"
+msgstr ""
+
+#: ../../installation.md
+msgid "openpyxl"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 3.1"
+msgstr ""
+
+#: ../../installation.md
+msgid "Excel file reading"
+msgstr ""
+
+#: ../../installation.md
+msgid "xlsxwriter"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 3.2.4"
+msgstr ""
+
+#: ../../installation.md
+msgid "Excel file writing"
+msgstr ""
+
+#: ../../installation.md
+msgid "pyyaml"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 6.0"
+msgstr ""
+
+#: ../../installation.md
+msgid "YAML configuration parsing"
+msgstr ""
+
+#: ../../installation.md
+msgid "matplotlib"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 3.8"
+msgstr ""
+
+#: ../../installation.md
+msgid ""
+"Figures (`scripts/figures/report`, `scripts/figures/presentation`, "
+"`scripts/fix_dispatch`, `scripts/tx_chain`)"
+msgstr ""
+
+#: ../../installation.md
+msgid "plotly"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 5.18, < 7"
+msgstr ""
+
+#: ../../installation.md
+msgid "Interactive dashboard (`scripts/figures/dashboard/build_dashboard.py`)"
+msgstr ""
+
+#: ../../installation.md
+msgid "pyarrow"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 14"
+msgstr ""
+
+#: ../../installation.md
+msgid ""
+"Parquet subset of the combined CSV for the static figures "
+"(`scripts/figures/common/dashboard_config.py`)"
+msgstr ""
+
+#: ../../installation.md
+msgid "ruamel.yaml"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 0.17"
+msgstr ""
+
+#: ../../installation.md
+msgid ""
+"Comment-preserving YAML edits in `B1_Run_Compiler.py` (PyYAML fallback if"
+" absent)"
+msgstr ""
+
+#: ../../installation.md
+msgid "scipy"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 1.11"
+msgstr ""
+
+#: ../../installation.md
+msgid "Least-squares fit in `scripts/experimental/matriz_balance`"
+msgstr ""
+
+#: ../../installation.md
+msgid "glpk"
+msgstr ""
+
+#: ../../installation.md
+msgid "latest (conda-forge)"
+msgstr ""
+
+#: ../../installation.md
+msgid "GLPK solver, provides the `glpsol` CLI"
+msgstr ""
+
+#: ../../installation.md
+msgid "coincbc"
+msgstr ""
+
+#: ../../installation.md
+msgid "CBC solver, provides the `cbc` CLI (metapackage for `coin-or-cbc`)"
+msgstr ""
+
+#: ../../installation.md
+msgid "git"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 2.40"
+msgstr ""
+
+#: ../../installation.md
+msgid "Version control"
+msgstr ""
+
+#: ../../installation.md
+msgid "dvc"
+msgstr ""
+
+#: ../../installation.md
+msgid "latest"
+msgstr ""
+
+#: ../../installation.md
+msgid "Data Version Control pipeline"
+msgstr ""
+
+#: ../../installation.md
+msgid "otoole"
+msgstr ""
+
+#: ../../installation.md
+msgid ">= 1.1.1"
+msgstr ""
+
+#: ../../installation.md
+msgid "OSeMOSYS data format conversion"
+msgstr ""
+
+#: ../../installation.md:55
+msgid "Solver Setup"
+msgstr ""
+
+#: ../../installation.md:57
+msgid "GLPK and CBC (included in the environment)"
+msgstr ""
+
+#: ../../installation.md:59
+msgid ""
+"Both open-source solvers are declared in `environment.yaml` (`glpk` and "
+"`coincbc`), so they are installed together with the Conda environment. No"
+" extra step is needed for a fresh environment."
+msgstr ""
+
+#: ../../installation.md:61
+msgid ""
+"If your `OG-MOMF-env` was created before the solvers were added, `run.py`"
+" detects the missing `glpsol`/`cbc` binaries and installs them on its "
+"next run. You can also do it manually:"
+msgstr ""
+
+#: ../../installation.md:67
+msgid ""
+"Note: the binaries live inside the environment (`...\\envs\\OG-MOMF-"
+"env\\Library\\bin`), so they are only on `PATH` when the environment is "
+"active (or when running through `conda run`, as `run.py` does)."
+msgstr ""
+
+#: ../../installation.md:69
+msgid "CPLEX"
+msgstr ""
+
+#: ../../installation.md:71
+msgid ""
+"Install IBM ILOG CPLEX Optimization Studio from the [IBM "
+"website](https://www.ibm.com/products/ilog-cplex-optimization-studio)."
+msgstr ""
+
+#: ../../installation.md:72
+msgid "Ensure the `cplex` binary is available on your system `PATH`."
+msgstr ""
+
+#: ../../installation.md:73
+msgid "Set `solver: 'cplex'` in `inputs/config/Config_MOMF_T1_AB.yaml`."
+msgstr ""
+
+#: ../../installation.md:75
+msgid "Gurobi"
+msgstr ""
+
+#: ../../installation.md:77
+msgid ""
+"Install Gurobi from the [Gurobi "
+"website](https://www.gurobi.com/downloads/)."
+msgstr ""
+
+#: ../../installation.md:78
+msgid "Activate your license (`grbgetkey <license-key>`)."
+msgstr ""
+
+#: ../../installation.md:79
+msgid "Ensure the `gurobi` binary is available on your system `PATH`."
+msgstr ""
+
+#: ../../installation.md:80
+msgid "Set `solver: 'gurobi'` in `inputs/config/Config_MOMF_T1_AB.yaml`."
+msgstr ""
+
+#: ../../installation.md:82
+msgid "Verify Installation"
+msgstr ""
+
+#: ../../installation.md:84
+msgid "After setup, verify that the environment works:"
+msgstr ""
+
+#: ../../installation.md:91
+msgid "To verify your solver:"
+msgstr ""
+
+#: ../../installation.md:107
+msgid "DVC Setup (Optional)"
+msgstr ""
+
+#: ../../installation.md:109
+msgid ""
+"RELAC TX uses [DVC](https://dvc.org/) (Data Version Control) to manage "
+"the pipeline. The `run.py` script handles DVC commands automatically, but"
+" if you want to run stages manually:"
+msgstr ""
+
+#: ../../installation.md:116
+msgid ""
+"This will execute all pipeline stages that have outdated outputs based on"
+" dependency tracking."
+msgstr ""
+

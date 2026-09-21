@@ -1,0 +1,62 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../index.md:7
+msgid "The study"
+msgstr "El estudio"
+
+#: ../../index.md:20
+msgid "Getting started"
+msgstr "Primeros pasos"
+
+#: ../../index.md:28
+msgid "Pipeline"
+msgstr "Pipeline"
+
+#: ../../index.md:37
+msgid "Reference"
+msgstr "Referencia"
+
+#: ../../index.md:1
+msgid "RELAC TX"
+msgstr "RELAC TX"
+
+#: ../../index.md:3
+msgid ""
+"RELAC TX is the regional transmission-expansion model built by Climate "
+"Lead Group for the Inter-American Development Bank to assess whether the "
+"planned transmission infrastructure of Latin America and the Caribbean "
+"can support the enhanced renewable targets of the RELAC initiative. This "
+"site documents both the **study** (context, methodology, scenarios, "
+"results) and the **tool** (installation, pipeline, configuration, data)."
+msgstr ""
+"RELAC TX es el modelo regional de expansión de transmisión desarrollado "
+"por Climate Lead Group para el Banco Interamericano de Desarrollo, para "
+"evaluar si la infraestructura de transmisión planificada de América "
+"Latina y el Caribe puede sostener las metas renovables ampliadas de la "
+"iniciativa RELAC. Este sitio documenta tanto el **estudio** (contexto, "
+"metodología, escenarios, resultados) como la **herramienta** "
+"(instalación, pipeline, configuración, datos)."
+
+#: ../../index.md:5
+msgid "Source code: <https://github.com/Climate-Lead-Group/relac_tx>"
+msgstr "Código fuente: <https://github.com/Climate-Lead-Group/relac_tx>"
+

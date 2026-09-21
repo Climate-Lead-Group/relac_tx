@@ -1,0 +1,845 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../solver-patchers.md:1
+msgid "Solver Patcher Chain (Stage B2)"
+msgstr ""
+
+#: ../../solver-patchers.md:3
+msgid ""
+"After the OSeMOSYS preprocessor produces the GMPL datafile (`.txt`) but "
+"**before** the solver runs, Stage B2 applies an ordered chain of "
+"*patchers* that rewrite parameter blocks directly in the `.txt`. These "
+"patchers implement the **reserve-margin and storage** modeling features "
+"and several feasibility safeguards."
+msgstr ""
+
+#: ../../solver-patchers.md:5
+msgid ""
+"This page documents the chain, what each patcher does, and the "
+"configuration that controls it. All patcher settings live in "
+"[`Config_MOMF_T1_AB.yaml`](configuration.md#config_momf_t1_abyaml)."
+msgstr ""
+
+#: ../../solver-patchers.md:8
+msgid ""
+"Every patcher is gated by an `*_active` master switch. When a switch is "
+"`False` (or absent), that patcher is a **no-op** and the pipeline behaves"
+" as if it were not there. Some switches ship **enabled** in the current "
+"`Config_MOMF_T1_AB.yaml` — see the \"Shipped default\" column in each "
+"section."
+msgstr ""
+
+#: ../../solver-patchers.md:13
+msgid "Why patch the `.txt` instead of the CSVs?"
+msgstr ""
+
+#: ../../solver-patchers.md:15
+msgid ""
+"Some adjustments are easier or only possible on the fully-assembled GMPL "
+"model:"
+msgstr ""
+
+#: ../../solver-patchers.md:17
+msgid ""
+"`DaysInDayType` is never emitted by the `B1 → otoole → preprocess` path, "
+"so it must be injected post-preprocess."
+msgstr ""
+
+#: ../../solver-patchers.md:18
+msgid ""
+"Reserve-margin tags, firm-capacity caps, and storage-build timing are "
+"global, cross-scenario rules best applied as a final reconciliation step."
+msgstr ""
+
+#: ../../solver-patchers.md:19
+msgid ""
+"The patched values are then **synced back** into the otoole CSVs (see "
+"[Sync patched CSVs](#sync-patched-csvs-back-to-the-otoole-folder)) so the"
+" combined input/output files reflect what the solver actually consumed."
+msgstr ""
+
+#: ../../solver-patchers.md:23
+msgid "Execution order"
+msgstr ""
+
+#: ../../solver-patchers.md:25
+msgid ""
+"For each scenario, B2 runs (in "
+"[`B2_Executing_OG_Model.py`](../scripts/pipeline/B2_Executing_OG_Model.py)):"
+msgstr ""
+
+#: ../../solver-patchers.md:45
+msgid ""
+"Each active patcher appends a suffix to the datafile name and feeds its "
+"output to the next patcher in the chain. With the shipped configuration "
+"the file that reaches the solver is "
+"`Executables/<S>_0/Pre_processed_<S>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON.txt`."
+" The order is fixed in `CHAIN_ORDER` inside "
+"[`B2_Executing_OG_Model.py`](../scripts/pipeline/B2_Executing_OG_Model.py);"
+" B2 aborts at startup if the active flags would produce a chain other "
+"than `StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED` before VEGCON, "
+"because the Tx-chain scripts have that prefix hardcoded in their file "
+"matching."
+msgstr ""
+
+#: ../../solver-patchers.md:49
+msgid "Storage-delay mode and the dual output pipeline"
+msgstr ""
+
+#: ../../solver-patchers.md:51
+msgid ""
+"The storage-delay patcher is special: when `storage_delay_active: True`, "
+"B2 redirects the solver model file and the root datafile."
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Aspect"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Baseline run"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Storage-delay run"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Solver model file"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "`osemosys_fast_preprocessed.txt`"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid ""
+"`osemosys_fast_preprocessed_storage_delay.txt` "
+"(`storage_delay_model_output`)"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Root datafile"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "`RELAC_TX_data.txt`"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "`RELAC_TX_data_storage_delay.txt` (`storage_delay_root_datafile`)"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "Final CSV prefix"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "`RELAC_TX_`"
+msgstr ""
+
+#: ../../solver-patchers.md:7
+msgid "`RELAC_TX_` (unchanged)"
+msgstr ""
+
+#: ../../solver-patchers.md:59
+msgid ""
+"The final CSVs (`RELAC_TX_Inputs.csv`, `RELAC_TX_Outputs.csv`, "
+"`RELAC_TX_Combined_Inputs_Outputs.csv`) always use `prefix_final_files`. "
+"Until 2026-09-11 storage-delay runs used a separate "
+"`RELAC_TX_StorageDelay_` prefix; that desynced the `outs` in `dvc.yaml` "
+"(so `dvc repro` failed after the solve) and the consumers that read the "
+"un-prefixed name (dashboard, D4). B2 now checks at startup that the "
+"`dvc.yaml` outs carry `prefix_final_files` and aborts otherwise."
+msgstr ""
+
+#: ../../solver-patchers.md:62
+msgid ""
+"`storage_delay_active` is **mutually exclusive** with "
+"`strip_storage_active`. When storage-delay is on, B2 silently forces "
+"`strip_storage_active = False`."
+msgstr ""
+
+#: ../../solver-patchers.md:65
+msgid ""
+"[`patch_storage_delay.py`](../scripts/pipeline/patch_storage_delay.py) "
+"keeps storage in the model but **blocks storage builds for the first N "
+"years** (`storage_delay_first_n_years`), then reopens the linked PWR "
+"storage technologies so the optimizer can add storage afterward."
+msgstr ""
+
+#: ../../solver-patchers.md:69
+msgid "The patchers"
+msgstr ""
+
+#: ../../solver-patchers.md:71
+msgid "1. DaysInDayType injector"
+msgstr ""
+
+#: ../../solver-patchers.md:73
+msgid ""
+"**Script:** "
+"[`inject_DaysInDayType.py`](../scripts/pipeline/inject_DaysInDayType.py) "
+"— runs unconditionally."
+msgstr ""
+
+#: ../../solver-patchers.md:75
+msgid ""
+"The `B1 → otoole → preprocess` chain never generates the `DaysInDayType` "
+"block, so the `.txt` ships with an empty block and OSeMOSYS falls back to"
+" `default = 7`. With 4 seasons × 1 daytype that makes storage equations "
+"treat the year as 4 × 7 = 28 days while the energy balance uses the real "
+"year length — a mismatch. This patcher writes the correct `DaysInDayType`"
+" values in place."
+msgstr ""
+
+#: ../../solver-patchers.md:77
+msgid "2. Storage-delay patcher"
+msgstr ""
+
+#: ../../solver-patchers.md:79
+msgid ""
+"**Script:** "
+"[`patch_storage_delay.py`](../scripts/pipeline/patch_storage_delay.py) · "
+"**Switch:** `storage_delay_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Param"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Default"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Description"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_first_n_years`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`5`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Number of initial model years where storage builds are blocked"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_storage_prefixes`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[SDS, LDS]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Storage classes to delay"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_storages`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "*(unset)*"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Exact storage names; overrides prefixes if set"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_allowed_value`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"-1\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "PWR cap value applied in the open years (`-1` = unconstrained)"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"StorageDelayN5\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Filename suffix for the chained `.txt`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_model_output`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`osemosys_fast_preprocessed_storage_delay.txt`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Patched model file the solver is redirected to"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`storage_delay_root_datafile`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`RELAC_TX_data_storage_delay.txt`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Root datafile name"
+msgstr ""
+
+#: ../../solver-patchers.md:91
+msgid "3. Storage-strip patcher (diagnostic)"
+msgstr ""
+
+#: ../../solver-patchers.md:93
+msgid ""
+"**Script:** [`strip_storage.py`](../scripts/pipeline/strip_storage.py) · "
+"**Switch:** `strip_storage_active` · **Shipped default: True** (forced "
+"off when storage-delay is on)"
+msgstr ""
+
+#: ../../solver-patchers.md:95
+msgid ""
+"Produces a new `.txt` with selected storage facilities **and their "
+"feeding PWR technologies disabled** — used to diagnose whether storage is"
+" the source of an infeasibility."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`strip_storage_mode`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"all\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"tech\"` (exact names), `\"class\"` (by prefix), or `\"all\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`strip_storage_targets`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Facility names (`tech` mode) or prefixes (`class` mode)"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`strip_storage_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"NoStorage\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Filename suffix"
+msgstr ""
+
+#: ../../solver-patchers.md:103
+msgid "4. PWRBCK cap-opening patcher (diagnostic)"
+msgstr ""
+
+#: ../../solver-patchers.md:105
+msgid ""
+"**Script:** "
+"[`open_pwrbck_caps.py`](../scripts/pipeline/open_pwrbck_caps.py) · "
+"**Switch:** `open_pwrbck_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:107
+msgid ""
+"`PWRBCK*` are high-cost backstop generators that absorb feasibility edge "
+"cases. If their `TotalAnnualMaxCapacity` / "
+"`TotalAnnualMaxCapacityInvestment` are hardcapped at 0, the safety net is"
+" removed and the LP can become infeasible. This patcher reopens those "
+"caps."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`open_pwrbck_value`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`9999`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Cap value applied to PWRBCK* techs"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`open_pwrbck_pattern`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"PWRBCK\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Technology-name prefix to match"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`open_pwrbck_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"OpenBCK\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:115
+msgid "5. Reserve-margin repair — careful XLSX"
+msgstr ""
+
+#: ../../solver-patchers.md:117
+msgid ""
+"**Script:** "
+"[`patch_reserve_margin_repair_careful_xlsx.py`](../scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py)"
+" · **Switch:** `reserve_margin_xlsx_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:119
+msgid ""
+"Adds reserve-margin tags and repairs firm fossil capacity caps using per-"
+"country-region fallback values from an XLSX workbook. It keeps **stock** "
+"(`TotalAnnualMaxCapacity`) and **flow** "
+"(`TotalAnnualMaxCapacityInvestment`) limits separate and only replaces "
+"sentinel values."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_workbook`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`firm_capacity_fallbacks_by_cr.xlsx`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Workbook of per-country-region firm-capacity fallbacks"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_sheet`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"fallbacks\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Worksheet name"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_backstop_credit`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`1.0`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Reserve credit for PWRBCK capacity (1.0 = full)"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_ccs_credit`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`0.9`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Reserve credit for PWRCCS capacity"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_target_prefixes`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[PWRPET, PWROIL, PWRNGS]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Firm fossil techs whose sentinel caps may be replaced"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_sentinel_values`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[0, 9999]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Only these existing cap values are replaced"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_global_value`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`0.15`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid ""
+"Global `ReserveMargin` written for every (REGION, YEAR); unset = leave "
+"block untouched"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_modify_from_year`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`2026`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid ""
+"Forwarded as `--modify-from-year`: caps are only repaired for years ≥ "
+"this value, so historical years synced from BAU stay untouched; unset = "
+"repair all years"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`reserve_margin_xlsx_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"RMCarefulXLSX\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:133
+msgid "6. Activity-upper-limit patcher"
+msgstr ""
+
+#: ../../solver-patchers.md:135
+msgid ""
+"**Script:** "
+"[`patch_activity_upper_limit.py`](../scripts/pipeline/patch_activity_upper_limit.py)"
+" · **Switch:** `activity_upper_limit_active` · **Shipped default: False**"
+msgstr ""
+
+#: ../../solver-patchers.md:137
+msgid ""
+"Runs **outside** the canonical chain: B2 applies it to the RMCarefulXLSX "
+"file and copies the capped output back onto that same file, so the "
+"`ActUpLim` suffix never appears in the datafile the solver reads. When "
+"active it is limited to `activity_upper_limit_scenarios` (shipped "
+"`[\"BAU\"]`)."
+msgstr ""
+
+#: ../../solver-patchers.md:139
+msgid ""
+"Reads rows from the **Secondary Techs** sheet of "
+"`A-O_Parametrization.xlsx` whose `Parameter` equals "
+"`activity_upper_limit_parameter_label`. Each year cell holds a "
+"**fraction** in `[0, 1]` of that country's electricity demand. The "
+"patcher maps each tech to its demand fuel via `OutputActivityRatio`, "
+"converts `fraction × demand / OAR` into an absolute cap, and rewrites the"
+" `TotalTechnologyAnnualActivityUpperLimit` block."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_scenarios`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[\"BAU\"]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Scenarios where the patch applies (data lives in each scenario's own xlsx)"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_parameter_label`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`TotalTechnologyAnnualActivityUpperLimit_fraction`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Row label that holds the fractions"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_demand_fuel_prefixes`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[\"ELC\"]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Demand fuel prefixes"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_tech_prefixes`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[\"PWR\"]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Technology prefixes the cap applies to"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_exclude_prefixes`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[PWRSDS, PWRLDS, PWRBCK, PWRTRN]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Technology prefixes excluded"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_coverage_tolerance`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid ""
+"If summed fractions per region/fuel/year fall below `1 − tolerance`, B1b "
+"raises a **V4** warning"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`activity_upper_limit_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"ActUpLim\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:151
+msgid "7. Dispatch floors (FLOORED)"
+msgstr ""
+
+#: ../../solver-patchers.md:153
+msgid ""
+"**Script:** [`write_floors.py`](../scripts/fix_dispatch/write_floors.py) "
+"· **Switch:** `dispatch_floors_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:155
+msgid ""
+"Writes per-technology `TotalTechnologyAnnualActivityLowerLimit` floors "
+"for the fossil fleet so the optimizer cannot dump thermal dispatch below "
+"its calibrated/committed level. Runs once per **base** scenario listed in"
+" `dispatch_floors_scenarios`; derived scenarios inherit the floored file."
+" Before writing, B2 runs a read-only gate "
+"([`preflight_separation.py`](../scripts/fix_dispatch/preflight_separation.py));"
+" a non-zero exit aborts the pipeline."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`dispatch_floors_script`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`scripts/fix_dispatch/write_floors.py`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Floor writer, path relative to the repo root"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`dispatch_floors_scenarios`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`[\"BAU\", \"OPT\", \"INV\", \"VGB\"]`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Base scenarios to floor"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`dispatch_floors_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"FLOORED\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`preflight_separation_active`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`True`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Run the separation gate before writing floors"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`preflight_separation_script`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`scripts/fix_dispatch/preflight_separation.py`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Gate script"
+msgstr ""
+
+#: ../../solver-patchers.md:165
+msgid "8. Veg Tx constraints (VEGCON)"
+msgstr ""
+
+#: ../../solver-patchers.md:167
+msgid ""
+"**Script:** "
+"[`veg_tx_constraints.py`](../scripts/tx_chain/veg_tx_constraints.py) · "
+"**Switch:** `veg_tx_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:169
+#, python-brace-format
+msgid ""
+"Cross-scenario barrier: needs the `_FLOORED.txt` of BAU, OPT, INV and VGB"
+" **simultaneously** (floor raise, calibration of the cost slope, planned-"
+"lines ceiling taken from OPT). Runs **once** after every base scenario "
+"has been floored and writes one `*_VEGCON.txt` per scenario into "
+"`Executables/<S>_0/`, creating the folders of the derived scenarios BAC, "
+"OPC, INVWF and VGBWF. See the Tx-chain subsection of {doc}`pipeline` for "
+"the etapas B/C/D and the scenario-code table."
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`veg_tx_script`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`scripts/tx_chain/veg_tx_constraints.py`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Barrier script"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`veg_tx_suffix`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`\"VEGCON\"`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`veg_tx_needs_csv`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "`inputs/tx_chain/outputs_BSR/NewCapacity.csv`"
+msgstr ""
+
+#: ../../solver-patchers.md:61
+msgid "Pinned \"revealed need\" input; must exist before the barrier runs"
+msgstr ""
+
+#: ../../solver-patchers.md:179
+msgid "Sync patched CSVs back to the otoole folder"
+msgstr ""
+
+#: ../../solver-patchers.md:181
+msgid ""
+"**Script:** "
+"[`sync_patched_csvs_from_txt.py`](../scripts/pipeline/sync_patched_csvs_from_txt.py)"
+" · **Switch:** `sync_patched_csvs_active` · **Shipped default: True**"
+msgstr ""
+
+#: ../../solver-patchers.md:183
+msgid ""
+"After the chain runs, this step extracts the listed parameter blocks from"
+" the **final** patched `.txt` and overwrites the matching CSVs in "
+"`A2_Outputs_Params_otoole/<scenario>/` **in place**. "
+"`generate_combined_input_file()` then reads those CSVs, so the patched "
+"values appear in `RELAC_TX_Combined_Inputs_Outputs.csv`."
+msgstr ""
+
+#: ../../solver-patchers.md:185
+msgid "`sync_patched_csvs_params` lists which parameters are synced (default):"
+msgstr ""
+
+#: ../../solver-patchers.md:199
+msgid ""
+"The sync writes into the original A2 folder in place. Re-running the "
+"pipeline regenerates those CSVs from A1 before the patcher chain re-"
+"applies, so the operation is repeatable."
+msgstr ""
+
+#: ../../solver-patchers.md:204
+msgid "Turning the chain off"
+msgstr ""
+
+#: ../../solver-patchers.md:206
+msgid ""
+"To run the plain baseline pipeline (no patchers, single `RELAC_TX_*` "
+"output set), set every master switch to `False` in "
+"`Config_MOMF_T1_AB.yaml`:"
+msgstr ""
+
+#: ../../solver-patchers.md:217
+msgid ""
+"The `DaysInDayType` injector still runs (it only fixes a missing block "
+"and does not change modeling assumptions)."
+msgstr ""
+

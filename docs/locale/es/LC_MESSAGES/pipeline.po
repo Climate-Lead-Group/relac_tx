@@ -1,0 +1,1520 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../pipeline.md:1
+msgid "Pipeline Workflow"
+msgstr ""
+
+#: ../../pipeline.md:3
+msgid ""
+"RELAC TX processes energy system data through a multi-stage pipeline. "
+"This page documents each stage in detail, including its inputs, outputs, "
+"and configuration."
+msgstr ""
+
+#: ../../pipeline.md:5
+msgid "Pipeline Overview"
+msgstr ""
+
+#: ../../pipeline.md:35
+msgid "Stage A0: Generate Technology-Country Matrix"
+msgstr ""
+
+#: ../../pipeline.md:37
+msgid "**Script:** `scripts/pipeline/A0_generate_tech_country_matrix.py`"
+msgstr ""
+
+#: ../../pipeline.md:39
+msgid ""
+"Generates `Tech_Country_Matrix.xlsx`, which controls which technology-"
+"country combinations are included in the model."
+msgstr ""
+
+#: ../../pipeline.md:41 ../../pipeline.md:99 ../../pipeline.md:148
+#: ../../pipeline.md:202 ../../pipeline.md:246 ../../pipeline.md:290
+#: ../../pipeline.md:322 ../../pipeline.md:359
+msgid "Usage"
+msgstr ""
+
+#: ../../pipeline.md:47 ../../pipeline.md:175 ../../pipeline.md:227
+msgid "What It Does"
+msgstr ""
+
+#: ../../pipeline.md:49 ../../pipeline.md:177
+msgid "Reads the country list from `Config_country_codes.yaml`."
+msgstr ""
+
+#: ../../pipeline.md:50
+msgid "Creates a matrix of 21 technology codes against all countries."
+msgstr ""
+
+#: ../../pipeline.md:51
+msgid ""
+"Marks implausible combinations (from `implausible_combinations` in the "
+"YAML) as **NO** with red highlighting."
+msgstr ""
+
+#: ../../pipeline.md:52
+msgid "All other combinations default to **YES**."
+msgstr ""
+
+#: ../../pipeline.md:53
+msgid "Writes the matrix to `Tech_Country_Matrix.xlsx` with 5 sheets."
+msgstr ""
+
+#: ../../pipeline.md:55
+msgid "Technology Codes"
+msgstr ""
+
+#: ../../pipeline.md ../../pipeline.md:81
+msgid "Code"
+msgstr ""
+
+#: ../../pipeline.md ../../pipeline.md:81 ../../pipeline.md:269
+msgid "Description"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "BCK"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Backstop"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "BIO"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Biomass"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "CCS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Carbon Capture & Storage (Coal)"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "COA"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Coal"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "COG"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Cogeneration"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "CSP"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Concentrated Solar Power"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "GAS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Natural Gas"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "GEO"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Geothermal"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "HYD"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Hydroelectric"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "LDS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Long Duration Storage"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "NGS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Natural Gas (CCG + OCG unified)"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "OIL"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Oil"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "OTH"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Other"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "PET"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Petroleum"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "SDS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Short Duration Storage"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "SPV"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Solar Photovoltaic"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "URN"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Nuclear"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "WAS"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Waste"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "WAV"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Wave"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "WOF"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Offshore Wind"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "WON"
+msgstr ""
+
+#: ../../pipeline.md
+msgid "Onshore Wind"
+msgstr ""
+
+#: ../../pipeline.md:82
+msgid ""
+"Structural prefixes (`ELC`, `MIN`, `PWR`, `RNW`, `TRN`) are **not** "
+"included in the matrix. They combine with the codes above to form full "
+"technology names (e.g., `PWRBIOARGXX`, `MINCOAARG`)."
+msgstr ""
+
+#: ../../pipeline.md:85
+msgid "After Generation"
+msgstr ""
+
+#: ../../pipeline.md:87
+msgid "Edit `Tech_Country_Matrix.xlsx` to customize:"
+msgstr ""
+
+#: ../../pipeline.md:88
+msgid "In the **Matrix** sheet: change YES/NO for any technology-country pair."
+msgstr ""
+
+#: ../../pipeline.md:89
+msgid ""
+"In the **NGS_Unification** sheet: toggle YES/NO to enable CCG+OCG merging"
+" into NGS."
+msgstr ""
+
+#: ../../pipeline.md:93
+msgid "Stage A1: Preprocess Raw CSVs"
+msgstr ""
+
+#: ../../pipeline.md:95
+msgid "**Script:** `scripts/pipeline/A1_Pre_processing_OG_csvs.py`"
+msgstr ""
+
+#: ../../pipeline.md:97
+msgid ""
+"The largest processing step. Reads raw OSeMOSYS CSV files and produces "
+"structured Excel model files for each scenario."
+msgstr ""
+
+#: ../../pipeline.md:105 ../../pipeline.md:330
+msgid "Input Files"
+msgstr ""
+
+#: ../../pipeline.md:107
+msgid ""
+"`OG_csvs_inputs/*.csv` -- All standard OSeMOSYS parameter and set CSV "
+"files."
+msgstr ""
+
+#: ../../pipeline.md:108
+msgid "`Tech_Country_Matrix.xlsx` -- Technology filtering configuration."
+msgstr ""
+
+#: ../../pipeline.md:109
+msgid "`Config_country_codes.yaml` -- Country definitions and settings."
+msgstr ""
+
+#: ../../pipeline.md:110
+msgid "`Config_region_consolidation.yaml` -- Region consolidation rules."
+msgstr ""
+
+#: ../../pipeline.md:112
+msgid "Output Files (per scenario)"
+msgstr ""
+
+#: ../../pipeline.md:114
+#, python-brace-format
+msgid "Written to `A1_Outputs/A1_Outputs_{scenario}/`:"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "File"
+msgstr ""
+
+#: ../../pipeline.md:81 ../../pipeline.md:417
+msgid "Content"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`A-O_Parametrization.xlsx`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "All technology parameters (costs, capacities, limits, etc.)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`A-O_Demand.xlsx`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Demand data, profiles, and projections"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`A-O_AR_Model_Base_Year.xlsx`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Base year activity ratios (InputActivityRatio, OutputActivityRatio)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`A-O_AR_Projections.xlsx`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Projection activity ratios"
+msgstr ""
+
+#: ../../pipeline.md:123
+msgid "Processing Steps"
+msgstr ""
+
+#: ../../pipeline.md:125
+msgid "The script performs these operations in order:"
+msgstr ""
+
+#: ../../pipeline.md:127
+msgid "**Read all CSV files** into memory as DataFrames."
+msgstr ""
+
+#: ../../pipeline.md:128
+msgid "**Replace country codes** according to the configuration."
+msgstr ""
+
+#: ../../pipeline.md:129
+msgid "**Filter by first year** -- removes data before `first_year`."
+msgstr ""
+
+#: ../../pipeline.md:130
+msgid ""
+"**Normalize temporal profiles** -- ensures SpecifiedDemandProfile sums to"
+" 1.0 per fuel/tech/year."
+msgstr ""
+
+#: ../../pipeline.md:131
+msgid ""
+"**Consolidate regions** (if enabled) -- merges sub-regional data using "
+"avg/sum rules."
+msgstr ""
+
+#: ../../pipeline.md:132
+msgid "**Remove internal interconnections** after consolidation."
+msgstr ""
+
+#: ../../pipeline.md:133
+msgid ""
+"**Clean PWR technologies** -- handles PWR00/PWR01 duplicates based on "
+"`pwr_cleanup_mode`."
+msgstr ""
+
+#: ../../pipeline.md:134
+msgid ""
+"**Apply Tech-Country Matrix filtering** -- removes technology-country "
+"pairs marked NO."
+msgstr ""
+
+#: ../../pipeline.md:135
+msgid "**Unify NGS technologies** -- merges CCG+OCG into NGS where enabled."
+msgstr ""
+
+#: ../../pipeline.md:136
+msgid ""
+"**Write Excel output files** with formatted sheets and human-readable "
+"names."
+msgstr ""
+
+#: ../../pipeline.md:137
+msgid "**Update demand profiles and projections**."
+msgstr ""
+
+#: ../../pipeline.md:138
+msgid "**Update parametrization capacities and temporal splits**."
+msgstr ""
+
+#: ../../pipeline.md:142
+msgid "Stage A2: Add Transmission Technologies"
+msgstr ""
+
+#: ../../pipeline.md:144
+msgid "**Script:** `scripts/pipeline/A2_AddTx.py`"
+msgstr ""
+
+#: ../../pipeline.md:146
+msgid ""
+"Adds transmission (TRN) and dispatch (DSPTRN) technology entries to the "
+"Excel model files. Creates 6 transmission types plus 1 dispatch type per "
+"country for renewable and non-renewable power routing, and updates "
+"interconnection fuel codes."
+msgstr ""
+
+#: ../../pipeline.md:154
+msgid "Transmission Technology Types"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`RNWTRN`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Renewable transmission (existing)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`RNWRPO`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Renewable transmission (repowered)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`RNWNLI`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Renewable transmission (new lines)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`PWRTRN`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Non-renewable transmission (existing)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`TRNRPO`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Non-renewable transmission (repowered)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`TRNNLI`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Non-renewable transmission (new lines)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`DSPTRN`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Dispatch (interconnection routing, 2 modes)"
+msgstr ""
+
+#: ../../pipeline.md:166
+msgid "Fuel Routing"
+msgstr ""
+
+#: ../../pipeline.md:168
+msgid "The script assigns fuel codes for the energy flow:"
+msgstr ""
+
+#: ../../pipeline.md:170
+msgid "`ELC*00` -- Renewable electricity"
+msgstr ""
+
+#: ../../pipeline.md:171
+msgid "`ELC*01` -- Non-renewable electricity"
+msgstr ""
+
+#: ../../pipeline.md:172
+msgid "`ELC*02` -- Transmission output / Demand"
+msgstr ""
+
+#: ../../pipeline.md:173
+msgid "`ELC*03` -- Dispatch-ready for interconnection"
+msgstr ""
+
+#: ../../pipeline.md:178
+msgid "For each scenario's Excel files:"
+msgstr ""
+
+#: ../../pipeline.md:179
+msgid ""
+"Classifies power plant output as renewable (`ELC*00`) or non-renewable "
+"(`ELC*01`) in **Secondary** sheets."
+msgstr ""
+
+#: ../../pipeline.md:180
+msgid ""
+"Updates TRN interconnection fuel codes from `ELC*02`/`ELC*01` to `ELC*03`"
+" in **Secondary** sheets."
+msgstr ""
+
+#: ../../pipeline.md:181
+msgid ""
+"Adds transmission technology entries (RNWTRN, PWRTRN, etc.) to **Demand "
+"Techs** sheets."
+msgstr ""
+
+#: ../../pipeline.md:182
+msgid ""
+"Adds DSPTRN dispatch technology (Mode 1: `ELC*02` → `ELC*03`, Mode 2: "
+"`ELC*03` → `ELC*01`) to **Demand Techs** sheets."
+msgstr ""
+
+#: ../../pipeline.md:183
+msgid ""
+"Adds parameter entries to `A-O_Parametrization.xlsx` (sheets: **Fixed "
+"Horizon Parameters**, **Demand Techs**)."
+msgstr ""
+
+#: ../../pipeline.md:185 ../../pipeline.md:258 ../../pipeline.md:298
+msgid "Command-Line Options"
+msgstr ""
+
+#: ../../pipeline.md:81 ../../pipeline.md:269
+msgid "Flag"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Default"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--yaml`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Auto-detected"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Path to YAML configuration"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--base`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Base year filename"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--proj`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Projections filename"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--param`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Parametrization filename"
+msgstr ""
+
+#: ../../pipeline.md:196
+msgid "Stage A3: Migrate Old Inputs (Optional)"
+msgstr ""
+
+#: ../../pipeline.md:198
+msgid "**Script:** `scripts/pipeline/A3_migrate_old_inputs_CLG.py`"
+msgstr ""
+
+#: ../../pipeline.md:200
+msgid ""
+"Migrates data from an older input format (`Old_Inputs/` directory) into "
+"the current model structure. This is only needed when transitioning from "
+"a legacy data format."
+msgstr ""
+
+#: ../../pipeline.md:209
+msgid "Required Setup"
+msgstr ""
+
+#: ../../pipeline.md:211
+msgid ""
+"The `Old_Inputs/` folder **must be created manually** inside "
+"`inputs/reference/`. It is not generated by any script. The folder must "
+"contain the following files, which must have **the same format** as the "
+"current model files:"
+msgstr ""
+
+#: ../../pipeline.md:225
+msgid ""
+"If the `Old_Inputs/` folder does not exist, the script will exit with an "
+"error."
+msgstr ""
+
+#: ../../pipeline.md:229
+msgid "Applies technology name transformations (CCG+OCG to NGS, suffix removal)."
+msgstr ""
+
+#: ../../pipeline.md:230
+msgid "Imports and normalizes profiles from old files."
+msgstr ""
+
+#: ../../pipeline.md:231
+msgid "Reads equivalence rules from `Config_tech_equivalences.yaml`."
+msgstr ""
+
+#: ../../pipeline.md:235
+msgid "Stage A3_process: Parametrization Modification Workflow (Optional)"
+msgstr ""
+
+#: ../../pipeline.md:237
+msgid "**Script:** [`A3_process.py`](../scripts/pipeline/A3_process.py)"
+msgstr ""
+
+#: ../../pipeline.md:239
+msgid ""
+"An orchestrator that applies a set of post-A1/A2 calibration rules to "
+"each scenario's `A-O_Parametrization.xlsx`. For every scenario folder "
+"under `A1_Outputs/A1_Outputs_<scenario>/` it runs three per-scenario "
+"steps in order, followed by one global harmonization pass:"
+msgstr ""
+
+#: ../../pipeline.md:241
+msgid ""
+"**LID rule** "
+"([`add_max_cap_investment_lid_rule.py`](../scripts/pipeline/A3_process/rules_scripts/add_max_cap_investment_lid_rule.py))"
+" — fills `TotalAnnualMaxCapacityInvestment` placeholders with calibrated "
+"\"lid\" values, configured in "
+"[`lid_rule.yaml`](../inputs/config/A3_process/lid_rule.yaml)."
+msgstr ""
+
+#: ../../pipeline.md:242
+msgid ""
+"**Extend lower limits** "
+"([`extend_lowerlimits_pwr.py`](../scripts/pipeline/A3_process/rules_scripts/extend_lowerlimits_pwr.py))"
+" — extends the 2024 value of `TotalTechnologyAnnualActivityLowerLimit` "
+"for PWR techs flat through 2050 in the **Secondary Techs** sheet, so the "
+"calibration floor does not expire and the optimizer cannot dump thermal "
+"generation in 2025+."
+msgstr ""
+
+#: ../../pipeline.md:243
+msgid ""
+"**Pre-solver validation** — runs `B1b_Pre_solver_validation.py --auto-"
+"fix-all` to reconcile any residual inconsistencies (see below)."
+msgstr ""
+
+#: ../../pipeline.md:244
+msgid ""
+"**Historical sync to BAU (global, after all scenarios)** — for every "
+"scenario listed under `historical_sync_through` in "
+"[`lid_rule.yaml`](../inputs/config/A3_process/lid_rule.yaml), runs "
+"[`sync_historical_from_bau.py`](../scripts/pipeline/sync_historical_from_bau.py)"
+" `--apply --scenarios <S> --years 2023,…,<through_year>`. It copies the "
+"year cells 2023..`<through_year>` from the current BAU workbook into the "
+"target scenario so that all scenarios share the same historical/near-term"
+" values (shipped: INV 2030, OPT 2026, VGB 2030). Two per-scenario "
+"refinements are forwarded from the same YAML: "
+"`historical_sync_protect_from_2026` (parameters passed as `--protect-"
+"params`, which are *not* snapped back to BAU for years ≥ 2027 — shipped "
+"for VGB: `TotalTechnologyAnnualActivityLowerLimit`, "
+"`TotalAnnualMinCapacityInvestment`, `TotalAnnualMaxCapacityInvestment`) "
+"and `historical_sync_tx_follow_bau` (scenarios passed `--no-protect-tx`, "
+"whose transmission `TotalAnnualMaxCapacityInvestment` *is* synced to BAU "
+"across the whole window — shipped: OPT). BAU is always the source and "
+"never a target. The sync aborts on any structural mismatch between "
+"workbooks (row order, sheet names), which stops A3 with a non-zero exit."
+msgstr ""
+
+#: ../../pipeline.md:81 ../../pipeline.md:269
+msgid "`--scenario`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Comma-separated scenario name(s); default = all discovered"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--rules-script`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Override the rules script path"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--list`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Show discovered scenarios and exit"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--skip-validation`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Skip the B1b auto-fix step (step 3)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--force-overwrite`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid ""
+"Forwarded to the lid script: overwrite prior positive lid values in "
+"`TotalAnnualMaxCapacityInvestment` cells (use when iterating on the lid "
+"schedule without restoring the xlsx)"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "`--skip-historical-sync`"
+msgstr ""
+
+#: ../../pipeline.md:81
+msgid "Skip the final BAU harmonization pass (step 4)"
+msgstr ""
+
+#: ../../pipeline.md:270
+msgid ""
+"The LID script writes a JSON change log "
+"(`lid_rule_changes_<timestamp>.json`) inside each scenario directory but "
+"does **not** make a folder-level backup — recovery is via git. B1b makes "
+"its own timestamped backup of the xlsx before writing."
+msgstr ""
+
+#: ../../pipeline.md:275
+msgid "Pre-Solver Validation (B1b)"
+msgstr ""
+
+#: ../../pipeline.md:277
+msgid ""
+"**Script:** "
+"[`B1b_Pre_solver_validation.py`](../scripts/pipeline/B1b_Pre_solver_validation.py)"
+msgstr ""
+
+#: ../../pipeline.md:279
+msgid ""
+"Detects infeasibility-prone data in `A-O_Parametrization.xlsx` **before**"
+" `B1_Compiler` reads the workbook (and before B2 emits the `.txt` for the"
+" solver). For each issue it shows the auto-fix formula and, by default, "
+"asks before writing. It can run standalone or as the final step of "
+"`A3_process.py`."
+msgstr ""
+
+#: ../../pipeline.md:281
+msgid "Validations"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "ID"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Check"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Auto-fix"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "**V1**"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Per-year: `TotalAnnualMinCapacityInvestment(y) >= "
+"TotalAnnualMaxCapacityInvestment(y)`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`Max_inv(y) = Min_inv(y) × 1.01`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "**V2**"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Cumulative: `TotalAnnualMaxCapacity(y) <= ResidualCapacity(y) + Σ "
+"Min_inv` over the operational-life window"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`Max_tot(y) = (Residual + ΣMin) × 1.01`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "**V3**"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Activity: `TotalTechnologyAnnualActivityLowerLimit(y) > max_activity(y)` "
+"(where `max_activity = max_capacity × AvailabilityFactor × "
+"CapacityToActivityUnit × Σ(CF·YearSplit)`)"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`ActivityLowerLimit(y) = max_activity(y) × 0.99`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "**V4**"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Coverage: summed activity-upper-limit fractions per region/fuel/year "
+"below `1 − activity_upper_limit_coverage_tolerance`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Warning only (no auto-fix)"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Scenario name (e.g. `BAU`); used to derive the default xlsx path"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--xlsx`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Override the xlsx path directly"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--non-interactive`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Do not prompt; fail on issues"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--auto-fix-all`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Apply every fix without prompting"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--report-only`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "Write the report only; do not modify the xlsx"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--skip-v3`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Skip the V3 `TotalTechnologyAnnualActivityLowerLimit` fixes; V1/V2 still "
+"apply (used by A3_process to gate LowerLimit changes)"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid "`--modify-from-year`"
+msgstr ""
+
+#: ../../pipeline.md:269
+msgid ""
+"Only apply fixes for years ≥ this year; earlier issues are reported but "
+"not fixed, so historical cells synced from BAU stay untouched. Default: "
+"no cutoff"
+msgstr ""
+
+#: ../../pipeline.md:311
+msgid ""
+"`--non-interactive`, `--auto-fix-all`, and `--report-only` are mutually "
+"exclusive. B1b creates a timestamped backup of the workbook before "
+"applying any fix."
+msgstr ""
+
+#: ../../pipeline.md:316
+msgid "Stage B1: Compile to OSeMOSYS Format"
+msgstr ""
+
+#: ../../pipeline.md:318
+msgid ""
+"**Script:** `scripts/pipeline/B1_Compiler.py` (invoked via "
+"`B1_Run_Compiler.py`)"
+msgstr ""
+
+#: ../../pipeline.md:320
+msgid ""
+"Reads the Excel model files and compiles them into OSeMOSYS-format CSV "
+"parameter files."
+msgstr ""
+
+#: ../../pipeline.md:324 ../../pipeline.md:361
+msgid "This stage runs automatically via the DVC pipeline:"
+msgstr ""
+
+#: ../../pipeline.md:332
+#, python-brace-format
+msgid "`A1_Outputs/A1_Outputs_{scenario}/A-O_*.xlsx` -- All Excel model files."
+msgstr ""
+
+#: ../../pipeline.md:333
+msgid ""
+"`A2_Extra_Inputs/A-Xtra_*.xlsx` -- Extra inputs (storage, emissions, "
+"projections)."
+msgstr ""
+
+#: ../../pipeline.md:334
+msgid "`Config_MOMF_T1_A.yaml` -- Compiler configuration."
+msgstr ""
+
+#: ../../pipeline.md:336 ../../pipeline.md:440
+msgid "Output Files"
+msgstr ""
+
+#: ../../pipeline.md:338
+#, python-brace-format
+msgid "`A2_Output_Params/{scenario}/*.csv` -- One CSV per OSeMOSYS parameter."
+msgstr ""
+
+#: ../../pipeline.md:339
+msgid "`A2_Structure_Lists.xlsx` -- Generated structure/set listings."
+msgstr ""
+
+#: ../../pipeline.md:341
+msgid "Compilation Logic"
+msgstr ""
+
+#: ../../pipeline.md:343
+msgid "The compiler handles:"
+msgstr ""
+
+#: ../../pipeline.md:345
+msgid ""
+"**Projection modes**: Flat, yearly percentage change, user-defined, "
+"interpolation to stated value, zero."
+msgstr ""
+
+#: ../../pipeline.md:346
+msgid ""
+"**Activity ratios**: InputActivityRatio and OutputActivityRatio from base"
+" year and projection sheets."
+msgstr ""
+
+#: ../../pipeline.md:347
+msgid ""
+"**Parametrization**: All technology parameters (costs, capacities, "
+"operational life, etc.)."
+msgstr ""
+
+#: ../../pipeline.md:348
+msgid ""
+"**Transport** (when enabled): Fleet calculations, distance handling, "
+"occupancy rates."
+msgstr ""
+
+#: ../../pipeline.md:349
+msgid ""
+"**Capacity limits**: Hard limits, lower limits, continuous residual "
+"capacity."
+msgstr ""
+
+#: ../../pipeline.md:353
+msgid "Stage B2: Execute the Model"
+msgstr ""
+
+#: ../../pipeline.md:355
+msgid "**Script:** `scripts/pipeline/B2_Executing_OG_Model.py`"
+msgstr ""
+
+#: ../../pipeline.md:357
+msgid "Runs the OSeMOSYS optimization model using the configured solver."
+msgstr ""
+
+#: ../../pipeline.md:367
+msgid "Execution Steps"
+msgstr ""
+
+#: ../../pipeline.md:369
+msgid ""
+"**CSV to datafile conversion** via otoole (per base scenario: BAU, OPT, "
+"INV, VGB)."
+msgstr ""
+
+#: ../../pipeline.md:370
+msgid "**Preprocessing** -- runs the OSeMOSYS preprocessor."
+msgstr ""
+
+#: ../../pipeline.md:371
+#, python-brace-format
+msgid ""
+"**Patcher chain** -- rewrites parameter blocks directly in the GMPL "
+"`.txt` to apply the reserve-margin and storage features plus feasibility "
+"safeguards (DaysInDayType, storage-delay, PWRBCK caps, reserve margin, "
+"activity upper limits, dispatch floors). See {doc}`solver-patchers` for "
+"the full chain."
+msgstr ""
+
+#: ../../pipeline.md:372
+msgid ""
+"**Sync patched CSVs** -- overwrites the affected otoole CSVs in place so "
+"the combined input/output files reflect the patched values the solver "
+"consumed."
+msgstr ""
+
+#: ../../pipeline.md:373
+msgid ""
+"**Tx chain (FLOORED → VEGCON → scenario transforms)** -- see subsection "
+"below; produces the 17 derived scenarios (BAC, OPC, INVWF, VGBWF, BSR, "
+"ISR, VSR, ISRWF, VSRWF, BFA, IFA, BFB, IFB, BRB, IRB, BRA, IRA) that the "
+"rest of the pipeline treats like any other scenario."
+msgstr ""
+
+#: ../../pipeline.md:374
+msgid ""
+"**Solver execution** -- runs the selected solver (GLPK/CBC/CPLEX/Gurobi) "
+"over the configured `solve_scenarios` universe (base + derived)."
+msgstr ""
+
+#: ../../pipeline.md:375
+msgid ""
+"**Result extraction** -- converts solver output back to CSV, using each "
+"derived scenario's base A2 as the otoole-results reference (derived "
+"scenarios share sets with their base; only values differ)."
+msgstr ""
+
+#: ../../pipeline.md:376
+msgid ""
+"**Post-processing** -- input re-sync from the final `.txt` (fixes stale-"
+"input bug for derived scenarios), capital annualization, scenario "
+"concatenation."
+msgstr ""
+
+#: ../../pipeline.md:379
+#, python-brace-format
+msgid ""
+"The final CSVs always use `prefix_final_files` (`RELAC_TX_`), regardless "
+"of which patchers are active; `dvc.yaml` declares them as `outs` under "
+"that name and B2 aborts at startup if they disagree. When "
+"`storage_delay_active: True` (the shipped default) only the solver model "
+"file and the root datafile are redirected. See {doc}`solver-patchers` for"
+" details."
+msgstr ""
+
+#: ../../pipeline.md:382
+msgid "Tx Chain Integration (FLOORED → VEGCON → scenario transforms)"
+msgstr ""
+
+#: ../../pipeline.md:384
+msgid ""
+"B2 orchestrates four previously-manual scripts as subprocesses, with "
+"their internal logic untouched (only CLI path arguments were added). The "
+"canonical suffix chain is "
+"`StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED_VEGCON`; B2 asserts this at"
+" startup and aborts with a clear message if the YAML's active flags would"
+" produce a different chain (the four scripts below have it hardcoded in "
+"their file-matching logic)."
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Etapa"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "What runs"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Script (unmodified logic)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Output"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "B (per-scenario)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid ""
+"`preflight_separation` gate once, then `write_floors.py --scenarios <S>` "
+"per base scenario"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`scripts/fix_dispatch/write_floors.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`Executables/<S>_0/..._FLOORED.txt`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "C (barrier, 1 call)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`veg_tx_constraints.py --base-dir Executables --needs-csv <pin>`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`scripts/tx_chain/veg_tx_constraints.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid ""
+"`..._FLOORED_VEGCON.txt` for BAU, OPT, INV, VGB, BAC, OPC, INVWF, VGBWF "
+"(creates the derived scenarios' `<S>_0/` folders)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "D (barrier, registry)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid ""
+"`cost_sensitivity_v_SR_WF.py`, then `nli_sr_recompute.py`, then "
+"`cost_sensitivity_v_FA/FB/RB/RA.py`, all `--executables-dir Executables`"
+msgstr ""
+
+#: ../../pipeline.md:378
+#, python-brace-format
+msgid ""
+"`scripts/tx_chain/cost_sensitivity_v_SR_WF.py`, `nli_sr_recompute.py`, "
+"`cost_sensitivity_v_{FA,FB,RB,RA}.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid ""
+"BSR, ISR, VSR, ISRWF, VSRWF (new scenarios); ISR/VSR/ISRWF/VSRWF edited "
+"in place; BFA/IFA, BFB/IFB, BRB/IRB, BRA/IRA (cost sensitivities from "
+"BAC/INV)"
+msgstr ""
+
+#: ../../pipeline.md:392
+msgid ""
+"Extensibility: a new constraint script or derived scenario is added "
+"entirely in `Config_MOMF_T1_AB.yaml` -- a `scenario_transforms` entry "
+"(script + `produces`/`in_place`) plus a `derived_scenarios` mapping and, "
+"if it should be solved, an entry in `solve_scenarios`. No B2 code change "
+"is needed."
+msgstr ""
+
+#: ../../pipeline.md:394
+msgid ""
+"Solve universe: `solve_universe()` resolves `solve_scenarios` from the "
+"YAML (defaulting to the base scenarios) and validates each has its final "
+"datafile before the solver stage runs; `scenario_base()` maps a derived "
+"scenario back to the base whose A2/sets it reuses for otoole results."
+msgstr ""
+
+#: ../../pipeline.md:396
+msgid "Scenario codes (shipped `Config_MOMF_T1_AB.yaml`, 2026-09-17)"
+msgstr ""
+
+#: ../../pipeline.md:398
+#, python-brace-format
+msgid ""
+"Base scenarios are the four `A1_Outputs_<S>/` folders: **BAU, INV, OPT, "
+"VGB**. Every other code is derived by the Tx chain. Reading a code: first"
+" letter `B` = optimal family (built on BAU/BAC), `I` = trend family "
+"(built on INV/ISR); suffixes `SR` = no repowering, `FA`/`FB` = fossil "
+"fuel cost high/low, `RA`/`RB` = renewables cost high/low, `WF` = water-"
+"fill NLI weights. Report names (see {doc}`study/scenarios`): OPT = BAC, "
+"ETT = ISR, PLAN = OPC, ETT-GP = VSR."
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Derived code"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Base (A2 sets reused)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Produced by"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "Notes"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BAC"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BAU"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "etapa C (`veg_tx_constraints.py`, NLI mode `ramp`)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "reporting base of the OPT family"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "OPC"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "OPT"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "etapa C (`ramp`)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "PLAN"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "INVWF"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "INV"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "etapa C (water-fill)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "parent of ISRWF; not solved"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "VGBWF"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "VGB"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "parent of VSRWF; not solved"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BSR"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_SR_WF.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "OPT without repowering"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "ISR"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_SR_WF.py` + `nli_sr_recompute.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "reporting base of the ETT family"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "VSR"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "ETT-GP"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "ISRWF, VSRWF"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "INV, VGB"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "not solved"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BFA, IFA"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BAU, INV"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_FA.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "fossil `VariableCost` ×1.70 (applied on BAC / INV VEGCON files)"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BFB, IFB"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_FB.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "fossil `VariableCost` ×0.52"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BRB, IRB"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_RB.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`CapitalCost` solar ×0.60, wind ×0.75, batteries ×0.50"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "BRA, IRA"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid "`cost_sensitivity_v_RA.py`"
+msgstr ""
+
+#: ../../pipeline.md:378
+msgid ""
+"renewables high; **multipliers pending calibration** (currently equal to "
+"RB)"
+msgstr ""
+
+#: ../../pipeline.md:415
+msgid ""
+"Shipped `solve_scenarios` (14, solved in this order when `parallel: "
+"False`): `BAC, OPC, BSR, BFA, BFB, BRA, BRB, ISR, IFA, IFB, INV, IRA, "
+"IRB, VSR`. INV is solved as-is (its VEGCON file) and reported as \"ETT "
+"with repowering\"."
+msgstr ""
+
+#: ../../pipeline.md:418
+msgid ""
+"The chain was validated end-to-end on 2026-09-03 with the then-current 9 "
+"derived scenarios (all reached VEGCON with `preflight_separation` PASS "
+"and `veg_tx` PASS=35/FAIL=0; BAC and ISR reached CPLEX optimal). The four"
+" cost-sensitivity transforms (FA/FB/RA/RB) were added on 2026-09-16/17 "
+"and follow the same mechanism. Two prerequisites surfaced by that "
+"validation still hold: the chain suffix must equal "
+"`StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED` before VEGCON (B2 asserts "
+"it), and `inputs/tx_chain/outputs_BSR/NewCapacity.csv` "
+"(`veg_tx_needs_csv`) must exist before the VEGCON barrier runs."
+msgstr ""
+
+#: ../../pipeline.md:421
+msgid "Solver Configuration"
+msgstr ""
+
+#: ../../pipeline.md:423
+msgid "Configure in `Config_MOMF_T1_AB.yaml`:"
+msgstr ""
+
+#: ../../pipeline.md:431
+msgid "Parallel Execution"
+msgstr ""
+
+#: ../../pipeline.md:433
+msgid ""
+"When `parallel: True` and `only_main_scenario: False`, multiple scenarios"
+" are solved simultaneously:"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "Directory/File"
+msgstr ""
+
+#: ../../pipeline.md:417
+#, python-brace-format
+msgid "`A2_Outputs_Params_otoole/{scenario}/`"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid ""
+"otoole-format CSVs (one per parameter); for derived scenarios (see the "
+"scenario-code table above) this is a copy of the base scenario's folder, "
+"re-synced from that derived scenario's own final `.txt`"
+msgstr ""
+
+#: ../../pipeline.md:417
+#, python-brace-format
+msgid "`Executables/{scenario}_0/`"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid ""
+"Compiled solver data files -- one folder per scenario, base or derived; "
+"derived scenarios' folders are created by the Tx chain (etapas C/D), not "
+"by A1/A2"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "`RELAC_TX_Inputs.csv`"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "Combined inputs (all scenarios)"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "`RELAC_TX_Outputs.csv`"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "Combined outputs (all scenarios)"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "`RELAC_TX_Combined_Inputs_Outputs.csv`"
+msgstr ""
+
+#: ../../pipeline.md:417
+msgid "Merged inputs and outputs"
+msgstr ""
+
+#: ../../pipeline.md:450
+msgid "Reproducibility"
+msgstr ""
+
+#: ../../pipeline.md:452
+msgid "Deterministic results are ensured through:"
+msgstr ""
+
+#: ../../pipeline.md:454
+msgid "`PYTHONHASHSEED=0` (set by `run.py`)."
+msgstr ""
+
+#: ../../pipeline.md:455
+msgid "Configurable random seeds per solver."
+msgstr ""
+
+#: ../../pipeline.md:456
+msgid "Sorted CSV files for consistent ordering."
+msgstr ""
+

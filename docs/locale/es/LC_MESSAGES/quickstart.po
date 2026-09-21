@@ -1,0 +1,271 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../quickstart.md:1
+msgid "Quick Start"
+msgstr ""
+
+#: ../../quickstart.md:3
+msgid "This page walks you through running RELAC TX for the first time."
+msgstr ""
+
+#: ../../quickstart.md:5
+msgid "1. Run the Full Pipeline"
+msgstr ""
+
+#: ../../quickstart.md:7
+msgid "From an **Anaconda Prompt** (or any terminal with conda available):"
+msgstr ""
+
+#: ../../quickstart.md:14
+msgid "The `run.py` launcher automatically:"
+msgstr ""
+
+#: ../../quickstart.md:16
+msgid "Creates the Conda environment (`OG-MOMF-env`) if it does not exist."
+msgstr ""
+
+#: ../../quickstart.md:17
+msgid "Installs any missing dependencies."
+msgstr ""
+
+#: ../../quickstart.md:18
+msgid "Injects today's date into the DVC pipeline for date-stamped output files."
+msgstr ""
+
+#: ../../quickstart.md:19
+msgid "Runs `dvc repro` to execute all pipeline stages."
+msgstr ""
+
+#: ../../quickstart.md:20
+msgid "Restores the original `dvc.yaml` after completion."
+msgstr ""
+
+#: ../../quickstart.md:22
+msgid "Command-Line Options"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Flag"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Default"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Description"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`--env-name`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Read from YAML (`OG-MOMF-env`)"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Conda environment name"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`--env-file`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`environment.yaml`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Path to the Conda environment file"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`--dvc-file`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`dvc.yaml`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Path to the DVC pipeline file"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`--date`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Today (`YYYY-MM-DD`)"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Date stamp for output files"
+msgstr ""
+
+#: ../../quickstart.md:31
+msgid "Example with a custom date:"
+msgstr ""
+
+#: ../../quickstart.md:37
+msgid "2. Pipeline Stages"
+msgstr ""
+
+#: ../../quickstart.md:39
+msgid "The DVC pipeline has two stages that run in sequence:"
+msgstr ""
+
+#: ../../quickstart.md:41
+msgid "Stage 1: Preprocess (Compile)"
+msgstr ""
+
+#: ../../quickstart.md:47
+msgid ""
+"Reads the Excel model files in `A1_Outputs/` and compiles them into "
+"OSeMOSYS-compatible CSV parameter files in `A2_Output_Params/`."
+msgstr ""
+
+#: ../../quickstart.md:49
+msgid "Stage 2: Execute"
+msgstr ""
+
+#: ../../quickstart.md:55
+msgid ""
+"Converts CSVs to the solver's data format, runs the optimization, and "
+"produces combined result files."
+msgstr ""
+
+#: ../../quickstart.md:57
+msgid "3. Output Files"
+msgstr ""
+
+#: ../../quickstart.md:59
+msgid "After a successful run, results are generated in `outputs/`:"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "File"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Inputs.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Compiled model inputs (all scenarios)"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Outputs.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Optimization results (all scenarios)"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Combined_Inputs_Outputs.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Merged inputs and outputs"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Inputs_YYYY-MM-DD.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Date-stamped copy of inputs"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Outputs_YYYY-MM-DD.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Date-stamped copy of outputs"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "`RELAC_TX_Combined_Inputs_Outputs_YYYY-MM-DD.csv`"
+msgstr ""
+
+#: ../../quickstart.md
+msgid "Date-stamped combined file"
+msgstr ""
+
+#: ../../quickstart.md:70
+msgid ""
+"Date-stamped files preserve a complete execution history so you can "
+"compare runs over time."
+msgstr ""
+
+#: ../../quickstart.md:72
+msgid "4. Directory Structure Overview"
+msgstr ""
+
+#: ../../quickstart.md:100
+msgid "5. Typical Workflow"
+msgstr ""
+
+#: ../../quickstart.md:102
+msgid "A typical modeling workflow follows these steps:"
+msgstr ""
+
+#: ../../quickstart.md:104
+msgid "**Configure countries and technologies** in `Config_country_codes.yaml`."
+msgstr ""
+
+#: ../../quickstart.md:105
+msgid "**Generate the Tech-Country Matrix** (`A0`)."
+msgstr ""
+
+#: ../../quickstart.md:106
+msgid "**Preprocess raw CSVs into Excel model files** (`A1`)."
+msgstr ""
+
+#: ../../quickstart.md:107
+msgid "**Add transmission technologies** (`A2`)."
+msgstr ""
+
+#: ../../quickstart.md:108
+msgid "**Optionally edit secondary technologies** (`D1` + manual editing + `D2`)."
+msgstr ""
+
+#: ../../quickstart.md:109
+msgid ""
+"**Run the full pipeline** with `python run.py` (this executes stages "
+"**B1** and **B2** only -- data preparation stages A0--A2 and the "
+"secondary techs editor D1/D2 must be run separately beforehand)."
+msgstr ""
+
+#: ../../quickstart.md:110
+msgid "**Analyze results** using the output CSVs or the interactive dashboards."
+msgstr ""
+
+#: ../../quickstart.md:112
+#, python-brace-format
+msgid "See {doc}`pipeline` for a detailed walkthrough of each stage."
+msgstr ""
+

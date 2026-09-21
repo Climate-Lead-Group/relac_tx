@@ -1,0 +1,161 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../study/results.md:1
+msgid "Results"
+msgstr "Resultados"
+
+#: ../../study/results.md:3
+#, python-brace-format
+msgid ""
+"The figures below are the static report figures produced by "
+"`scripts/figures/report/` (see {doc}`../figures`) from the model run of "
+"2026-09-17. They compare the base scenarios of the two main families, "
+"**OPT** (`BAC`) and **ETT** (`ISR`), for the milestone years 2030, 2040 "
+"and 2050 or as trajectories over 2025–2050. Interactive versions with "
+"every solved scenario and country filters are available in the Plotly "
+"dashboard."
+msgstr ""
+"Las figuras a continuación son las figuras estáticas del informe "
+"generadas por `scripts/figures/report/` (ver {doc}`../figures`) a partir "
+"de la corrida del modelo del 2026-09-17. Comparan los escenarios base de "
+"las dos familias principales, **OPT** (`BAC`) y **ETT** (`ISR`), para "
+"los años hito 2030, 2040 y 2050, o como trayectorias durante 2025–2050. "
+"Las versiones interactivas con todos los escenarios resueltos y filtros "
+"por país están disponibles en el dashboard de Plotly."
+
+#: ../../study/results.md:5
+msgid "Generation"
+msgstr "Generación"
+
+#: ../../study/results.md:9
+msgid ""
+"Installed generation capacity by scenario in 2030, 2040 and 2050 [GW], "
+"split into renewable and non-renewable."
+msgstr ""
+"Capacidad instalada de generación por escenario en 2030, 2040 y 2050 "
+"[GW], desglosada en renovable y no renovable."
+
+#: ../../study/results.md:14
+msgid ""
+"Annual generation by scenario in 2030, 2040 and 2050 [TWh] and renewable "
+"share."
+msgstr ""
+"Generación anual por escenario en 2030, 2040 y 2050 [TWh] y "
+"participación renovable."
+
+#: ../../study/results.md:19
+msgid "Renewable share of generation [%] by scenario, 2025–2050."
+msgstr "Participación renovable de la generación [%] por escenario, 2025–2050."
+
+#: ../../study/results.md:22
+msgid "Transmission"
+msgstr "Transmisión"
+
+#: ../../study/results.md:26
+msgid ""
+"Installed transmission capacity by scenario in 2030, 2040 and 2050 [GW], "
+"stacked by line group (existing, planned, repowered, new)."
+msgstr ""
+"Capacidad de transmisión instalada por escenario en 2030, 2040 y 2050 "
+"[GW], apilada por grupo de línea (existente, planificada, repotenciada, "
+"nueva)."
+
+#: ../../study/results.md:31
+msgid ""
+"Cumulative transmission line kilometres built to 2030, 2040 and 2050 [km]"
+" by scenario, stacked by line group."
+msgstr ""
+"Kilómetros acumulados de líneas de transmisión construidas hasta 2030, "
+"2040 y 2050 [km] por escenario, apilados por grupo de línea."
+
+#: ../../study/results.md:36
+msgid "Cumulative transmission investment per period [MUSD] by scenario."
+msgstr "Inversión acumulada en transmisión por período [MUSD] por escenario."
+
+#: ../../study/results.md:39
+msgid "Storage"
+msgstr "Almacenamiento"
+
+#: ../../study/results.md:43
+msgid "Installed storage capacity by scenario in 2030, 2040 and 2050 [GW]."
+msgstr ""
+"Capacidad de almacenamiento instalada por escenario en 2030, 2040 y 2050"
+" [GW]."
+
+#: ../../study/results.md:46
+msgid "Costs and fuel"
+msgstr "Costos y combustible"
+
+#: ../../study/results.md:50
+msgid ""
+"Fossil fuel consumption by scenario, cumulative per period [million "
+"barrels of oil equivalent]."
+msgstr ""
+"Consumo de combustibles fósiles por escenario, acumulado por período "
+"[millones de barriles equivalentes de petróleo]."
+
+#: ../../study/results.md:55
+msgid ""
+"Total system cost and \"cost of non-investment\" by scenario, cumulative "
+"per period [billion USD]."
+msgstr ""
+"Costo total del sistema y \"costo de la no inversión\" por escenario, "
+"acumulado por período [miles de millones de USD]."
+
+#: ../../study/results.md:60
+msgid ""
+"Total system cost and \"cost of non-investment\", cumulative per period "
+"[billion USD], including the transmission-capped case."
+msgstr ""
+"Costo total del sistema y \"costo de la no inversión\", acumulado por "
+"período [miles de millones de USD], incluyendo el caso con tope de "
+"transmisión."
+
+#: ../../study/results.md:65
+msgid "Unit system cost by scenario [MUSD/TWh]."
+msgstr "Costo unitario del sistema por escenario [MUSD/TWh]."
+
+#: ../../study/results.md:68
+msgid "Security and resilience"
+msgstr "Seguridad y resiliencia"
+
+#: ../../study/results.md:72
+msgid ""
+"Energy security by scenario in 2030, 2040 and 2050: domestic versus "
+"imported primary energy [%]."
+msgstr ""
+"Seguridad energética por escenario en 2030, 2040 y 2050: energía "
+"primaria doméstica versus importada [%]."
+
+#: ../../study/results.md:77
+msgid "Domestic energy share [%] by scenario, trajectory 2025–2050."
+msgstr "Participación de energía doméstica [%] por escenario, trayectoria 2025–2050."
+
+#: ../../study/results.md:82
+msgid ""
+"Effective number of generation sources (1/HHI) by scenario in 2030, 2040 "
+"and 2050. A higher value means a more diversified, more resilient mix."
+msgstr ""
+"Número efectivo de fuentes de generación (1/HHI) por escenario en 2030, "
+"2040 y 2050. Un valor más alto significa una mezcla más diversificada y "
+"más resiliente."
+

@@ -1,0 +1,1229 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../configuration.md:1
+msgid "Configuration Reference"
+msgstr ""
+
+#: ../../configuration.md:3
+msgid ""
+"RELAC TX uses four YAML configuration files and two Excel-based "
+"configuration files. This page documents every option."
+msgstr ""
+
+#: ../../configuration.md:6
+msgid ""
+"All data entered in the configuration files (technologies, years, "
+"countries, codes) **must match values that exist in the model**. Using "
+"technology codes, country codes, year ranges, or any other identifiers "
+"that are not present in the model data can cause the pipeline to fail "
+"during execution."
+msgstr ""
+
+#: ../../configuration.md:9
+msgid "Config_country_codes.yaml"
+msgstr ""
+
+#: ../../configuration.md:11
+msgid "**Location:** `inputs/config/Config_country_codes.yaml`"
+msgstr ""
+
+#: ../../configuration.md:13
+msgid ""
+"The single source of truth for all country, region, and technology "
+"definitions. Used by most scripts in the project."
+msgstr ""
+
+#: ../../configuration.md:15
+msgid "`country_data`"
+msgstr ""
+
+#: ../../configuration.md:17
+msgid ""
+"Master registry of countries. Each entry is keyed by a 3-letter ISO code "
+"and contains:"
+msgstr ""
+
+#: ../../configuration.md:29
+msgid "`english_name`: Display name used in reports and documentation."
+msgstr ""
+
+#: ../../configuration.md:30
+msgid ""
+"`olade_name`: Name used for matching against OLADE source data files "
+"(note Spanish spellings, e.g. `\"Brasil\"`)."
+msgstr ""
+
+#: ../../configuration.md:32
+msgid "`special_entries`"
+msgstr ""
+
+#: ../../configuration.md:34
+msgid "Non-country codes used in the model:"
+msgstr ""
+
+#: ../../configuration.md:41
+msgid "`countries`"
+msgstr ""
+
+#: ../../configuration.md:43
+msgid "Ordered list of active country/region codes for the current model run:"
+msgstr ""
+
+#: ../../configuration.md:68
+msgid ""
+"Countries modeled with sub-regions use extended codes (e.g., `BRACN` for "
+"Brazil-Center). In the current model, sub-regions are consolidated into "
+"the default region `XX` (see `Config_region_consolidation.yaml`), so "
+"countries appear with their 3-letter code."
+msgstr ""
+
+#: ../../configuration.md:70
+msgid "`first_year`"
+msgstr ""
+
+#: ../../configuration.md:72
+msgid "Reference/start year of the model time horizon:"
+msgstr ""
+
+#: ../../configuration.md:78
+msgid "`pwr_cleanup_mode`"
+msgstr ""
+
+#: ../../configuration.md:80
+msgid ""
+"Controls how duplicate PWR (power) technology entries are handled during "
+"preprocessing:"
+msgstr ""
+
+#: ../../configuration.md:5 ../../configuration.md:171
+msgid "Value"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "Behavior"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "`\"drop\"`"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "Drop PWR00 when PWR01 exists, rename PWR01 to PWR"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "`\"merge\"`"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "Sum PWR00 values into PWR01, drop PWR00, rename PWR01 to PWR"
+msgstr ""
+
+#: ../../configuration.md:5 ../../configuration.md:171
+msgid "`false`"
+msgstr ""
+
+#: ../../configuration.md:5
+msgid "Skip PWR cleanup entirely"
+msgstr ""
+
+#: ../../configuration.md:92
+msgid "`add_missing_countries_from_olade`"
+msgstr ""
+
+#: ../../configuration.md:94
+msgid ""
+"Whether the preprocessing step should fill missing country data from "
+"OLADE source files:"
+msgstr ""
+
+#: ../../configuration.md:100
+msgid "`olade_tech_mapping`"
+msgstr ""
+
+#: ../../configuration.md:102
+msgid ""
+"Maps technology names from the OLADE source Excel files to 3-character "
+"model codes:"
+msgstr ""
+
+#: ../../configuration.md:116
+msgid ""
+"Keys are the OLADE source names, in Spanish (note accents). BIO (Biomass)"
+" is a special case: it is the sum of Biogas + Solid biomass + Liquid "
+"biofuels from the source data."
+msgstr ""
+
+#: ../../configuration.md:119
+msgid "`code_to_energy`"
+msgstr ""
+
+#: ../../configuration.md:121
+msgid "Maps 3-character technology codes to human-readable descriptions:"
+msgstr ""
+
+#: ../../configuration.md:132
+msgid "`renewable_fuels`"
+msgstr ""
+
+#: ../../configuration.md:134
+msgid "List of technology codes classified as renewable energy:"
+msgstr ""
+
+#: ../../configuration.md:148
+msgid "`shares_tech_mapping`"
+msgstr ""
+
+#: ../../configuration.md:150
+msgid "Maps technology names from the Shares Excel file to model codes:"
+msgstr ""
+
+#: ../../configuration.md:161
+msgid "`implausible_combinations`"
+msgstr ""
+
+#: ../../configuration.md:163
+msgid ""
+"Technology-country pairs where a technology is physically infeasible. "
+"These are marked as NO (red) in the Tech-Country Matrix. Each entry maps "
+"a technology code to the list of country codes where it is implausible "
+"(inline list format). A combo is implausible when all four capacity "
+"parameters (`ResidualCapacity`, `CapitalCost`, `TotalAnnualMaxCapacity`, "
+"`TotalAnnualMaxCapacityInvestment`) are zero/absent for every year."
+msgstr ""
+
+#: ../../configuration.md:172
+#, python-brace-format
+msgid ""
+"This section was regenerated for the active Latin-American country set. "
+"In the current `OG_csvs_inputs/` data no `PWR{source}` technology carries"
+" an explicit zero hard-cap (capacity limits are either populated or "
+"absent, i.e. unbounded), so the only data-supported exclusion is `GAS` "
+"(there is no `PWRGAS` technology). Any further geographic/domain "
+"exclusions (e.g. wave or offshore wind for landlocked countries) must be "
+"curated manually."
+msgstr ""
+
+#: ../../configuration.md:175
+msgid "`template_generation`"
+msgstr ""
+
+#: ../../configuration.md:177
+msgid ""
+"Configuration for the country template generator "
+"(`Z_generate_country_template.py`):"
+msgstr ""
+
+#: ../../configuration.md:179
+msgid ""
+"`template_generation` is a **list** of entries; each entry generates one "
+"new country. Leave the fields blank to disable generation:"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Key"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Description"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`new_country`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "3-letter code for the country to create"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`reference_country`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Existing country to clone data from"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`region`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Region suffix (default: `XX`)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`centerpoint_lat` / `centerpoint_lon`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Latitude/longitude of the country centerpoint (used for map placement)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`interconnections`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"List of neighbor country codes for TRN links. Empty list = no "
+"interconnections; omit the key to copy the reference country's topology"
+msgstr ""
+
+#: ../../configuration.md:199
+msgid "`enable_dsptrn`"
+msgstr ""
+
+#: ../../configuration.md:205
+msgid ""
+"When `True`, A2_AddTx adds the `DSPTRN` dispatch technology and uses "
+"4-tier ELC routing (`ELC00/01/02/03`), rewriting TRN interconnection "
+"fuels to `ELC03`. When `False`, it keeps 3-tier routing (`ELC00/01/02`) "
+"without DSPTRN."
+msgstr ""
+
+#: ../../configuration.md:207
+msgid "`force_empty_max_capacity_investment_pwr`"
+msgstr ""
+
+#: ../../configuration.md:213
+msgid ""
+"When `true`, forces `Projection.Mode = \"EMPTY\"` for "
+"`TotalAnnualMaxCapacityInvestment` on every PWR technology (the lid rule "
+"of A3_process fills those cells later). When `false`, the auto-detected "
+"`Projection.Mode` is kept."
+msgstr ""
+
+#: ../../configuration.md:215
+msgid "Transmission Technology Parameters"
+msgstr ""
+
+#: ../../configuration.md:217
+msgid ""
+"Seven sections define default parameters for transmission and dispatch "
+"technologies:"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Section"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`RNWTRN`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Renewable transmission (existing)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`RNWRPO`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Renewable transmission (repowered)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`RNWNLI`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Renewable transmission (new lines)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`PWRTRN`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Non-renewable transmission (existing)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`TRNRPO`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Non-renewable transmission (repowered)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`TRNNLI`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Non-renewable transmission (new lines)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`DSPTRN`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Dispatch (interconnection routing)"
+msgstr ""
+
+#: ../../configuration.md:229
+msgid "Each section contains:"
+msgstr ""
+
+#: ../../configuration.md:241
+msgid ""
+"DSPTRN is a virtual dispatch node with zero costs and high capacity, used"
+" to route electricity to/from cross-border interconnections:"
+msgstr ""
+
+#: ../../configuration.md:255
+msgid "Config_MOMF_T1_A.yaml"
+msgstr ""
+
+#: ../../configuration.md:257
+msgid "**Location:** `inputs/config/Config_MOMF_T1_A.yaml`"
+msgstr ""
+
+#: ../../configuration.md:259
+msgid ""
+"The primary compiler configuration. Defines the data model for the Excel-"
+"to-OSeMOSYS compilation step."
+msgstr ""
+
+#: ../../configuration.md:261
+msgid "Key Settings"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`base_year`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`\"2023\"`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Base year of the energy model"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`initial_year`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "First year of the time horizon"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`final_year`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`\"2050\"`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Last year of the time horizon"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Use_Transport`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Enable/disable the transport sub-module"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Use_OG_module`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`true`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Enable/disable the OSeMOSYS-Global module pathway"
+msgstr ""
+
+#: ../../configuration.md:271
+msgid "Temporal Structure (`xtra_scen`)"
+msgstr ""
+
+#: ../../configuration.md:287
+msgid ""
+"The model uses 12 timeslices (4 seasons x 3 daily brackets), a single "
+"region (`GLOBAL`), and 2 modes of operation."
+msgstr ""
+
+#: ../../configuration.md:289
+msgid "Directory and File Paths"
+msgstr ""
+
+#: ../../configuration.md:291
+msgid ""
+"The configuration defines all input/output paths and Excel file names "
+"used by the compiler. These are relative to the repo root (e.g. "
+"`inputs/A1_Outputs`, `outputs/A2_Output_Params/`):"
+msgstr ""
+
+#: ../../configuration.md:293
+msgid "`A1_inputs` / `A1_outputs`: Stage A1 directories"
+msgstr ""
+
+#: ../../configuration.md:294
+msgid "`A2_extra_inputs` / `A2_output`: Stage A2 directories"
+msgstr ""
+
+#: ../../configuration.md:295
+msgid ""
+"`Print_*`: Output Excel file name templates (e.g., `Print_Paramet: "
+"\"/A-O_Parametrization.xlsx\"`)"
+msgstr ""
+
+#: ../../configuration.md:297
+msgid "OSeMOSYS Parameters"
+msgstr ""
+
+#: ../../configuration.md:299
+msgid "The file lists all OSeMOSYS parameters organized by technology category:"
+msgstr ""
+
+#: ../../configuration.md:301
+msgid "`tech_param_list_primary`: Parameters for primary supply technologies"
+msgstr ""
+
+#: ../../configuration.md:302
+msgid "`tech_param_list_secondary`: Parameters for secondary (power) technologies"
+msgstr ""
+
+#: ../../configuration.md:303
+msgid "`tech_param_list_demands`: Parameters for demand technologies"
+msgstr ""
+
+#: ../../configuration.md:304
+msgid "`tech_param_list_disttrn` / `_trn` / `_trngroups`: Transport parameters"
+msgstr ""
+
+#: ../../configuration.md:308
+msgid "Config_MOMF_T1_AB.yaml"
+msgstr ""
+
+#: ../../configuration.md:310
+msgid "**Location:** `inputs/config/Config_MOMF_T1_AB.yaml`"
+msgstr ""
+
+#: ../../configuration.md:312
+msgid "The execution/runtime configuration for the model solver."
+msgstr ""
+
+#: ../../configuration.md:314
+msgid "Solver Configuration"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`solver`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Active solver: `glpk`, `cbc`, `cplex`, or `gurobi`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`cplex_threads`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Number of threads for CPLEX"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`cplex_random_seed`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Random seed for CPLEX reproducibility"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`cbc_random_seed`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Random seed for CBC"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`iteration_time`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Time limit for CBC in seconds"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`gurobi_threads`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Number of threads for Gurobi"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`gurobi_seed`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Random seed for Gurobi"
+msgstr ""
+
+#: ../../configuration.md:336
+msgid "Pipeline Control Flags"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Flag"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`del_files`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Delete intermediate files after execution"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`only_main_scenario`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Run only the main scenario (skip others)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`parallel`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Run scenarios in parallel"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`max_x_per_iter`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Maximum scenarios per parallel batch"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`A2_otoole_outputs`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Write otoole-format output CSVs"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`write_txt_model`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Generate the `.txt` model file for the solver"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`create_matrix`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Create the optimization matrix"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`execute_model`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Run the solver"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`concat_otoole_csv`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Concatenate otoole CSVs across scenarios"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`concat_scenarios_csv`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Concatenate scenario result CSVs"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`annualize_capital`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Run capital cost annualization post-processing"
+msgstr ""
+
+#: ../../configuration.md:366
+msgid "Other Settings"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`base_scenario`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`\"BAU\"`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Name of the base/reference scenario"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`prefix_final_files`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`\"RELAC_TX_\"`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Prefix for final output file names"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`osemosys_model`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`\"osemosys_fast_preprocessed.txt\"`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "OSeMOSYS model file (GMPL)"
+msgstr ""
+
+#: ../../configuration.md:374
+msgid "Paths and File-Name Plumbing"
+msgstr ""
+
+#: ../../configuration.md:376
+msgid ""
+"All paths are relative to the repository root. Values shown are the "
+"shipped ones (`inputs/config/Config_MOMF_T1_AB.yaml` lines 4–24)."
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`A2_output`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`outputs/A2_Output_Params`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "A2 parameter CSVs per scenario"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`A2_output_otoole`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`outputs/A2_Outputs_Params_otoole`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"otoole-format twin of `A2_output`; the folder the patched CSVs are synced"
+" back into"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Miscellaneous`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`inputs/Miscellaneous`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Folder holding `conversion_format.yaml` and the otoole templates"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`templates`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "otoole template folder name (under `Miscellaneous`)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`executables`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`outputs/Executables`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Where per-scenario `<S>_0/` datafiles are written"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`outputs`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Outputs`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Solver output sub-folder name inside each `<S>_0/`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`concatenate_folder`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`scripts/tools`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Folder of the CSV concatenation helper"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`concat_csvs`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`concatenate_relac.py`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Concatenation helper script"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`otoole_config` / `conv_format`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`conversion_format.yaml`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "otoole conversion format (both keys point to the same file)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`preprocess_data`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`preprocess_data.py`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "OSeMOSYS preprocessor script"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`preprocess_data_name`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Pre_processed_`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Prefix of the preprocessed datafile"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`output_files`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`_output`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Suffix of solver output files"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`inputs_file` / `outputs_file`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`Inputs.csv` / `Outputs.csv`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Base names of the combined CSVs (prefixed by `prefix_final_files`); the "
+"merged file is `<prefix>Combined_Inputs_Outputs.csv`"
+msgstr ""
+
+#: ../../configuration.md:394
+msgid "Solver Patcher Chain"
+msgstr ""
+
+#: ../../configuration.md:396
+msgid ""
+"`Config_MOMF_T1_AB.yaml` also contains the settings for the **Stage B2 "
+"patcher chain** — the reserve-margin and storage features applied to the "
+"GMPL `.txt` before the solver runs. Each patcher has an `*_active` master"
+" switch; the shipped configuration enables several of them."
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Master switch"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Shipped default"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Patcher"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`storage_delay_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`True`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Block storage builds for the first N years (redirects the solver model "
+"file; final CSVs keep the `RELAC_TX_` prefix)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`strip_storage_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Disable storage + feeding PWR techs (diagnostic; forced off when storage-"
+"delay is on)"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`open_pwrbck_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Reopen PWRBCK* backstop capacity caps"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`reserve_margin_xlsx_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Careful reserve-margin repair from `firm_capacity_fallbacks_by_cr.xlsx`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`activity_upper_limit_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`False`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Cap `TotalTechnologyAnnualActivityUpperLimit` from demand fractions"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`dispatch_floors_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Write fossil dispatch floors (`FLOORED`) per base scenario, gated by "
+"`preflight_separation_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`veg_tx_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Cross-scenario transmission constraints (`VEGCON`); creates "
+"BAC/OPC/INVWF/VGBWF"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`sync_patched_csvs_active`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Sync patched values back into the otoole CSVs (`sync_patched_csvs_params`"
+" lists the parameter blocks copied)"
+msgstr ""
+
+#: ../../configuration.md:409
+#, python-brace-format
+msgid ""
+"See {doc}`solver-patchers` for the full chain, execution order, and every"
+" per-patcher parameter."
+msgstr ""
+
+#: ../../configuration.md:411
+msgid "Tx Chain: Derived Scenarios"
+msgstr ""
+
+#: ../../configuration.md:413
+#, python-brace-format
+msgid ""
+"Three blocks at the end of `Config_MOMF_T1_AB.yaml` drive the Tx chain "
+"that B2 runs after VEGCON (see the Tx-chain subsection of "
+"{doc}`pipeline`). Adding a constraint script or a derived scenario is "
+"done **only** here; B2 needs no code change."
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`scenario_transforms`"
+msgstr ""
+
+#: ../../configuration.md:171
+#, python-brace-format
+msgid ""
+"Ordered list. Each entry runs its `script` once with `--executables-dir "
+"Executables`. `produces: {NEW: SOURCE}` creates `Executables/NEW_0/` from"
+" `SOURCE`'s final datafile; `in_place: [S, …]` edits existing datafiles."
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`derived_scenarios`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"Map `derived → base` telling B2 which base scenario's A2 sets/templates "
+"to reuse for otoole results (transforms change values, never sets). Every"
+" code in `produces` must appear here."
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "`solve_scenarios`"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid ""
+"The universe actually sent to the solver (etapa E). Order = execution "
+"order when `parallel: False`. Comment out codes to skip them. Default "
+"when absent: the four base scenarios."
+msgstr ""
+
+#: ../../configuration.md:440
+msgid ""
+"Shipped transforms (2026-09-17): `cost_sensitivity` (SR/WF variants), "
+"`nli_sr_recompute`, `cost_sensitivity_FA` (fossil `VariableCost` ×1.70), "
+"`cost_sensitivity_FB` (×0.52), `cost_sensitivity_RB` (`CapitalCost` solar"
+" ×0.60, wind ×0.75, batteries ×0.50), `cost_sensitivity_RA` (renewables "
+"high; multipliers pending calibration)."
+msgstr ""
+
+#: ../../configuration.md:444
+msgid "Config_region_consolidation.yaml"
+msgstr ""
+
+#: ../../configuration.md:446
+msgid "**Location:** `inputs/config/Config_region_consolidation.yaml`"
+msgstr ""
+
+#: ../../configuration.md:448
+msgid ""
+"Controls optional consolidation of sub-regional data into unified "
+"country-level data. This is relevant when a country is modeled with "
+"multiple sub-regions (e.g., India with 5 regions)."
+msgstr ""
+
+#: ../../configuration.md:450
+msgid "Enable/Disable"
+msgstr ""
+
+#: ../../configuration.md:456
+msgid "`pwrbck_output_to_elc02`"
+msgstr ""
+
+#: ../../configuration.md:462
+#, python-brace-format
+msgid ""
+"When `true`, remaps the `OutputActivityRatio` fuel of every `PWRBCK*` "
+"(backstop) technology from `ELC{ISO3}XX01` to `ELC{ISO3}XX02`. Applied at"
+" CSV-load time, so it propagates to all downstream sheets (Secondary "
+"Techs, Model Base Year Secondary, Projection Secondary). Independent of "
+"`enabled`."
+msgstr ""
+
+#: ../../configuration.md:464
+msgid "Country Definitions"
+msgstr ""
+
+#: ../../configuration.md:473
+msgid "Each entry specifies:"
+msgstr ""
+
+#: ../../configuration.md:474
+msgid "`regions`: List of sub-region codes to merge."
+msgstr ""
+
+#: ../../configuration.md:475
+msgid "`unified_region`: Target code for the merged region."
+msgstr ""
+
+#: ../../configuration.md:477
+msgid "Aggregation Rules"
+msgstr ""
+
+#: ../../configuration.md:479
+msgid "Defines how parameters are combined when merging sub-regions:"
+msgstr ""
+
+#: ../../configuration.md:481
+msgid "**Averaged parameters** (`aggregation_rules.avg`):"
+msgstr ""
+
+#: ../../configuration.md:483
+msgid ""
+"Parameters where values are averaged across regions: "
+"`AvailabilityFactor`, `CapacityFactor`, `CapacityToActivityUnit`, "
+"`CapitalCost`, `CapitalCostStorage`, `FixedCost`, `InputActivityRatio`, "
+"`OutputActivityRatio`, `VariableCost`, and others."
+msgstr ""
+
+#: ../../configuration.md:485
+msgid "**Summed parameters** (`aggregation_rules.sum`):"
+msgstr ""
+
+#: ../../configuration.md:487
+msgid ""
+"Parameters where values are summed: `ResidualCapacity`, "
+"`ResidualStorageCapacity`, `SpecifiedAnnualDemand`, "
+"`TotalAnnualMaxCapacity`, `TotalAnnualMaxCapacityInvestment`, and others."
+msgstr ""
+
+#: ../../configuration.md:489
+msgid "**Disabled parameters** (`aggregation_rules.disabled`):"
+msgstr ""
+
+#: ../../configuration.md:491
+msgid ""
+"Parameters skipped during consolidation: `CapacityOfOneTechnologyUnit`, "
+"`RETagTechnology`, `TotalAnnualMinCapacity`, and model-period activity "
+"limits."
+msgstr ""
+
+#: ../../configuration.md:495
+msgid "Excel-Based Configuration"
+msgstr ""
+
+#: ../../configuration.md:497
+msgid "Tech_Country_Matrix.xlsx"
+msgstr ""
+
+#: ../../configuration.md:499
+msgid "Generated by `A0_generate_tech_country_matrix.py`. Contains 5 sheets:"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Sheet"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Purpose"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "**Matrix**"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "YES/NO grid for each technology-country combination"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "**NGS_Unification**"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "ON/OFF toggle per country for merging CCG+OCG into NGS"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "**Aggregation_Rules**"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Rules for averaging, summing, or disabling parameters"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "**Tech_Reference**"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Technology code to description mapping"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "**Country_Reference**"
+msgstr ""
+
+#: ../../configuration.md:171
+msgid "Country code to name mapping"
+msgstr ""
+
+#: ../../configuration.md:509
+msgid "Secondary_Techs_Editor.xlsx"
+msgstr ""
+
+#: ../../configuration.md:511
+#, python-brace-format
+msgid ""
+"Generated by `D1_generate_editor_template.py`. See {doc}`secondary-techs-"
+"editor` for full documentation."
+msgstr ""
+

@@ -1,0 +1,640 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../secondary-techs-editor.md:1
+msgid "Secondary Technologies Editor"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:3
+msgid ""
+"The Secondary Technologies Editor provides a user-friendly Excel "
+"interface for modifying technology parameters across scenarios, with "
+"support for automatic OLADE data integration."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:5
+msgid "Overview"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:7
+msgid "The editor workflow has two steps:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:9
+msgid "**Generate the template** (`D1`) -- Creates `Secondary_Techs_Editor.xlsx`."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:10
+msgid ""
+"**Apply changes** (`D2`) -- Reads the filled template and updates the "
+"model files."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:14
+msgid "Step 1: Generate the Editor Template"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:16
+msgid "**Script:** `scripts/pipeline/D1_generate_editor_template.py`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:22
+msgid "What It Creates"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:24
+msgid "The script generates `Secondary_Techs_Editor.xlsx` with these sheets:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Sheet"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Purpose"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Instructions**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "User guide with editing instructions"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Documentation**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Full technical documentation on calculations"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**OLADE_Config**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Toggle switches for automatic OLADE data integration"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Demand_Growth**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Demand growth rate configuration per country"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Scenarios_Demand_Growth**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Scenario-specific demand growth rates"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Renewability_Targets**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Renewable percentage targets per year/country"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Technology_Weights**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Custom distribution of renewable/non-renewable technologies"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Editor**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Main editing area with dropdown lists"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "**Interconnections**"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Transmission interconnection technologies (only if TRN technologies exist)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "*(Hidden sheets)*"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Validation data for dropdown lists"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:39
+msgid "How It Works"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:41
+msgid "The script:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:42
+msgid "Reads all `A-O_Parametrization.xlsx` files across scenarios."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:43
+msgid "Collects existing parameter data and transmission interconnections."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:44
+msgid "Builds the Excel template with:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:45
+msgid ""
+"**Dropdown lists** for Scenario, Country, Technology, and Parameter "
+"selection."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:46
+msgid "**Auto-fill formulas** (VLOOKUP) for the Tech column."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:47
+msgid "**Year columns** (2021--2050) for entering values."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:51
+msgid "Step 2: Edit the Template"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:53
+msgid "Manual Editing (Editor Sheet)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:55
+msgid ""
+"In the **Editor** sheet (and similarly in the **Interconnections** sheet "
+"for transmission technologies):"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:57
+msgid ""
+"**Select a Scenario**: Choose from the auto-discovered scenarios (based "
+"on existing `A1_Outputs_*` folders), or ALL (applies to every scenario)."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:58
+msgid "**Select a Country**: Pick a country from the dropdown."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:59
+msgid ""
+"**Select a Technology**: Choose by Tech.Name (descriptive name). The Tech"
+" code auto-populates."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:60
+msgid ""
+"**Select a Parameter**: Choose which parameter to modify (e.g., "
+"CapitalCost, ResidualCapacity)."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:61
+msgid ""
+"**Enter values**: Fill in the year columns (2021--2050) with your desired"
+" values."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:63
+msgid "OLADE Configuration (OLADE_Config Sheet)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:65
+msgid ""
+"The **OLADE_Config** sheet provides toggle switches for automatic data "
+"population:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Parameter"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Values"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Description"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`ResidualCapacitiesFromOLADE`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "YES / NO"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Auto-populate ResidualCapacity from installed capacity data"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`PetroleumSplitMode`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`OIL_only` / `Split_PET_OIL`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "How to handle petroleum capacity allocation"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`DemandFromOLADE`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Auto-populate electricity demand from generation data"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`ActivityLowerLimitFromOLADE`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Auto-populate TotalTechnologyAnnualActivityLowerLimit"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`ActivityUpperLimitFromOLADE`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "NO / YES_ALL / EXISTING_ONLY"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Auto-populate TotalTechnologyAnnualActivityUpperLimit"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`TradeBalanceDemandAdjustment`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Adjust demand based on trade balance data"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`InterconnectionsControl`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "ON / OFF"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Enable/disable interconnection technologies"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:77
+msgid "Petroleum Split Modes"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Mode"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Behavior"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`OIL_only`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "All petroleum capacity is assigned to OIL (Fuel oil)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`Split_PET_OIL`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid ""
+"Capacity is split between PET (Diesel) and OIL (Fuel oil + Bunker) using "
+"proportions from `Shares_PET_OIL_Split.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:84
+msgid "Demand Configuration (Demand_Growth Sheet)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:86
+msgid "When `DemandFromOLADE` is YES, configure growth rates per country:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:88
+msgid "Uses OLADE generation data as the base."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:89
+msgid ""
+"Applies linear growth: `Demand(year) = Demand(2023) * (1 + rate * (year -"
+" 2023))`."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:90
+msgid "Growth rates are specified per country in the **Demand_Growth** sheet."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:91
+msgid "Scenario-specific overrides are available in **Scenarios_Demand_Growth**."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:93
+msgid "ActivityUpperLimit Modes"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`NO`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "No UpperLimit updates"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`YES_ALL`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid ""
+"Update UpperLimit for all technologies. Formula: `UpperLimit = LowerLimit"
+" × 1.05`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`EXISTING_ONLY`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid ""
+"Only update technologies that already have UpperLimit values defined and "
+"`Projection.Mode = \"User defined\"`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:101
+msgid "Renewability Targets (Renewability_Targets Sheet)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:103
+msgid "When Activity Limits from OLADE are enabled:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:105
+msgid "Define target renewable percentages per year and country."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:106
+msgid "The system interpolates between specified target years."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:107
+msgid "Targets affect the distribution of activity limits across technologies."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:109
+msgid "Technology Weights (Technology_Weights Sheet)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:111
+msgid "Customize how activity limits are distributed among technologies:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:113
+msgid "Define weights for individual renewable and non-renewable technologies."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:114
+msgid "Weights determine each technology's share of the total activity limit."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:118
+msgid "Step 3: Apply Changes"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:120
+msgid "**Script:** `scripts/pipeline/D2_update_secondary_techs.py`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:126
+msgid "What It Does"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:128
+msgid "Reads the filled `Secondary_Techs_Editor.xlsx`."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:129
+msgid "Reads OLADE configuration toggles."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:130
+msgid "For each scenario:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:131
+msgid "Creates a **backup** of the parametrization file."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:132
+msgid "Applies manual edits from the Editor sheet."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:133
+msgid "If OLADE integration is enabled:"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:134
+msgid "Reads capacity data (MW to GW conversion)."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:135
+msgid "Reads generation data (GWh to PJ conversion)."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:136
+msgid "Applies petroleum split logic."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:137
+msgid "Calculates activity limits with renewability targets."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:138
+msgid "Validates limits against available capacities."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:139
+msgid "Updates `A-O_Parametrization.xlsx`."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:140
+msgid "Updates `A-O_Demand.xlsx` (if demand integration is enabled)."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:141
+msgid "Sets **Projection.Mode** to \"User defined\" for modified parameters."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:143
+msgid "Unit Conversions"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Source"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Target"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Conversion"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "MW (source capacity)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "GW (model)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "/ 1000"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "GWh (source generation)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "PJ (model)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "* 0.0036"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:150
+msgid "Safety Features"
+msgstr ""
+
+#: ../../secondary-techs-editor.md:152
+msgid "**Automatic backups**: One backup per scenario before applying changes."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:153
+msgid ""
+"**Activity limit validation**: Verifies that limits do not exceed "
+"available capacity."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:154
+msgid ""
+"**Detailed logging**: Full log output with country identification for "
+"each operation."
+msgstr ""
+
+#: ../../secondary-techs-editor.md:158
+msgid "Related Files"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "File"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`D1_generate_editor_template.py`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Generates the Excel template"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`D2_update_secondary_techs.py`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Applies changes to scenario files"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`Secondary_Techs_Editor.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "The editor template (generated)"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`OLADE - Capacidad instalada por fuente - Anual.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "OLADE installed capacity source data"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`OLADE - Generación eléctrica por fuente - Anual.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "OLADE electricity generation source data"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`Shares_PET_OIL_Split.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Petroleum/oil split proportions per scenario"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "`Shares_Power_Generation_Technologies.xlsx`"
+msgstr ""
+
+#: ../../secondary-techs-editor.md
+msgid "Power generation technology shares"
+msgstr ""
+

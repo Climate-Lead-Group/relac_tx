@@ -1,0 +1,114 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 09:17-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../study/assumptions.md:1
+msgid "Assumptions"
+msgstr "Supuestos"
+
+#: ../../study/assumptions.md:3
+msgid "The model is based on the following key assumptions:"
+msgstr "El modelo se basa en los siguientes supuestos clave:"
+
+#: ../../study/assumptions.md:5
+msgid "**Technical**"
+msgstr "**Técnico**"
+
+#: ../../study/assumptions.md:7
+msgid ""
+"Transmission repowering is assumed to be significantly more cost-"
+"effective than building new lines."
+msgstr ""
+"Se asume que la repotenciación de la transmisión es significativamente "
+"más rentable que construir nuevas líneas."
+
+#: ../../study/assumptions.md:8
+msgid ""
+"Energy storage technologies are included: short-duration systems such as "
+"batteries, and long-duration systems such as pumped-hydro storage."
+msgstr ""
+"Se incluyen tecnologías de almacenamiento de energía: sistemas de corta "
+"duración como baterías, y sistemas de larga duración como el "
+"almacenamiento hidroeléctrico por bombeo."
+
+#: ../../study/assumptions.md:10
+msgid "**Economic**"
+msgstr "**Económico**"
+
+#: ../../study/assumptions.md:12
+msgid ""
+"Electricity demand is expected to grow at an average annual rate of 2.6%,"
+" aligned with historical economic growth."
+msgstr ""
+"Se espera que la demanda eléctrica crezca a una tasa anual promedio del "
+"2.6%, en línea con el crecimiento económico histórico."
+
+#: ../../study/assumptions.md:13
+msgid ""
+"The model follows a least-cost optimisation approach, minimising capital "
+"and operating costs across generation, transmission and storage."
+msgstr ""
+"El modelo sigue un enfoque de optimización de mínimo costo, minimizando "
+"los costos de capital y operación en generación, transmisión y "
+"almacenamiento."
+
+#: ../../study/assumptions.md:15
+msgid "**Policy**"
+msgstr "**Política**"
+
+#: ../../study/assumptions.md:17
+msgid ""
+"Transmission expansion aligns with national plans and supports RELAC "
+"goals for renewable energy and electrification."
+msgstr ""
+"La expansión de la transmisión se alinea con los planes nacionales y "
+"respalda las metas de RELAC en materia de energía renovable y "
+"electrificación."
+
+#: ../../study/assumptions.md:18
+msgid ""
+"Includes energy efficiency and electrification of end uses in line with "
+"current policies and commitments."
+msgstr ""
+"Incluye la eficiencia energética y la electrificación de usos finales en "
+"línea con las políticas y compromisos vigentes."
+
+#: ../../study/assumptions.md:20
+msgid "**Implementation constraints**"
+msgstr "**Restricciones de implementación**"
+
+#: ../../study/assumptions.md:22
+msgid ""
+"Repowering of existing lines not included in national plans is only "
+"allowed from 2027."
+msgstr ""
+"La repotenciación de líneas existentes no incluidas en los planes "
+"nacionales solo se permite a partir de 2027."
+
+#: ../../study/assumptions.md:23
+msgid ""
+"New transmission lines not planned in official documents are allowed only"
+" from 2030, accounting for typical development timelines and permitting "
+"processes."
+msgstr ""
+"Las nuevas líneas de transmisión no planificadas en documentos oficiales "
+"solo se permiten a partir de 2030, considerando los plazos típicos de "
+"desarrollo y los procesos de permisos."
+
