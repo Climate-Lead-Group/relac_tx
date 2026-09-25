@@ -1,0 +1,571 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025-2026, Climate Lead Group
+# This file is distributed under the same license as the RELAC TX package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: RELAC TX \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-25 08:16-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../sources.md:1
+msgid "Data Sources"
+msgstr "Fuentes de datos"
+
+#: ../../sources.md:3
+msgid ""
+"This page catalogues where the data behind RELAC TX comes from: the "
+"external datasets and national planning documents used to calibrate the "
+"model, and how internal assumptions and tool defaults are distinguished "
+"from them."
+msgstr ""
+"Esta página cataloga de dónde provienen los datos de RELAC TX: los "
+"conjuntos de datos externos y los documentos de planificación nacional "
+"usados para calibrar el modelo, y cómo se distinguen de ellos los "
+"supuestos internos y los valores por defecto de la herramienta."
+
+#: ../../sources.md:7
+#, python-brace-format
+msgid ""
+"The record here is a summary. The authoritative, parameter-by-parameter "
+"citation — which sheet, which technology, which years, which exact source"
+" and how it was transformed — lives in a `Fuentes` sheet added to the end"
+" of `A-O_Parametrization.xlsx`, `A-O_Demand.xlsx` and "
+"`A-Xtra_Storage.xlsx` for every scenario (see {doc}`data-reference`). "
+"That sheet is generated from the master table "
+"`inputs/config/data_sources.csv` by "
+"[`add_fuentes_sheet.py`](../scripts/tools/data_patches/add_fuentes_sheet.py);"
+" editing a source means editing the CSV and re-running that script, never"
+" the sheet itself."
+msgstr ""
+"Este registro es un resumen. La cita autorizada, parámetro por parámetro —"
+" qué hoja, qué tecnología, qué años, qué fuente exacta y cómo se "
+"transformó — vive en una hoja `Fuentes` agregada al final de "
+"`A-O_Parametrization.xlsx`, `A-O_Demand.xlsx` y `A-Xtra_Storage.xlsx` de "
+"cada escenario (ver {doc}`data-reference`). Esa hoja se genera desde la "
+"tabla maestra `inputs/config/data_sources.csv` con "
+"[`add_fuentes_sheet.py`](../scripts/tools/data_patches/add_fuentes_sheet.py);"
+" cambiar una fuente significa editar el CSV y volver a correr ese script, "
+"nunca la hoja misma."
+
+#: ../../sources.md:15
+msgid "Primary external sources"
+msgstr "Fuentes externas principales"
+
+#: ../../sources.md
+msgid "Source"
+msgstr "Fuente"
+
+#: ../../sources.md
+msgid "What it provides"
+msgstr "Qué aporta"
+
+#: ../../sources.md
+msgid ""
+"OLACDE — annual generation-by-source statistics and energy balance matrix"
+" (regional energy information system, Latin America and the Caribbean)"
+msgstr ""
+"OLACDE — estadísticas anuales de generación por fuente y matriz de "
+"balance energético (sistema de información energética regional de "
+"América Latina y el Caribe)"
+
+#: ../../sources.md
+msgid ""
+"Existing generation mix shares by country (calibrates minimum/maximum "
+"generation floors); base-year (2023–2024) electricity demand, from "
+"generation plus net imports/exports; historical bilateral interconnection"
+" flows"
+msgstr ""
+"Participación de cada tecnología en la generación por país (calibra los "
+"pisos mínimo y máximo de generación); demanda eléctrica del año base "
+"(2023–2024), a partir de la generación más importaciones y exportaciones "
+"netas; flujos históricos de intercambio bilateral entre países"
+
+#: ../../sources.md
+msgid ""
+"National official electricity- and transmission-expansion planning "
+"documents (one set per country)"
+msgstr ""
+"Documentos oficiales nacionales de planificación de la expansión "
+"eléctrica y de transmisión (uno por país)"
+
+#: ../../sources.md
+msgid ""
+"Minimum mandatory investment floors for generation and transmission, "
+"2023–2039 (only committed/contracted/in-service projects); high-demand-"
+"growth scenarios, 2025–2050; for the Optimal (OPT) scenario, planned "
+"projects dated 2040–2050. See the country table below"
+msgstr ""
+"Pisos mínimos obligatorios de inversión en generación y transmisión, "
+"2023–2039 (solo proyectos comprometidos, adjudicados o ya en servicio); "
+"escenarios de crecimiento de demanda alta, 2025–2050; para el escenario "
+"Óptimo (OPT), proyectos planificados fechados entre 2040 y 2050. Ver la "
+"tabla de países más abajo"
+
+#: ../../sources.md
+msgid "IEA — World Energy Outlook 2020 (WEO 2020), via OSeMOSYS Global"
+msgstr "IEA — World Energy Outlook 2020 (WEO 2020), a través de OSeMOSYS Global"
+
+#: ../../sources.md
+msgid ""
+"Generation-technology capital and fixed costs (2019 USD/kW). OSeMOSYS "
+"Global maps each country to the closest WEO region (South America → "
+"Brazil; Mexico, Central America and the Caribbean → United States) and "
+"interpolates between the WEO's 2019/2030/2040 values, holding them "
+"constant after 2040"
+msgstr ""
+"Costo de inversión y costo fijo de las tecnologías de generación (USD de "
+"2019 por kW). OSeMOSYS Global asigna a cada país la región del WEO más "
+"parecida (Sudamérica → Brasil; México, Centroamérica y el Caribe → "
+"Estados Unidos) e interpola entre los valores del WEO para 2019, 2030 y "
+"2040, manteniéndolos constantes después de 2040"
+
+#: ../../sources.md
+msgid "IEA — World Energy Outlook 2025, Net Zero Emissions scenario"
+msgstr "IEA — World Energy Outlook 2025, escenario de Emisiones Netas Cero (NZE)"
+
+#: ../../sources.md
+msgid ""
+"Haiti's 2025–2050 demand trajectory, in the absence of a national "
+"planning document (creates a step from OLACDE's 2024 value to the IEA's "
+"2025 value)"
+msgstr ""
+"Trayectoria de demanda de Haití 2025–2050, ante la falta de un documento "
+"nacional de planificación (genera un salto entre el valor de OLACDE de "
+"2024 y el valor de la IEA de 2025)"
+
+#: ../../sources.md
+msgid "World Bank — Commodity Markets Outlook, October 2024, via OSeMOSYS Global"
+msgstr ""
+"Banco Mundial — Commodity Markets Outlook, octubre de 2024, a través de "
+"OSeMOSYS Global"
+
+#: ../../sources.md
+msgid ""
+"International prices for coal, crude oil and natural gas, marked up 1.3× "
+"(OSeMOSYS Global's surcharge for imported fuels)"
+msgstr ""
+"Precios internacionales de carbón, petróleo crudo y gas natural, "
+"multiplicados por 1.3 (recargo que OSeMOSYS Global aplica a los "
+"combustibles importados)"
+
+#: ../../sources.md
+msgid "NREL — Annual Technology Baseline (ATB) 2024"
+msgstr "NREL — Annual Technology Baseline (ATB) 2024"
+
+#: ../../sources.md
+msgid ""
+"Storage capital costs (power and energy components, short- and long-"
+"duration); default technology operational lifetimes used throughout the "
+"model"
+msgstr ""
+"Costo de inversión del almacenamiento (componentes de potencia y de "
+"energía, corta y larga duración); vidas útiles por defecto de las "
+"tecnologías, usadas en todo el modelo"
+
+#: ../../sources.md
+msgid ""
+"PLEXOS-World 2015 dataset (Brinkerink et al., 2021), via Renewables.ninja"
+" and IRENA, through OSeMOSYS Global"
+msgstr ""
+"Conjunto de datos PLEXOS-World 2015 (Brinkerink et al., 2021), vía "
+"Renewables.ninja e IRENA, a través de OSeMOSYS Global"
+
+#: ../../sources.md
+msgid ""
+"Hourly 2015 capacity-factor profiles for solar PV, solar thermal and "
+"wind; monthly hydro profiles; hourly national demand profiles"
+msgstr ""
+"Perfiles horarios de factor de capacidad de 2015 para solar fotovoltaica, "
+"solar térmica y eólica; perfiles mensuales de hidro; perfiles horarios de "
+"demanda por país"
+
+#: ../../sources.md
+msgid ""
+"Global Transmission Database v1.1 (Brinkerink et al., 2024), through "
+"OSeMOSYS Global"
+msgstr ""
+"Global Transmission Database v1.1 (Brinkerink et al., 2024), a través de "
+"OSeMOSYS Global"
+
+#: ../../sources.md
+msgid ""
+"Existing cross-border interconnection capacity, refined against national "
+"transmission plans; gaps in some countries' plans were filled by IDB "
+"collaborators"
+msgstr ""
+"Capacidad existente de las interconexiones eléctricas entre países, "
+"revisada con los planes nacionales de transmisión; los vacíos de algunos "
+"países fueron completados por colaboradores del BID"
+
+#: ../../sources.md
+msgid ""
+"DOE / Sandia — Global Energy Storage Database (GESDB), through OSeMOSYS "
+"Global"
+msgstr ""
+"DOE / Sandia — Global Energy Storage Database (GESDB), a través de "
+"OSeMOSYS Global"
+
+#: ../../sources.md
+msgid ""
+"Existing storage capacity by country, from commissioned projects (only "
+"Argentina, Bolivia, Brazil, Haiti and Mexico have non-zero values)"
+msgstr ""
+"Capacidad de almacenamiento existente por país, según proyectos ya "
+"comisionados (solo Argentina, Bolivia, Brasil, Haití y México tienen "
+"valores distintos de cero)"
+
+#: ../../sources.md
+msgid ""
+"ACER (2026), *European Resource Adequacy Assessment 2025* (ERAA), Annex "
+"III — ENTSO-E's scarcity price cap"
+msgstr ""
+"ACER (2026), *European Resource Adequacy Assessment 2025* (ERAA), Anexo "
+"III — tope de precio de escasez de ENTSO-E"
+
+#: ../../sources.md
+#, python-brace-format
+msgid ""
+"Variable cost of the backstop technology (PWRBCK), used as the penalty "
+"for unserved energy — see {doc}`data-reference` for why this is a "
+"conservative feasibility penalty and not an estimate of the social cost "
+"of outages"
+msgstr ""
+"Costo variable de la tecnología de respaldo (PWRBCK), usado como "
+"penalización por energía no suministrada — ver {doc}`data-reference` "
+"para entender por qué es una penalización conservadora de factibilidad y "
+"no una estimación del costo social de las interrupciones"
+
+#: ../../sources.md:30
+msgid "National planning documents"
+msgstr "Documentos de planificación nacional"
+
+#: ../../sources.md:32
+msgid ""
+"Nineteen countries each contribute their own official planning "
+"document(s) for three different things: generation-investment floors, "
+"transmission-investment floors, and the high-demand growth scenario used "
+"from 2025 onward (a handful of countries publish no \"high\" scenario and"
+" their central scenario is used instead — the exact case-by-case detail "
+"is in `inputs/config/data_sources.csv`). The table below lists, per "
+"country, the primary document used for the demand-growth scenario:"
+msgstr ""
+"Diecinueve países aportan cada uno su propio documento oficial de "
+"planificación para tres cosas distintas: los pisos de inversión en "
+"generación, los pisos de inversión en transmisión, y el escenario de "
+"crecimiento de demanda alta usado desde 2025 (algunos países no publican "
+"un escenario \"alto\" y se usa su escenario central en su lugar — el "
+"detalle caso por caso está en `inputs/config/data_sources.csv`). La "
+"siguiente tabla muestra, por país, el documento principal usado para el "
+"escenario de crecimiento de demanda:"
+
+#: ../../sources.md
+msgid "Country"
+msgstr "País"
+
+#: ../../sources.md
+msgid "Document"
+msgstr "Documento"
+
+#: ../../sources.md
+msgid "Argentina"
+msgstr "Argentina"
+
+#: ../../sources.md
+msgid ""
+"*Lineamientos y Escenarios para la Transición Energética al 2050* "
+"(Secretaría de Energía)"
+msgstr ""
+"*Lineamientos y Escenarios para la Transición Energética al 2050* "
+"(Secretaría de Energía)"
+
+#: ../../sources.md
+msgid "Bolivia"
+msgstr "Bolivia"
+
+#: ../../sources.md
+msgid "*Plan Eléctrico Referencial 2035*"
+msgstr "*Plan Eléctrico Referencial 2035*"
+
+#: ../../sources.md
+msgid "Brazil"
+msgstr "Brasil"
+
+#: ../../sources.md
+msgid ""
+"*Plano Decenal de Expansão de Energia 2034* and *Plano Nacional de "
+"Energia 2050* (EPE)"
+msgstr ""
+"*Plano Decenal de Expansão de Energia 2034* y *Plano Nacional de Energia "
+"2050* (EPE)"
+
+#: ../../sources.md
+msgid "Barbados"
+msgstr "Barbados"
+
+#: ../../sources.md
+msgid "*Barbados Action Plan / Roadmap 2030*"
+msgstr "*Barbados Action Plan / Roadmap 2030*"
+
+#: ../../sources.md
+msgid "Chile"
+msgstr "Chile"
+
+#: ../../sources.md
+msgid ""
+"*Planificación Energética de Largo Plazo 2023–2027* (Ministerio de "
+"Energía)"
+msgstr ""
+"*Planificación Energética de Largo Plazo 2023–2027* (Ministerio de "
+"Energía)"
+
+#: ../../sources.md
+msgid "Colombia"
+msgstr "Colombia"
+
+#: ../../sources.md
+msgid "*Plan de Expansión de Referencia Generación 2025–2039* (UPME)"
+msgstr "*Plan de Expansión de Referencia Generación 2025–2039* (UPME)"
+
+#: ../../sources.md
+msgid "Costa Rica"
+msgstr "Costa Rica"
+
+#: ../../sources.md
+msgid "*Plan de Expansión de la Generación 2024–2040* (ICE)"
+msgstr "*Plan de Expansión de la Generación 2024–2040* (ICE)"
+
+#: ../../sources.md
+msgid "Dominican Republic"
+msgstr "República Dominicana"
+
+#: ../../sources.md
+msgid "*Plan Energético Nacional 2022–2037* (CNE)"
+msgstr "*Plan Energético Nacional 2022–2037* (CNE)"
+
+#: ../../sources.md
+msgid "Ecuador"
+msgstr "Ecuador"
+
+#: ../../sources.md
+msgid "*Plan Maestro de Electricidad 2023–2032*"
+msgstr "*Plan Maestro de Electricidad 2023–2032*"
+
+#: ../../sources.md
+msgid "Guatemala"
+msgstr "Guatemala"
+
+#: ../../sources.md
+msgid "*Plan de Expansión de la Generación 2020–2050* (MEM / CNEE)"
+msgstr "*Plan de Expansión de la Generación 2020–2050* (MEM / CNEE)"
+
+#: ../../sources.md
+msgid "Honduras"
+msgstr "Honduras"
+
+#: ../../sources.md
+msgid "*Plan Indicativo de Expansión de la Generación 2026–2035* (ENEE / CND)"
+msgstr "*Plan Indicativo de Expansión de la Generación 2026–2035* (ENEE / CND)"
+
+#: ../../sources.md
+msgid "Haiti"
+msgstr "Haití"
+
+#: ../../sources.md
+msgid "none — see IEA WEO 2025 (NZE) above"
+msgstr "ninguno — ver IEA WEO 2025 (NZE) más arriba"
+
+#: ../../sources.md
+msgid "Mexico"
+msgstr "México"
+
+#: ../../sources.md
+msgid ""
+"*Programa de Desarrollo del Sistema Eléctrico Nacional 2024–2038* "
+"(PRODESEN, SENER)"
+msgstr ""
+"*Programa de Desarrollo del Sistema Eléctrico Nacional 2024–2038* "
+"(PRODESEN, SENER)"
+
+#: ../../sources.md
+msgid "Nicaragua"
+msgstr "Nicaragua"
+
+#: ../../sources.md
+msgid "*Plan Indicativo de Expansión de la Generación 2021–2035* (MEM)"
+msgstr "*Plan Indicativo de Expansión de la Generación 2021–2035* (MEM)"
+
+#: ../../sources.md
+msgid "Panama"
+msgstr "Panamá"
+
+#: ../../sources.md
+msgid ""
+"*Plan de Expansión del Sistema Interconectado Nacional 2025–2039*, Tomo "
+"II (ETESA)"
+msgstr ""
+"*Plan de Expansión del Sistema Interconectado Nacional 2025–2039*, Tomo "
+"II (ETESA)"
+
+#: ../../sources.md
+msgid "Peru"
+msgstr "Perú"
+
+#: ../../sources.md
+msgid "Annex D.1 of COES report DP-02-2022 (SEIN Transmission Plan 2023–2032)"
+msgstr ""
+"Anexo D.1 del informe COES DP-02-2022 (Plan de Transmisión del SEIN "
+"2023–2032)"
+
+#: ../../sources.md
+msgid "Paraguay"
+msgstr "Paraguay"
+
+#: ../../sources.md
+msgid "*Plan Maestro de Generación 2024–2043* (ANDE)"
+msgstr "*Plan Maestro de Generación 2024–2043* (ANDE)"
+
+#: ../../sources.md
+msgid "El Salvador"
+msgstr "El Salvador"
+
+#: ../../sources.md
+msgid "*Plan Indicativo de la Expansión de la Generación 2024–2038* (CNE)"
+msgstr "*Plan Indicativo de la Expansión de la Generación 2024–2038* (CNE)"
+
+#: ../../sources.md
+msgid "Uruguay"
+msgstr "Uruguay"
+
+#: ../../sources.md
+msgid "*Plan de Expansión de la Generación 2024–2043* (UTE)"
+msgstr "*Plan de Expansión de la Generación 2024–2043* (UTE)"
+
+#: ../../sources.md:61
+msgid "Assumptions set by the modelling team"
+msgstr "Supuestos definidos por el equipo de modelación"
+
+#: ../../sources.md:63
+msgid ""
+"Some parameters are not taken from an external source; they were set "
+"directly by the CLG modelling team, generally to keep the optimisation "
+"well-behaved rather than to represent a published forecast:"
+msgstr ""
+"Algunos parámetros no provienen de una fuente externa: fueron definidos "
+"directamente por el equipo de modelación de CLG, generalmente para "
+"mantener bien comportada la optimización, no para representar una "
+"proyección publicada:"
+
+#: ../../sources.md:67
+msgid ""
+"**Annual capacity-growth caps** for new generation investment (a "
+"declining percentage of each country's existing capacity, by technology)."
+" Introduced because, without a cap, the model's cost-minimisation "
+"produced unrealistic, disproportionate capacity build-outs."
+msgstr ""
+"**Topes anuales de crecimiento de capacidad** para la inversión en nueva "
+"generación (un porcentaje decreciente de la capacidad existente de cada "
+"país, por tecnología). Se introdujeron porque, sin este tope, la "
+"minimización de costos del modelo producía un crecimiento de capacidad "
+"desproporcionado e irreal."
+
+#: ../../sources.md:70
+msgid ""
+"**Solar and wind annual capacity ceilings** in the Reference (BAU) "
+"scenario, for the same reason; the team's supporting documentation for "
+"these specific ceilings is not archived in the repository."
+msgstr ""
+"**Techos anuales de capacidad solar y eólica** en el escenario de "
+"Referencia (BAU), por la misma razón; el documento de respaldo del "
+"equipo para estos techos específicos no está archivado en el "
+"repositorio."
+
+#: ../../sources.md:73
+msgid ""
+"**Internal transmission network cost estimates**, per country, carried "
+"over from an earlier version of the model (August 2025); the original "
+"estimation methodology is not documented."
+msgstr ""
+"**Estimaciones internas de costos de la red de transmisión**, por país, "
+"heredadas de una versión anterior del modelo (agosto de 2025); la "
+"metodología original de estimación no está documentada."
+
+#: ../../sources.md:75
+msgid ""
+"**Internal transmission network technical lifetime** (50 years, all "
+"countries)."
+msgstr ""
+"**Vida útil técnica interna de la red de transmisión** (50 años, en "
+"todos los países)."
+
+#: ../../sources.md:76
+msgid ""
+"**The trend (Vegetativo A / INV) scenario's transmission investment "
+"cap**, derived from the Reference scenario's own model results rather "
+"than from any external document."
+msgstr ""
+"**El tope de inversión en transmisión del escenario tendencial "
+"(Vegetativo A / INV)**, derivado de los propios resultados del modelo en "
+"el escenario de Referencia y no de ningún documento externo."
+
+#: ../../sources.md:79
+msgid "OSeMOSYS Global internal defaults"
+msgstr "Valores por defecto internos de OSeMOSYS Global"
+
+#: ../../sources.md:81
+msgid ""
+"A number of parameters are neither externally sourced nor a team "
+"assumption — they are default values or structural conventions built into"
+" the OSeMOSYS Global tool itself, applied uniformly by the software "
+"rather than calibrated to this region:"
+msgstr ""
+"Varios parámetros no son ni de fuente externa ni un supuesto del equipo: "
+"son valores por defecto o convenciones estructurales propias de la "
+"herramienta OSeMOSYS Global, aplicados de manera uniforme por el software "
+"y no calibrados para esta región:"
+
+#: ../../sources.md:85
+msgid "Technology availability factors and reserve-margin tags."
+msgstr "Factores de disponibilidad por tecnología y marcas de margen de reserva."
+
+#: ../../sources.md:86
+msgid ""
+"The temporal structure (12 timeslices: 4 seasons × 3 daily blocks) and "
+"the physical capacity-to-energy conversion constant."
+msgstr ""
+"La estructura temporal (12 bloques horarios: 4 estaciones × 3 tramos del "
+"día) y la constante física de conversión de capacidad a energía."
+
+#: ../../sources.md:88
+msgid ""
+"Default unit costs for transmission lines (converter and per-km costs) "
+"and their fixed O&M rate."
+msgstr ""
+"Costos unitarios por defecto de las líneas de transmisión (costo de los "
+"convertidores y costo por km) y su tasa de costo fijo de operación y "
+"mantenimiento."
+
+#: ../../sources.md:90
+msgid "Fixed default fuel costs for uranium, biomass and waste."
+msgstr "Costos de combustible fijos por defecto para uranio, biomasa y residuos."
+
+#: ../../sources.md:91
+msgid ""
+"The storage-to-technology linkage structure (which technology charges and"
+" discharges each storage reservoir) — a modelling-structure choice, not a"
+" data value."
+msgstr ""
+"La estructura de vínculo entre almacenamiento y tecnología (qué "
+"tecnología carga y descarga cada depósito) — una decisión de estructura "
+"del modelo, no un dato."

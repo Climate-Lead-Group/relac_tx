@@ -40,6 +40,7 @@ figures
 
 configuration
 data-reference
+sources
 country-management
 secondary-techs-editor
 auxiliary-tools

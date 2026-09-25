@@ -206,6 +206,8 @@ Demand data per scenario:
 | Profiles | `SpecifiedDemandProfile` timeslice distribution |
 | Fuentes | Documentation sheet (data provenance), same convention as in `A-O_Parametrization.xlsx` |
 
+See {doc}`sources` for a summary of the external datasets and national planning documents these `Fuentes` sheets cite.
+
 ### A-O_AR_Model_Base_Year.xlsx
 
 Base year activity ratios:
