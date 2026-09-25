@@ -44,10 +44,10 @@ SCENARIOS = ["BAU", "INV", "OPT", "VGB"]
 COLUMNS = ["Hoja", "Tecnologias", "Parametro", "Anios", "Fuente", "Detalle"]
 COL_WIDTHS = {"Hoja": 28, "Tecnologias": 42, "Parametro": 40, "Anios": 18,
               "Fuente": 55, "Detalle": 90}
-TITLE_ROW = ("Fuentes de los datos de este libro. Las fuentes SUBRAYADAS son supuestos propios del equipo "
-             "de modelación (no provienen de una fuente externa). Hoja informativa: el modelo no la lee.")
+TITLE_ROW = ("Fuentes de los datos de este libro. Las fuentes marcadas como 'Supuesto propio' son "
+             "estimaciones internas del equipo de modelación (no provienen de una fuente externa). "
+             "Hoja informativa: el modelo no la lee.")
 ASSUMPTION_TAG = "Supuesto propio"
-ASSUMPTION_FILL = PatternFill("solid", fgColor="FFF2CC")  # amarillo suave
 
 # (nombre lógico en el CSV, nombre de archivo)
 WORKBOOK_FILES = {
@@ -105,8 +105,7 @@ def write_sheet(wb: openpyxl.Workbook, rows: list[dict[str, str]]) -> None:
             cell = ws.cell(row=r_idx, column=c, value=row[name] or None)
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             if name == "Fuente" and ASSUMPTION_TAG.lower() in (row[name] or "").lower():
-                cell.font = Font(underline="single", bold=True)
-                cell.fill = ASSUMPTION_FILL
+                cell.font = Font(bold=True)
     ws.freeze_panes = "A3"
 
 

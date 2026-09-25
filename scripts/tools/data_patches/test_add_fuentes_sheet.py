@@ -93,9 +93,13 @@ def main() -> int:
             others = [ws.cell(row=r, column=fcol) for r in range(3, ws.max_row + 1)
                       if afs.ASSUMPTION_TAG.lower() not in str(ws.cell(row=r, column=fcol).value or "").lower()]
             if key == "A-O_Parametrization":
-                check(marked and all(c.font.underline == "single" for c in marked),
-                      f"{src.name}: {len(marked)} celdas 'Supuesto propio' subrayadas")
-            check(all(not c.font.underline for c in others), f"{src.name}: las demás fuentes no van subrayadas")
+                check(marked and all(c.font.bold for c in marked),
+                      f"{src.name}: {len(marked)} celdas 'Supuesto propio' en negrita")
+                check(all(c.fill.patternType is None for c in marked),
+                      f"{src.name}: celdas 'Supuesto propio' sin relleno")
+            check(all(not c.font.underline for c in marked + others),
+                  f"{src.name}: ninguna fuente va subrayada")
+            check(all(c.fill.patternType is None for c in others), f"{src.name}: las demás fuentes sin relleno")
             wb.close()
 
             after = snapshot(dst, skip=afs.SHEET_NAME)
