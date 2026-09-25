@@ -104,8 +104,6 @@ def write_sheet(wb: openpyxl.Workbook, rows: list[dict[str, str]]) -> None:
         for c, name in enumerate(COLUMNS, start=1):
             cell = ws.cell(row=r_idx, column=c, value=row[name] or None)
             cell.alignment = Alignment(vertical="top", wrap_text=True)
-            if name == "Fuente" and ASSUMPTION_TAG.lower() in (row[name] or "").lower():
-                cell.font = Font(bold=True)
     ws.freeze_panes = "A3"
 
 
