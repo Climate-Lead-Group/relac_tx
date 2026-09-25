@@ -267,6 +267,8 @@ The primary compiler configuration. Defines the data model for the Excel-to-OSeM
 | `final_year` | `"2050"` | Last year of the time horizon |
 | `Use_Transport` | `false` | Enable/disable the transport sub-module |
 | `Use_OG_module` | `true` | Enable/disable the OSeMOSYS-Global module pathway |
+| `pre_solver_validation` | `true` (default; key absent) | Run the B1b pre-solver validation at the start of B1 on the active scenario's `A-O_Parametrization.xlsx` (see {doc}`pipeline`) |
+| `pre_solver_validation_interactive` | `true` (default; key absent) | Ask before applying each B1b fix; `false` applies every fix without prompting |
 
 ### Temporal Structure (`xtra_scen`)
 
