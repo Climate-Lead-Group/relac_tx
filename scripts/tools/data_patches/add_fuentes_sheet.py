@@ -41,8 +41,8 @@ from common import relac_paths as P  # noqa: E402
 SHEET_NAME = "Fuentes"
 CSV_PATH = P.CONFIG / "data_sources.csv"
 SCENARIOS = ["BAU", "INV", "OPT", "VGB"]
-COLUMNS = ["Hoja", "Tecnologias", "Parametro", "Anios", "Fuente", "Detalle"]
-COL_WIDTHS = {"Hoja": 28, "Tecnologias": 42, "Parametro": 40, "Anios": 18,
+COLUMNS = ["Hoja", "Tecnologias", "Parametro", "Años", "Fuente", "Detalle"]
+COL_WIDTHS = {"Hoja": 28, "Tecnologias": 42, "Parametro": 40, "Años": 18,
               "Fuente": 55, "Detalle": 90}
 TITLE_ROW = ("Fuentes de los datos de este libro. Las fuentes marcadas como 'Supuesto propio' son "
              "estimaciones internas del equipo de modelación (no provienen de una fuente externa). "
