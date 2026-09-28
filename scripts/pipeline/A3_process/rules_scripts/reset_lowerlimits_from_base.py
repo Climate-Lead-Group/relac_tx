@@ -1,42 +1,32 @@
 # -*- coding: utf-8 -*-
-"""
-reset_lowerlimits_from_base.py
-==============================
+"""Reset the LowerLimit floor for PWR techs in a scenario back to the Base scenario's values.
 
-Resets TotalTechnologyAnnualActivityLowerLimit for PWR (generation) techs in a
-scenario's A-O_Parametrization.xlsx (sheet "Secondary Techs") back to the
-values of the Base scenario.
+Overwrites TotalTechnologyAnnualActivityLowerLimit (years 2023-2050) for every PWR row in a
+scenario's "Secondary Techs" sheet with the Base scenario's values for the same tech. The Base
+scenario only carries floors in the base years (2023/2024) and is empty for 2025-2050, so this
+both restores the 2023/2024 floor to the Base value and clears any 2025-2050 extension
+previously written (e.g. by extend_lowerlimits_pwr.py or B1b's V3 fix). Projection.Mode
+(col G) is also copied from Base so the row's mode matches the reset state.
 
-For every PWR row whose Parameter is TotalTechnologyAnnualActivityLowerLimit,
-the year cells 2023..2050 are overwritten with the Base scenario's values for
-the SAME tech. The Base scenario only carries floors in the base years
-(2023/2024) and is empty for 2025..2050, so this effectively:
-  - restores the 2023/2024 floor to the Base value, and
-  - clears any 2025..2050 extension previously written (e.g. by
-    extend_lowerlimits_pwr.py or B1b V3).
+Use this as a manual reset of the LowerLimit data across scenarios before re-running the A3
+workflow, so that only the scenarios configured under `lowerlimit_scenarios` in lid_rule.yaml
+get their floors extended/adjusted again.
 
-Use this to "reset" the LowerLimit data across scenarios before re-running the
-A3 workflow, so that only the scenarios configured in lid_rule.yaml's
-`lowerlimit_scenarios` get their floors extended/adjusted again.
-
-Projection.Mode (col G) is also copied from Base so the row's mode matches the
-reset state.
-
-USAGE
------
-    python reset_lowerlimits_from_base.py --input-dir <scenario_dir> \
-        [--base-dir <base_scenario_dir>]
-
-If --base-dir is omitted it defaults to:
-    inputs/reference/NO BORRAR A1_Outputs - Escenario Base/Base
-
-Side effects:
-- Makes a timestamped backup of the xlsx next to it before writing.
-- Modifies A-O_Parametrization.xlsx in place.
-- Writes reset_lowerlimits_from_base_changes_<ts>.json next to the xlsx with a
-  per-cell audit (row, tech, year, prev, new).
-
-Author: CLG (A3_process integration)
+Inputs:
+    <input_dir>/A-O_Parametrization.xlsx (sheet "Secondary Techs") — target scenario
+    <base_dir>/A-O_Parametrization.xlsx (sheet "Secondary Techs") — Base scenario reference;
+        --base-dir defaults to P.BASE_SCENARIO_REF / "Base" (inputs/reference/NO BORRAR
+        A1_Outputs - Escenario Base/Base)
+Outputs:
+    same target workbook, in place (a timestamped backup is written first)
+    <input_dir>/reset_lowerlimits_from_base_changes_<ts>.json — per-cell audit (row, tech,
+        year, prev, new)
+Usage:
+    python reset_lowerlimits_from_base.py --input-dir <scenario_dir> [--base-dir <base_dir>]
+Notes:
+    - Not invoked by A3_process.py — a manual, standalone tool run before re-running A3.
+Authors:
+    CLG (A3_process integration)
 """
 from __future__ import annotations
 
@@ -70,6 +60,7 @@ DEFAULT_BASE_DIR = P.BASE_SCENARIO_REF / "Base"
 
 
 def year_to_col(year: int) -> int:
+    """Return the 1-based column index of `year` in "Secondary Techs" (2023 -> COL_YEAR_2023)."""
     return COL_YEAR_2023 + (year - 2023)
 
 
@@ -109,6 +100,21 @@ def load_base_rows(base_paramfile: Path) -> tuple[dict, dict]:
 
 
 def run(input_dir: Path, base_dir: Path) -> dict:
+    """Reset PWR LowerLimit cells (2023-2050) and Projection.Mode in `input_dir` to Base's values.
+
+    Args:
+        input_dir: target scenario folder containing A-O_Parametrization.xlsx to reset.
+        base_dir: Base scenario folder containing the reference A-O_Parametrization.xlsx.
+
+    Returns:
+        The audit log dict (also written to disk as JSON), including per-row `changes` and
+        `rows_missing_in_base` (techs present in the target but absent from Base, left
+        untouched).
+
+    Side effects:
+        Writes a timestamped backup of the target workbook, saves the workbook in place, and
+        writes `reset_lowerlimits_from_base_changes_<ts>.json` next to it.
+    """
     paramfile = input_dir / PARAM_FILENAME
     if not paramfile.is_file():
         sys.exit(f"ERROR: {PARAM_FILENAME} not found in {input_dir}")
@@ -202,6 +208,7 @@ def run(input_dir: Path, base_dir: Path) -> dict:
 
 
 def print_summary(log: dict) -> None:
+    """Print a formatted summary of the `run` audit log dict to stdout."""
     print()
     print("=" * 70)
     print(f"  RESET LowerLimits from Base for {log['tech_prefix']} technologies")
@@ -221,6 +228,11 @@ def print_summary(log: dict) -> None:
 
 
 def main() -> int:
+    """CLI entry point: parse args, run the LowerLimit reset, and print a summary.
+
+    Returns:
+        0 on success.
+    """
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,

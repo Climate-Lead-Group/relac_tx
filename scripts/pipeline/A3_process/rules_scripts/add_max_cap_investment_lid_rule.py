@@ -1,147 +1,63 @@
-"""
-add_max_cap_investment_lid_rule.py
-===================================
+"""Compute and write a per-year investment cap (the "lid") for generation techs.
 
-Independent patch — applies a per-year LID and the V1 UNTIE RULE to
-TotalAnnualMaxCapacityInvestment for GENERATION technologies that have
-either ResidualCapacity > 0 or TotalAnnualMinCapacityInvestment > 0 in any
-year.
+Independent patch for TotalAnnualMaxCapacityInvestment ("MaxCapInv") of GENERATION technologies
+(per TECH_TYPES.csv) that have ResidualCapacity > 0 or TotalAnnualMinCapacityInvestment > 0 in
+any year — the ALLOWED set. Without a real upper bound, MaxCapInv is otherwise NaN (unconstrained)
+or a 9999 placeholder (far above any realistic ramp), letting the optimizer over-invest in
+candidate techs whose annual ramp should be physically constrained. Independent of
+add_max_capacity_investment_rule.py; safe to run on a fresh workbook, on that script's 9999
+placeholders (recognized and replaced), or repeatedly (idempotent — a second run is a no-op).
 
-This script is INDEPENDENT of add_max_capacity_investment_rule.py. It can run:
-  - On a fresh A-O_Parametrization.xlsx (operates on empty MaxInv cells).
-  - On the output of the first-patch script (recognizes 9999 placeholders and
-    replaces them with the lid).
-  - Repeatedly (idempotent — second run produces no changes).
+Rule, selected by LID_RULE_MODE ("uniform" or "proportional"), for every tech in the
+ALLOWED ∩ GENERATION set:
+    pool(cr, y)        = sum of ResidualCapacity(t, y) over ALLOWED GENERATION techs t in cr
+    mult(cr, y)        = demand(cr, y) / demand(cr, DEMAND_REFERENCE_YEAR)
+    scaled_pool(cr, y) = pool(cr, y) * mult(cr, y)
+    country_region(t)  = chars 6..10 of the tech code (e.g. BGDXX, INDNE)
 
-PROBLEM
--------
-For ALLOWED generation techs (those with residual or planned capacity), MaxInv
-was being left effectively unbounded — either NaN (no constraint at all) or
-9999 (a placeholder that's far above any realistic ramp). Without a real upper
-bound, the optimizer can over-invest in candidate techs whose annual ramp
-should be physically constrained. And without a year-by-year *ramp* tied to
-demand, a constant lid either binds in late years (when demand has scaled
-3x) or is too generous in early years.
+    "uniform" (default): every allowed tech in the same cr gets the same lid.
+        pct(cr, y) = LID_PERCENTAGE_BY_YEAR.get(y, LID_PERCENTAGE_DEFAULT) * mult(cr, y)
+        lid(t, y)  = pct(cr, y) * pool(cr, y) = base_pct(y) * scaled_pool(cr, y)
 
-RULE
-----
-For each tech in the ALLOWED ∩ GENERATION set, the per-year
-MaxCapacityInvestment lid is computed in one of two modes, selected by
-LID_RULE_MODE.
-
-Common quantities (used by both modes):
-    pool(cr, y)         = sum of ResidualCapacity(t, y) for every ALLOWED
-                          GENERATION tech t in cr
-    mult(cr, y)         = demand(cr, y) / demand(cr, DEMAND_REFERENCE_YEAR)
-    scaled_pool(cr, y)  = pool(cr, y) * mult(cr, y)
-    country_region(t)   = chars 6..10 of the tech code (e.g. BGDXX, INDNE)
-
-Mode "uniform" (default):
-    Every allowed tech in the same cr gets the SAME lid value.
-
-        pct(cr, y) = base_pct(y) * mult(cr, y)
-        where base_pct(y) = LID_PERCENTAGE_BY_YEAR.get(y, LID_PERCENTAGE_DEFAULT)
-        lid(t, y)  = pct(cr, y) * pool(cr, y)
-                   = base_pct(y) * scaled_pool(cr, y)
-
-    The base_pct schedule is a per-decade plateau encoding "tight while we
-    have planning data, looser as the horizon gets speculative." Demand
-    growth is layered on linearly via mult — fast-growing crs get
-    proportionally more headroom.
-
-Mode "proportional":
-    Each tech gets a lid sized to its share of the 2024 fleet. Total
-    headroom is the year-over-year growth in scaled_pool, distributed
-    proportionally and slackened by a security factor.
-
+    "proportional": lid sized to each tech's share of the reference-year fleet, times the
+    year-over-year growth in scaled_pool, slackened by a security factor.
         tech_share(t)     = ResidualCapacity(t, ref_year) / pool(cr, ref_year)
         pool_delta(cr, y) = max(0, scaled_pool(cr, y) - scaled_pool(cr, y-1))
         lid(t, y)         = LID_SECURITY_FACTOR * tech_share(t) * pool_delta(cr, y)
 
-    The max(0, ...) guard ensures that flat-or-declining demand years
-    yield zero new headroom (no negative lids). For the reference year and
-    earlier, lid = 0 (no prior year to delta against), so MinCapInv must
-    cover any required ref-year build via the untie rule.
+    Both modes are floored by the V1 untie rule (cf. B1b_Pre_solver_validation.py): if
+    MinCapInv(t, y) > 0 and the proposed lid <= MinCapInv(t, y), the lid is raised to
+    MinCapInv(t, y) * UNTIE_MULTIPLIER, guaranteeing MinCapInv < MaxCapInv whenever
+    MinCapInv > 0. Gen techs with zero pool (no residual, no min-inv) whose 3-char prefix
+    appears in LID_ABSOLUTE_BY_PREFIX (e.g. PWRWAV*) get a flat per-prefix absolute lid in
+    GW/year instead, optionally scaled by mult; without an entry there such a tech is left
+    untouched. TRN* transmission interconnects (13-char codes) are always skipped — they span
+    two country+region pairs and don't fit a single pool. Cells before MODIFY_FROM_YEAR (2026)
+    are never written; a cell holding an explicit non-placeholder value is preserved unless
+    --force-overwrite is given.
 
-Both modes are floored by the V1 untie rule: if MinCapInv(t, y) > 0 and
-the proposed lid <= MinCapInv(t, y), we push the lid to
-MinCapInv(t, y) * UNTIE_MULTIPLIER. This guarantees the LP-feasibility
-invariant MinCapInv < MaxCapInv whenever MinCapInv > 0.
-
-GENERATION FILTER
------------------
-"Generation" is defined by TECH_TYPES.csv (columns: 'Technology (PWR)',
-'Technology'). Only techs categorized as 'GENERATION' are eligible. This
-correctly excludes storage (e.g. PWRSDSLKAXX), interconnectors, primary
-fuels, etc., which need separate lid policies.
-
-DEMAND-ANCHORED RAMP
---------------------
-Demand multiplier per (country+region, year) is read from A-O_Demand.xlsx
-(sheet 'Demand_Projection', rows where Demand/Share == 'Demand'). Country+
-region is parsed from chars 3..7 of the Fuel/Tech code (ELCBGDXX03 -> BGDXX).
-Demand rows are summed within each cr and divided by the value at the
-reference year (default 2024) to obtain mult(cr, y).
-
-Cell-by-cell, for each MaxInv cell of an ALLOWED tech:
-    1. Empty (None) or 9999 placeholder  ->  proposed = lid
-    2. Other explicit value (manual cal)  ->  proposed = current value (preserved)
-    3. V1 UNTIE RULE (cf. B1b_Pre_solver_validation.py):
-         if MinCapacityInvestment(tech, y) >= proposed:
-             proposed = MinCapacityInvestment(tech, y) * UNTIE_MULTIPLIER
-
-This guarantees Max_inv > Min_inv per year, eliminating that class of solver
-infeasibility.
-
-SCOPE
------
-- ALLOWED set: techs with residual > 0 OR min-cap-investment > 0 in any year.
-  Use the pool-based lid (uniform or proportional).
-- SPECULATIVE set: gen techs with zero residual AND zero min-inv whose 3-char
-  prefix appears in LID_ABSOLUTE_BY_PREFIX. They have no pool to scale against
-  (pool=0 -> pool-based lid would be 0), so they get a per-prefix absolute lid
-  in GW/year, optionally scaled by demand mult. This is the escape hatch for
-  emerging technologies that are completely unconstrained otherwise — e.g.,
-  PWRWAV* (wave) which has zero residual fleet anywhere on Earth, or PWRGEO*
-  in countries without an existing geothermal fleet. Without an entry in
-  LID_ABSOLUTE_BY_PREFIX, a tech with zero pool stays untouched.
-- TRN* transmission interconnects (length-13 codes) are SKIPPED entirely —
-  they span two country+region pairs and don't fit a single pool. Their
-  manually-calibrated MaxInv values are left untouched.
-
-CONFIGURATION
--------------
-Edit LID_PERCENTAGE_DEFAULT and LID_PERCENTAGE_BY_YEAR at the top of this
-file to change the lid:
-
-    LID_PERCENTAGE_DEFAULT = 0.005       # default 0.5% of pool per year
-    LID_PERCENTAGE_BY_YEAR = {            # per-year overrides (optional)
-        2030: 0.01,
-        2040: 0.02,
-    }
-
-OUTPUT
-------
-1. In-place edit of A-O_Parametrization.xlsx.
-2. A JSON change log written inside the scenario dir as
-   `lid_rule_changes_<ts>.json`, with per-cell reasons and the
-   per-(country_region, year) pool sizes used.
-
-USAGE
------
-    # From the repo root:
-    python scripts/pipeline/A3_process/rules_scripts/add_max_cap_investment_lid_rule.py
-
-    # Override defaults:
-    python add_max_cap_investment_lid_rule.py \\
-        --input-dir inputs/A1_Outputs/A1_Outputs_BAU \\
-        --sheets "Secondary Techs"
-
-    # Restore from a legacy _PRE_LID_* backup (if one still exists alongside
-    # the scenario dir from before the no-backup default):
+Inputs:
+    <input_dir>/A-O_Parametrization.xlsx (sheet(s) in `sheets`, default "Secondary Techs")
+    inputs/config/A3_process/TECH_TYPES.csv (P.A3_CONFIG) — GENERATION category filter
+    <input_dir>/A-O_Demand.xlsx (sheet "Demand_Projection") — demand multiplier mult(cr, y),
+        when LID_RAMP_FROM_DEMAND is True; country+region parsed from chars 3..7 of the
+        Fuel/Tech code (ELCBGDXX03 -> BGDXX)
+    inputs/config/A3_process/lid_rule.yaml (P.A3_CONFIG / YAML_FILE_NAME), optional — overrides
+        the module-level lid constants for this run (see load_config / apply_config)
+Outputs:
+    same A-O_Parametrization.xlsx, in place
+    <input_dir>/lid_rule_changes_<ts>.json — per-cell reasons and the per-(country_region,
+        year) pool sizes used
+Usage:
+    python add_max_cap_investment_lid_rule.py --input-dir <scenario_dir>
+        [--sheets "Secondary Techs"] [--yaml <path>] [--force-overwrite]
+        [--modify-from-year Y]
     python add_max_cap_investment_lid_rule.py --restore
-    python add_max_cap_investment_lid_rule.py \\
-        --restore-from inputs/A1_Outputs/A1_Outputs_BAU_PRE_LID_20260430_204529
+    python add_max_cap_investment_lid_rule.py --restore-from <backup_dir>
+Notes:
+    - Called by A3_process.py (step 1) for every scenario.
+    - --restore / --restore-from only restore the input dir from a legacy _PRE_LID_* backup,
+      then exit; no lid computation runs.
 """
 
 from __future__ import annotations
@@ -1502,6 +1418,15 @@ def print_summary(log: dict) -> None:
 
 
 def main() -> int:
+    """CLI entry point: parse args, dispatch to restore or to the lid rule, print a summary.
+
+    Handles --restore/--restore-from as standalone actions (restore then exit); otherwise
+    calls `run` with any --force-overwrite / --modify-from-year CLI overrides layered on top
+    of YAML config.
+
+    Returns:
+        0 on success, 1 if the restore or `run` call raises (message printed to stderr).
+    """
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

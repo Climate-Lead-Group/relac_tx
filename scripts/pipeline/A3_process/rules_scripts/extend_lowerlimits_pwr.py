@@ -1,44 +1,37 @@
 # -*- coding: utf-8 -*-
-"""
-extend_lowerlimits_pwr.py
-==========================
+"""Extend the 2024 LowerLimit floor for PWR techs flat through 2050.
 
-Extends TotalTechnologyAnnualActivityLowerLimit for PWR (generation) techs in
-A-O_Parametrization.xlsx sheet "Secondary Techs" from BASE_YEAR (2024) through
-END_YEAR (2050). The 2024 value is held flat — no growth, no taper.
+Writes TotalTechnologyAnnualActivityLowerLimit for PWR (generation) techs in "Secondary Techs"
+of A-O_Parametrization.xlsx, holding the 2024 value flat (no growth, no taper) through 2050.
+Without this extension the 2024 calibration floor expires after one year and the optimizer is
+free to dump thermal generation from 2025 onward, which is undesirable for BAU-style runs that
+anchor thermal fleets on observed 2024 dispatch.
 
-Without this extension, the 2024 calibration floor expires and the optimizer
-is free to dump thermal generation in 2025+, which is undesirable for BAU-style
-runs that anchor thermal fleets on observed 2024 dispatch.
+Only cells from `modify_from_year` (default MODIFY_FROM_YEAR = 2026) onward are written, so
+years 2023-2025 stay identical across scenarios (see sync_historical_from_bau.py); the 2024
+value itself, used as the flat-floor source, is never overwritten. By default only empty or
+zero cells are filled; --force-overwrite rewrites every 2025..2050 cell of a qualifying row
+regardless of prior content. --include-types restricts the extension to PWR techs whose type
+code (chars 4-6 of the tech code, e.g. "HYD" in PWRHYDBRAXX) is in the given comma-separated
+list; without it every PWR row qualifies. Whenever a row is touched, its Projection.Mode
+(col G) is forced to "User defined" so the downstream pipeline does not treat the populated
+values as placeholders.
 
-USAGE (via A3_process.py orchestrator)
---------------------------------------
-A3_process.py invokes this for each scenario as:
+Inputs:
+    <input_dir>/A-O_Parametrization.xlsx (sheet "Secondary Techs")
+Outputs:
+    same workbook, in place
+    <input_dir>/extend_lowerlimits_pwr_changes_<ts>.json — per-cell audit (row, tech, year,
+        prev, new)
+Usage:
     python extend_lowerlimits_pwr.py --input-dir <scenario_dir> [--force-overwrite]
-
-Direct invocation:
-    python extend_lowerlimits_pwr.py --input-dir inputs/A1_Outputs/A1_Outputs_BAU
-
-Default (no --force-overwrite): only fills empty or zero 2025..2050 cells with
-the 2024 value; non-zero pre-existing values are preserved. With
---force-overwrite, every 2025..2050 cell of qualifying rows is set to the 2024
-value regardless of prior content.
-
---include-types restricts the extension to PWR techs whose type code (chars 4-6
-of the code, TECHNOLOGY[3:6], e.g. "HYD" in PWRHYDBRAXX) is in the given
-comma-separated list. Without it, every PWR row qualifies (original behavior).
-Used by A3_process.py to impose the floor on a subset of types per scenario
-(e.g. renewables only for OPT, see lowerlimit_scenarios in lid_rule.yaml).
-
-Side effects:
-- Modifies A-O_Parametrization.xlsx in place.
-- Writes extend_lowerlimits_pwr_changes_<ts>.json next to the xlsx with a
-  per-cell audit (row, tech, year, prev, new).
-- Whenever a row is touched, its Projection.Mode (col G) is forced to
-  "User defined" so the downstream pipeline does not treat populated values as
-  placeholders.
-
-Author: Luis / CLG  (refactored for A3_process integration)
+        [--include-types HYD,GEO,...] [--modify-from-year Y]
+Notes:
+    - Called by A3_process.py (step 2) only for scenarios listed in `lowerlimit_scenarios`
+      (inputs/config/A3_process/lid_rule.yaml), e.g. OPT restricts to renewable types via
+      --include-types.
+Authors:
+    Luis, CLG (refactored for A3_process integration)
 """
 from __future__ import annotations
 
@@ -74,6 +67,7 @@ PARAM_FILENAME = "A-O_Parametrization.xlsx"
 
 
 def year_to_col(year: int) -> int:
+    """Return the 1-based column index of `year` in "Secondary Techs" (2023 -> COL_YEAR_2023)."""
     return COL_YEAR_2023 + (year - 2023)
 
 
@@ -90,6 +84,23 @@ def _is_empty(val) -> bool:
 def run(input_dir: Path, force_overwrite: bool,
         include_types: set[str] | None = None,
         modify_from_year: int = MODIFY_FROM_YEAR) -> dict:
+    """Extend the 2024 LowerLimit floor flat through 2050 for PWR techs and save the workbook.
+
+    Args:
+        input_dir: scenario folder containing A-O_Parametrization.xlsx.
+        force_overwrite: if True, overwrite every 2025..2050 cell of a qualifying row with the
+            2024 value; if False (default), only empty/zero cells are filled.
+        include_types: optional set of PWR type codes (chars 4-6 of the tech code) to restrict
+            the extension to; None extends every PWR row.
+        modify_from_year: earliest year this call may write (clamped to at least BASE_YEAR + 1).
+
+    Returns:
+        The audit log dict (also written to disk as JSON), including per-row `changes`.
+
+    Side effects:
+        Saves the workbook in place and writes `extend_lowerlimits_pwr_changes_<ts>.json`
+        next to it.
+    """
     paramfile = input_dir / PARAM_FILENAME
     if not paramfile.is_file():
         sys.exit(f"ERROR: {PARAM_FILENAME} not found in {input_dir}")
@@ -180,6 +191,7 @@ def run(input_dir: Path, force_overwrite: bool,
 
 
 def print_summary(log: dict) -> None:
+    """Print a formatted summary of the `run` audit log dict to stdout."""
     print()
     print("=" * 70)
     print(f"  EXTEND LowerLimits for {log['tech_prefix']} technologies")
@@ -201,6 +213,11 @@ def print_summary(log: dict) -> None:
 
 
 def main() -> int:
+    """CLI entry point: parse args, run the LowerLimit extension, and print a summary.
+
+    Returns:
+        0 on success.
+    """
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
