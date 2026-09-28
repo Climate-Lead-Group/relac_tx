@@ -1,67 +1,70 @@
-# Verificación byte a byte de la reestructuración `inputs/ scripts/ outputs/`
+# scripts/tools/verification — byte-for-byte verification of the inputs/scripts/outputs restructure
 
-Procedimiento para demostrar que B1 y la cadena pre-solver de B2 producen exactamente los mismos
-archivos en el layout nuevo (rama `restructure/inputs-scripts-outputs`) que en el viejo
-(`clean-sirelac` @ `c8f0efc`). No se ejecuta el solver. Corresponde a las Tasks 1, 18 y 19 del plan
-`docs/superpowers/plans/2026-09-07-restructure-inputs-scripts-outputs.md`; el criterio de aceptación
-es **cero diferencias** (spec §9.2 y §12).
+Procedure to demonstrate that B1 and the B2 pre-solver chain produce exactly the same files in the
+new layout (branch `restructure/inputs-scripts-outputs`) as in the old one (`clean-sirelac` @
+`c8f0efc`). The solver is not run. Corresponds to Tasks 1, 18 and 19 of the plan
+`docs/superpowers/plans/2026-09-07-restructure-inputs-scripts-outputs.md`; the acceptance criterion
+is **zero differences** (spec §9.2 and §12).
 
-Requisitos en la máquina: clon del repo con ambas ramas, entorno conda `OG-MOMF-env` (lo crea
-`run.py`), `otoole` y `glpsol` en el PATH (los usa B2 aunque no se resuelva el modelo). Tiempo
-estimado por corrida: 30-45 min (B1 ~10-20, B2 sin solver ~15-25).
+Machine requirements: a clone of the repo with both branches, the `OG-MOMF-env` conda environment
+(created by `run.py`), `otoole` and `glpsol` on the PATH (B2 uses them even without solving the
+model). Estimated time per run: 30-45 min (B1 ~10-20, B2 without solver ~15-25).
 
-Herramientas (en esta carpeta):
+## Scripts
 
-- `verify_config.sh <Config_MOMF_T1_AB.yaml>` — pone `execute_model`, `create_matrix`,
-  `concat_scenarios_csv`, `annualize_capital` y `del_files` en `False` (misma config en ambos lados).
-- `compare_manifests.py manifest <raiz> <old|new> <out.json>` — md5 de todos los productos
-  comparables (`A2_Output_Params`, `A2_Outputs_Params_otoole`, `Executables/**.txt`, modelo parcheado,
-  datafile raíz, `upstream_floor_rows.csv`), con claves independientes del layout.
-- `compare_manifests.py diff <a.json> <b.json>` — lista faltantes, sobrantes y distintos; exit 0 si
-  todo es idéntico.
+| Script | What it does | Run |
+|---|---|---|
+| `compare_manifests.py` | Two subcommands. `manifest <root> <old\|new> <out.json>` computes md5 of every comparable product (`A2_Output_Params`, `A2_Outputs_Params_otoole`, `Executables/**.txt`, the patched model, the root datafile, `upstream_floor_rows.csv`), with layout-independent keys. `diff <a.json> <b.json>` lists missing, extra and differing entries; exits 0 when everything matches. | `python scripts/tools/verification/compare_manifests.py manifest <root> <old\|new> <out.json>`; `python scripts/tools/verification/compare_manifests.py diff <a.json> <b.json>` |
+| `verify_config.sh <Config_MOMF_T1_AB.yaml>` (not Python) | Sets `execute_model`, `create_matrix`, `concat_scenarios_csv`, `annualize_capital` and `del_files` to `False` (same config on both sides). | `bash scripts/tools/verification/verify_config.sh <path/to/Config_MOMF_T1_AB.yaml>` |
 
-## Pasos
+## How to run
 
-Desde la raíz del clon (rama `restructure/inputs-scripts-outputs`), con `V=../relac_tx_verif`
-como carpeta local para manifiestos y logs (fuera del repo):
+From the root of the clone (branch `restructure/inputs-scripts-outputs`), with `V=../relac_tx_verif`
+as the local folder for manifests and logs (outside the repo):
 
 ```bash
 mkdir -p ../relac_tx_verif; V=../relac_tx_verif
 
-# 1. Worktrees limpios: layout viejo y layout nuevo
+# 1. Clean worktrees: old layout and new layout
 git worktree add ../relac_tx_baseline clean-sirelac
 git worktree add ../relac_tx_new      restructure/inputs-scripts-outputs
 bash scripts/tools/verification/verify_config.sh ../relac_tx_baseline/t1_confection/Config_MOMF_T1_AB.yaml
 bash scripts/tools/verification/verify_config.sh ../relac_tx_new/inputs/config/Config_MOMF_T1_AB.yaml
 
-# 2. Baseline (layout viejo)
+# 2. Baseline (old layout)
 ( cd ../relac_tx_baseline \
   && PYTHONHASHSEED=0 conda run -n OG-MOMF-env --no-capture-output python -u t1_confection/B1_Run_Compiler.py 2>&1 | tee $V/baseline_B1.log \
   && PYTHONHASHSEED=0 conda run -n OG-MOMF-env --no-capture-output python -u t1_confection/B2_Executing_OG_Model.py 2>&1 | tee $V/baseline_B2.log )
 python scripts/tools/verification/compare_manifests.py manifest ../relac_tx_baseline old $V/manifest_baseline.json
 
-# 3. Nuevo (layout inputs/ scripts/ outputs/)
+# 3. New (inputs/ scripts/ outputs/ layout)
 ( cd ../relac_tx_new \
   && PYTHONHASHSEED=0 conda run -n OG-MOMF-env --no-capture-output python -u scripts/pipeline/B1_Run_Compiler.py 2>&1 | tee $V/new_B1.log \
   && PYTHONHASHSEED=0 conda run -n OG-MOMF-env --no-capture-output python -u scripts/pipeline/B2_Executing_OG_Model.py 2>&1 | tee $V/new_B2.log )
 python scripts/tools/verification/compare_manifests.py manifest ../relac_tx_new new $V/manifest_new.json
 
-# 4. Comparación
+# 4. Comparison
 python scripts/tools/verification/compare_manifests.py diff $V/manifest_baseline.json $V/manifest_new.json | tee $V/diff_result.txt
 ```
 
-Comprobaciones esperadas: en ambos worktrees B2 crea 13 carpetas `Executables/<S>_0/` (BAU BAC BSR INV
-INVWF ISR ISRWF OPC OPT VGB VGBWF VSR VSRWF) y termina con `veg_tx PASS`; el `diff` imprime
-`SOLO EN BASELINE: 0`, `SOLO EN NUEVO: 0`, `DISTINTOS: 0`. Si B1b (validador pre-solver) pregunta algo
-en el baseline, responder exactamente igual en el nuevo.
+Expected checks: in both worktrees B2 creates 13 `Executables/<S>_0/` folders (BAU BAC BSR INV INVWF
+ISR ISRWF OPC OPT VGB VGBWF VSR VSRWF) and finishes with `veg_tx PASS`; the `diff` prints
+`SOLO EN BASELINE: 0`, `SOLO EN NUEVO: 0`, `DISTINTOS: 0`. If B1b (the pre-solver validator) prompts
+for anything in the baseline, answer exactly the same way in the new run.
 
-Complementos (plan Task 18, steps 5-7): comparar `A2_Structure_Lists.xlsx` por contenido con openpyxl
-(el xlsx lleva timestamp, no vale md5) y los logs de la cadena (`grep -E "PASS|FAIL|veg_tx|\[chain\]"`
-en ambos `*_B2.log`, normalizando `t1_confection/` y `outputs/`). Opcional (Task 19): correr
-A0 → A1 → A2 en ambos worktrees y comparar `A1_Outputs/**/*.xlsx` hoja a hoja.
+Extras (plan Task 18, steps 5-7): compare `A2_Structure_Lists.xlsx` by content with openpyxl (the
+xlsx carries a timestamp, so md5 does not work) and the chain logs (`grep -E "PASS|FAIL|veg_tx|\[chain\]"`
+on both `*_B2.log` files, normalizing `t1_confection/` and `outputs/`). Optional (Task 19): run
+A0 → A1 → A2 in both worktrees and compare `A1_Outputs/**/*.xlsx` sheet by sheet.
 
-Si aparece alguna diferencia, las únicas clases aceptables son comentarios con rutas absolutas o
-timestamps embebidos en un archivo generado; cualquier diferencia en valores es un bug de rutas
-que hay que localizar en el script responsable. Registrar el resultado en la sección 13 del spec
-(`docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`) y eliminar los
-worktrees (`git worktree remove --force ../relac_tx_baseline ../relac_tx_new; git worktree prune`).
+## Gotchas
+
+- Requirements: the conda env `OG-MOMF-env` (created by `run.py`), `otoole` and `glpsol` on the
+  PATH, and 30-45 minutes per run (B1 ~10-20 min, B2 without solver ~15-25 min).
+- The acceptance criterion is **zero differences**: `SOLO EN BASELINE: 0`, `SOLO EN NUEVO: 0`,
+  `DISTINTOS: 0` from `compare_manifests.py diff`.
+- If any difference appears, the only acceptable classes are comments with absolute paths or
+  timestamps embedded in a generated file; any difference in values is a path bug that must be
+  traced to the responsible script. Record the result in section 13 of the spec
+  (`docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`) and remove the
+  worktrees (`git worktree remove --force ../relac_tx_baseline ../relac_tx_new; git worktree prune`).
