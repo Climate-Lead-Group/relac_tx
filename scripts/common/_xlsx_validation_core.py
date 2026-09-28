@@ -1,15 +1,32 @@
-"""
-Shared helpers for validating A-O_Parametrization.xlsx upper-bound invariants.
+"""Shared indexing and math for the V1/V2/V3/V4 A-O_Parametrization.xlsx invariant checks.
 
 Used by:
     - Z_AUX_apply_parametrization_review.py (consistency sweep after review writes)
-    - B1b_Pre_solver_validation.py            (pre-solver validation in B1)
+    - B1b_Pre_solver_validation.py (pre-solver validation in B1)
+    - patch_activity_upper_limit.py (V4 coverage check)
 
-Constants, indexing, and the cumulative-capacity sweep originated in
-Z_AUX_apply_parametrization_review.py. The activity-vs-capacity helpers
-(load_yearsplit, load_capacity_factor, load_capacity_to_activity_unit,
-get_availability_factor, compute_*, validate_activity_lower_limit) are
-new and support the CAb1_PlannedMaintenance vs AAC3 feasibility check.
+Constants, indexing (index_target_sheet) and the cumulative-capacity sweep
+(consistency_sweep, V1+V2) originated in Z_AUX_apply_parametrization_review.py. The
+activity-vs-capacity helpers (load_yearsplit, load_capacity_factor,
+load_capacity_to_activity_unit, get_availability_factor, compute_*,
+validate_activity_lower_limit — V3) support the CAb1_PlannedMaintenance vs AAC3
+feasibility check. validate_activity_upper_limit_coverage (V4) is a separate demand-coverage
+check, dormant when the xlsx has no rows for its parameter_label.
+
+Inputs:
+    A-O_Parametrization.xlsx sheets "Secondary Techs"/"Demand Techs", "Fixed Horizon
+        Parameters", "Yearsplit", "Capacities" — passed in by the caller as an already
+        open openpyxl Workbook, except validate_activity_upper_limit_coverage(), which
+        takes a path and opens/closes the workbook itself.
+    demand_csv, oar_csv otoole CSVs (validate_activity_upper_limit_coverage() only).
+Usage:
+    from common._xlsx_validation_core import consistency_sweep, index_target_sheet, ...
+Notes:
+    - apply_changes=True mutates the in-memory openpyxl worksheet cells; saving the
+      workbook to disk is the caller's responsibility.
+    - V3 (validate_activity_lower_limit) can rewrite TotalTechnologyAnnualActivity-
+      LowerLimit for the model's base_year, which feeds the calibration year; see
+      calibration_impact in its return value.
 """
 import math
 
@@ -36,10 +53,26 @@ ACT_LOWER_HAIRCUT = 0.99        # ActivityLowerLimit = max_activity * 99%
 
 
 def norm_str(v):
+    """Normalize a raw cell value to a stripped string.
+
+    Args:
+        v: raw cell value (any type, typically from openpyxl), or None.
+
+    Returns:
+        str(v).strip(), or "" when v is None.
+    """
     return str(v).strip() if v is not None else ""
 
 
 def is_empty_number(v):
+    """Report whether a cell value should be treated as an empty/missing number.
+
+    Args:
+        v: raw cell value (any type, typically from openpyxl).
+
+    Returns:
+        True when v is None, "" or a float NaN; False otherwise.
+    """
     if v is None or v == "":
         return True
     if isinstance(v, float) and math.isnan(v):
@@ -452,10 +485,39 @@ def validate_activity_lower_limit(ws, sheet_name, cols, ymap,
                                    tech_to_row_by_param, oplife_map,
                                    yearsplit, c2a_map, capacities_wb,
                                    base_year, apply_changes):
-    """V3 sweep: TotalTechnologyAnnualActivityLowerLimit must be ≤ max_activity.
+    """V3 sweep: flag/haircut TotalTechnologyAnnualActivityLowerLimit above max_activity.
 
-    Returns list of dicts with diagnostic data and (if apply_changes)
-    writes the haircut value back to the sheet.
+    For each tech with an ActivityLowerLimit row, compares the stored value against
+    max_activity(y) = max_capacity(y) * AvailabilityFactor * CapacityToActivityUnit *
+    Sum(CapacityFactor * YearSplit); techs whose max_capacity is unbounded (open
+    MaxCapacityInvestment) are skipped as vacuous.
+
+    Args:
+        ws: openpyxl worksheet for sheet_name ("Secondary Techs" or "Demand Techs").
+        sheet_name: name of ws, echoed into each issue dict.
+        cols: column index map from index_target_sheet() (uses cols["proj_mode"]).
+        ymap: {year: column index} map from index_target_sheet().
+        tech_to_row_by_param: {param_name: {tech_upper: row}} from index_target_sheet();
+            must include an entry for ACT_LOWER_PARAM.
+        oplife_map: {tech_upper: operational_life_years} from load_operational_life().
+        yearsplit: {year: {timeslice: fraction}} from load_yearsplit().
+        c2a_map: {tech_upper: CapacityToActivityUnit} from load_capacity_to_activity_unit().
+        capacities_wb: openpyxl Workbook holding the "Capacities" sheet; passed to
+            load_capacity_factor() once per tech that has an ActivityLowerLimit row.
+        base_year: model reference year (int) or None; used to set calibration_impact.
+        apply_changes: when True, writes the haircut value (max_activity *
+            ACT_LOWER_HAIRCUT) and sets Projection.Mode to "User defined" back into ws.
+
+    Returns:
+        List of issue dicts (target_sheet, tech, year, row, col, residual, af, c2a,
+        ann_cf, max_capacity, max_activity, old_lower, new_lower, gap,
+        calibration_impact, old_mode).
+
+    Side effects:
+        When apply_changes=True, mutates ws in place for the affected cells; when
+        year == base_year the rewritten value feeds the model's calibration year
+        (flagged via calibration_impact=True on that issue). Does not save the
+        workbook to disk — the caller is responsible for that.
     """
     al_rows = tech_to_row_by_param.get(ACT_LOWER_PARAM, {})
     issues = []

@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-Shared configuration loader for country and technology data.
-Single source of truth: Config_country_codes.yaml
+"""Load Config_country_codes.yaml once and expose cached accessors for its sections.
 
-Author: Climate Lead Group, Andrey Salazar-Vargas
+Single source of truth for country/ISO mappings, OLADE name mappings, technology-type
+helpers and per-run flags used across A0-A3 and the D-tools. The YAML is parsed on the
+first accessor call and cached in the module-level _cached_config for the rest of the
+process.
+
+Inputs:
+    inputs/config/Config_country_codes.yaml (via relac_paths.CONFIG_COUNTRY_CODES)
+Usage:
+    from common.Z_AUX_config_loader import get_countries, get_country_names, ...
+Notes:
+    - _cached_config is a module-level cache; changes to the YAML during a run are not
+      picked up without restarting the process.
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 import yaml
 import unicodedata
