@@ -1,17 +1,25 @@
-"""
-Migrate Old Inputs to New Model Structure
+"""Historical one-shot migrator from the legacy Old_Inputs/ model to the current structure.
 
-This script migrates data from Old_Inputs/ to the current model files,
-applying technology name transformations (CCG+OCG -> NGS, suffix removal, etc.)
-based on Config_tech_equivalences.yaml and Tech_Country_Matrix.xlsx.
+Migrates data from `inputs/reference/Old_Inputs/` into the current per-scenario A-O_*.xlsx
+workbooks, applying technology-name transformations (CCG+OCG -> NGS, suffix removal, etc.)
+driven by `Config_tech_equivalences.yaml` and `Tech_Country_Matrix.xlsx`. Not part of the
+normal A0-A3 chain; kept for legacy transitions only.
 
+Inputs:
+    inputs/reference/Old_Inputs/** (via P.OLD_INPUTS)
+    inputs/data/Tech_Country_Matrix.xlsx (via P.DATA)
+    inputs/config/Config_tech_equivalences.yaml (via P.CONFIG_TECH_EQUIVALENCES)
+    inputs/config/Config_country_codes.yaml (via P.CONFIG_COUNTRY_CODES)
+Outputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_*.xlsx (via P.A1_OUTPUTS)
+    inputs/A2_Extra_Inputs/A-Xtra_Storage.xlsx (via P.A2_EXTRA_INPUTS)
+    outputs/logs/migration_log_<timestamp>.txt (via P.LOGS)
 Usage:
     python scripts/pipeline/A3_migrate_old_inputs_CLG.py [--dry-run]
-
-Options:
-    --dry-run    Show what would be migrated without making changes
-
-Author: Climate Lead Group, Andrey Salazar-Vargas
+Notes:
+    - `--dry-run` reports what would be migrated without writing any file.
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 import openpyxl
 import yaml

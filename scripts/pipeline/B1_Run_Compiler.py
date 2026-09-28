@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 13 09:02:18 2025
+"""Drive B1_Compiler.py once per discovered scenario, the `preprocess` DVC stage.
 
-@author: ClimateLeadGroup, Andrey Salazar-Vargas
+Discovers `A1_Outputs_*` scenario folders under `inputs/A1_Outputs/`, then for each
+scenario suffix: sets `xtra_scen.Main_Scenario` in `Config_MOMF_T1_A.yaml` to that
+scenario and runs `B1_Compiler.py` (which also runs B1b validation on that scenario's
+workbook). The YAML is backed up before the loop and restored from the backup afterward,
+even if a scenario fails.
 
-
-Run scenarios by:
-1) Discovering folders starting with 'A1_Outputs_' in the same directory as this script.
-2) Building a list with the suffix after 'A1_Outputs_'.
-3) Iterating the list:
-   - Update xtra_scen.Main_Scenario in 'Config_MOMF_T1_A.yaml' to the current scenario.
-   - Execute 'B1_Compiler.py'.
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_*/ (folder names, via P.A1_OUTPUTS)
+    inputs/config/Config_MOMF_T1_A.yaml (via P.CONFIG_A)
+Outputs:
+    inputs/config/Config_MOMF_T1_A.yaml, modified then restored (a .bak backup is used
+        and removed on restore)
+    outputs/A2_Output_Params/ (via B1_Compiler.py, invoked as a subprocess)
+Usage:
+    python -u scripts/pipeline/B1_Run_Compiler.py
 Notes:
-- All referenced files are assumed to be in the same folder as this script.
-- The YAML file is backed up before modifications and restored at the end.
+    - All referenced files are assumed to be in the same folder as this script.
+    - The YAML file is backed up before modifications and restored at the end.
+Authors:
+    2025-08-13, ClimateLeadGroup, Andrey Salazar-Vargas
 """
 
 from pathlib import Path
@@ -155,6 +162,15 @@ def run_compiler(script_dir: Path) -> int:
 
 
 def main():
+    """Back up the YAML, run B1_Compiler.py once per discovered scenario, then restore it.
+
+    For each scenario suffix found by `list_scenario_suffixes`, updates
+    `xtra_scen.Main_Scenario` in `Config_MOMF_T1_A.yaml` and runs `run_compiler`; failures
+    (YAML update or a non-zero compiler exit code) are logged and the loop continues with
+    the next scenario. The original YAML is always restored from its `.bak` backup in a
+    `finally` block. Calls `sys.exit` if the YAML or `B1_Compiler.py` are missing, or if no
+    `A1_Outputs_*` folders are found.
+    """
     # Resolve base directory (same folder as this script)
     script_dir = Path(__file__).resolve().parent
 

@@ -1,27 +1,40 @@
-"""
-Pre-solver validation for A-O_Parametrization.xlsx.
+"""Detect and optionally auto-fix infeasibility-prone data in A-O_Parametrization.xlsx.
 
-Detects three classes of infeasibility-prone data BEFORE B1_Compiler reads
-the workbook (and BEFORE B2 emits the .txt for glpsol). For each class
-shows the auto-fix formula and asks the user before writing.
+Runs BEFORE B1_Compiler reads the workbook (and BEFORE B2 emits the .txt for glpsol).
+Checks the "Secondary Techs" and "Demand Techs" sheets for three fixable classes of
+infeasibility, plus a read-only coverage warning, showing the auto-fix formula and
+asking the user before writing (unless run non-interactively):
 
-Validations:
     V1. Per-year:    TotalAnnualMinCapacityInvestment(y) >= TotalAnnualMaxCapacityInvestment(y)
                      => Max_inv(y) = Min_inv(y) * 1.01
-    V2. Cumulative:  TotalAnnualMaxCapacity(y) <= ResidualCapacity(y) + Σ Min_inv(y') in [y-OL+1, y]
-                     => Max_tot(y) = (Residual + ΣMin) * 1.01
-    V3. Activity:    TotalTechnologyAnnualActivityLowerLimit(y) > max_activity(y)
-                     where max_activity = max_capacity × AvailabilityFactor × CapacityToActivityUnit × Σ(CF·YS)
+    V2. Cumulative:  TotalAnnualMaxCapacity(y) <= ResidualCapacity(y)
+                     + Sum Min_inv(y') for y' in [y-OL+1, y]
+                     => Max_tot(y) = (Residual + SumMin) * 1.01
+    V3. Activity:    TotalTechnologyAnnualActivityLowerLimit(y) > max_activity(y), where
+                     max_activity = max_capacity x AvailabilityFactor x CapacityToActivityUnit
+                     x Sum(CF x YS)
                      => ActivityLowerLimit(y) = max_activity(y) * 0.99
+    V4. Coverage:    best-effort sweep of activity-upper-limit fraction coverage vs demand;
+                     reported only, no auto-fix.
 
+Inputs:
+    A-O_Parametrization.xlsx of the target scenario (via P.scenario_dir(scenario) or
+        --xlsx)
+    inputs/config/Config_MOMF_T1_A.yaml, Config_MOMF_T1_AB.yaml (base_year and other
+        settings, best-effort)
+Outputs:
+    same workbook, in place (a timestamped backup is written first)
+    a CSV validation report per run (see `_write_report`)
 Usage:
     # Standalone CLI
     python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU
     python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --report-only
     python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --auto-fix-all
     python scripts/pipeline/B1b_Pre_solver_validation.py --xlsx path/to/A-O_Parametrization.xlsx
+    python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --skip-v3
+    python scripts/pipeline/B1b_Pre_solver_validation.py --scenario BAU --modify-from-year 2026
 
-    # Imported from B1_Compiler.py
+    # Imported from B1_Compiler.py and called by A3_process.py
     from B1b_Pre_solver_validation import run as pre_solver_validate
     any_fix, abort = pre_solver_validate(scenario, xlsx_path, interactive=True)
 """
@@ -517,6 +530,16 @@ def _run_v4_coverage(scenario, xlsx_path):
 # CLI
 # -------------------------------------------------------------------
 def main():
+    """CLI entry point: parse arguments, resolve the target xlsx, and call `run`.
+
+    Requires `--scenario` or `--xlsx` (derives the missing one from the other). Maps
+    `--non-interactive`/`--auto-fix-all`/`--report-only` (mutually exclusive) and
+    `--skip-v3`/`--modify-from-year` onto the matching `run()` keyword arguments.
+
+    Returns:
+        0 on success (or when no abort was requested), 1 if `run` reports `abort=True`,
+        2 if the scenario's default xlsx path cannot be located.
+    """
     ap = argparse.ArgumentParser(description="Pre-solver validation for A-O_Parametrization.xlsx")
     ap.add_argument("--scenario", help="Scenario name (e.g. BAU). Used to derive default xlsx path.")
     ap.add_argument("--xlsx", help="Override xlsx path directly.")

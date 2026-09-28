@@ -1,8 +1,31 @@
 # -*- coding: utf-8 -*-
-"""
-Created on 2025
+"""Rebuild the per-scenario A-O_*.xlsx workbooks from the raw OSeMOSYS CSVs.
 
-@author: ClimateLeadGroup, Andrey Salazar-Vargas
+First A-stage script. Reads the raw OG CSVs, normalizes temporal profiles, applies
+country-code fixes, the tech-country matrix (A0's output), NGS unification, region
+consolidation and PWR technology cleanup/merge, then rebuilds the "A-O_Demand",
+"A-O_Parametrization", "A-Xtra_Emissions", "A-O_AR_Model_Base_Year", "A-O_AR_Projections"
+and "A-Xtra_Storage" workbooks per scenario from the templates in `Miscellaneous/`, and
+rewrites the OG CSVs (including EMISSION.csv) that B1_Compiler.py reads.
+
+Inputs:
+    inputs/OG_csvs_inputs/*.csv (via P.OG_CSVS_INPUTS)
+    inputs/data/Tech_Country_Matrix.xlsx (built by A0_generate_tech_country_matrix.py)
+    inputs/config/*.yaml (region consolidation, PWR cleanup mode, first year, via
+        common.Z_AUX_config_loader)
+    inputs/Miscellaneous/A-O_*.xlsx, A-Xtra_*.xlsx templates (via P.MISCELLANEOUS)
+Outputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_*.xlsx (via P.A1_OUTPUTS)
+    inputs/A2_Extra_Inputs/A-Xtra_*.xlsx (via P.A2_EXTRA_INPUTS)
+    inputs/OG_csvs_inputs/*.csv, overwritten in place
+Usage:
+    python scripts/pipeline/A1_Pre_processing_OG_csvs.py
+Notes:
+    - Re-running this script rebuilds every A-O_*.xlsx from the templates and discards
+      the parametrization built by A2, A3_process, D1/D2, B1b and any manual edit
+      (see commit aeb53b3).
+Authors:
+    2025, ClimateLeadGroup, Andrey Salazar-Vargas
 """
 
 import os

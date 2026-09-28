@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-Technology-Country Matrix Generator
-====================================
-Generates an Excel configuration file that allows users to specify which
-technology-country combinations should be processed by A1_Pre_processing_OG_csvs.py.
+"""Build the Tech_Country_Matrix.xlsx configuration workbook consumed by A1.
 
-This script creates:
-1. A matrix sheet where each cell indicates if a tech-country combo is enabled
-2. An NGS unification configuration sheet (CCG + OCG → NGS)
-3. Aggregation rules following the same pattern as region consolidation
+Generates an Excel file that lets users mark which technology-country combinations
+A1_Pre_processing_OG_csvs.py should include. The workbook has five sheets: "Matrix"
+(YES/NO per tech x country, implausible combinations pre-filled NO and highlighted),
+"NGS_Unification" (CCG + OCG -> NGS toggle), "Aggregation_Rules" (avg/sum/disabled
+parameter lists, mirroring region_consolidation.yaml), "Tech_Reference" and
+"Country_Reference".
 
-Author: ClimateLeadGroup
+Inputs:
+    inputs/config/Config_country_codes.yaml (via P.CONFIG_COUNTRY_CODES; countries and
+        the "implausible_combinations" map)
+Outputs:
+    inputs/data/Tech_Country_Matrix.xlsx (via P.DATA)
+Usage:
+    python scripts/pipeline/A0_generate_tech_country_matrix.py
+Authors:
+    ClimateLeadGroup
 """
 
 import yaml

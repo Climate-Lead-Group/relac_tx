@@ -1,10 +1,30 @@
 # -*- coding: utf-8 -*-
-"""
-Created on 2021
-@author: Luis Victor-Gallardo
+"""Compile the A-O workbooks and A2_Extra_Inputs into OSeMOSYS parameter CSVs.
 
-Updated on 2025
-@author: ClimateLeadGroup, Andrey Salazar-Vargas
+Flat script (no functions), run for one scenario at a time via `B1_Run_Compiler.py`,
+which sets `xtra_scen.Main_Scenario` in `Config_MOMF_T1_A.yaml` before each call. First
+runs `B1b_Pre_solver_validation.run` on the scenario's A-O_Parametrization.xlsx (unless
+`pre_solver_validation: false` in the config), aborting if the user rejects the fixes
+interactively. Then reads the A-O workbooks, assembles the OSeMOSYS parameter DataFrames
+per sheet, writes back "completed" (rounded) copies of the workbooks for user review, and
+writes each parameter and structure list as a CSV under `A2_output_main_scen/<scenario>/`
+(and again per name in `Other_Scenarios`, with the `Scenario` column relabeled).
+
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_*.xlsx (path built from `A1_outputs`,
+        `Main_Scenario` and the `Print_*` keys in the config)
+    inputs/A2_Extra_Inputs/** (via the config's extra-input keys)
+    inputs/OG_csvs_inputs/EMISSION.csv (via P.OG_CSVS_INPUTS)
+    inputs/config/Config_MOMF_T1_A.yaml (via P.CONFIG_A)
+Outputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_*_Completed.xlsx (rounded copies, for
+        review)
+    outputs/A2_Output_Params/<scenario>/*.csv (and per scenario in `Other_Scenarios`)
+    outputs/A2_Structure_Lists.xlsx (`params['Print_A2_Struct_List']`)
+Usage:
+    called by B1_Run_Compiler.py, not run directly
+Authors:
+    2021, Luis Victor-Gallardo; 2025, ClimateLeadGroup, Andrey Salazar-Vargas
 """
 import pandas as pd
 import pickle

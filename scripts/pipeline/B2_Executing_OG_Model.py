@@ -1,8 +1,50 @@
 # -*- coding: utf-8 -*-
-"""
-Created on 2025
+"""Convert A2 CSVs to an OSeMOSYS datafile per scenario, patch, solve, and concatenate.
 
-@author: ClimateLeadGroup, Andrey Salazar-Vargas
+DVC `executing` stage. Its `__main__` block runs, per scenario, in this order:
+
+1. otoole CSV -> `.txt` conversion (`process_scenario_folder`, `run_otoole_conversion`).
+2. `preprocess_data.py` (always; `run_preprocessing_script`).
+3. `inject_DaysInDayType.py` (always; `run_days_in_day_type_patcher`).
+4. `patch_storage_delay.py` -- if `storage_delay_active` (mutually exclusive with 5).
+5. `strip_storage.py` -- if `strip_storage_active`.
+6. `open_pwrbck_caps.py` -- if `open_pwrbck_active`.
+7. `patch_reserve_margin_repair_careful_xlsx.py` -- if `reserve_margin_xlsx_active`.
+8. `patch_activity_upper_limit.py` (imported, not a subprocess) -- if
+   `activity_upper_limit_active`.
+9. dispatch floors, `scripts/fix_dispatch/write_floors.py` -- if `dispatch_floors_active`
+   (gated behind `preflight_separation_active`).
+10. `sync_patched_csvs_from_txt.py` -- if `sync_patched_csvs_active`; overwrites the A2
+    otoole CSVs from the final patched `.txt`. Runs BEFORE the solve, right after the
+    patcher chain and before `generate_combined_input_file`, so the combined
+    input/output CSVs reflect what the solver actually consumes.
+11. Tx chain: `scripts/tx_chain/veg_tx_constraints.py` (`run_veg_tx_stage`, produces
+    FLOORED_VEGCON files) then the `scenario_transforms` list (cost-sensitivity scripts
+    under `scripts/tx_chain/`, `run_scenario_transforms`) -- if `veg_tx_active` /
+    `scenario_transforms` is configured.
+12. Solve (`main_executer`: builds the solver command for glpk/cbc/cplex/gurobi, runs it,
+    converts `.sol` results to CSV via otoole, then concatenates per scenario).
+13. `concatenate_all_scenarios` -- combines all scenarios into `outputs/RELAC_TX_*.csv`.
+14. `Z_AUX_capital_annualization_script.py` -- if `annualize_capital: true`.
+
+Inputs:
+    outputs/A2_Output_Params/ (via `A2_output` in the config)
+    inputs/model/osemosys_fast_preprocessed.txt (`osemosys_model`, or the storage-delay
+        model variant when `storage_delay_active`)
+    inputs/config/Config_MOMF_T1_AB.yaml (via P.CONFIG_AB; all `*_active` flags, chain
+        suffixes, solver settings), Config_MOMF_T1_A.yaml (via P.CONFIG_A; main scenario)
+Outputs:
+    outputs/Executables/<scenario>_0/* (datafile, solver output, otoole result CSVs)
+    outputs/RELAC_TX_*.csv (combined inputs/outputs/combined, via `prefix_final_files`)
+    outputs/logs/ (solver logs; also the working directory while this script runs)
+Usage:
+    python -u scripts/pipeline/B2_Executing_OG_Model.py
+Notes:
+    - This is the solver step: it can take hours, overwrites `outputs/`, and requires
+      explicit user approval before being run (never run it without that approval).
+    - `sync_patched_csvs_from_txt.py` runs BEFORE the solve, not after it.
+Authors:
+    2025, ClimateLeadGroup, Andrey Salazar-Vargas
 """
 
 import os
@@ -845,7 +887,27 @@ def get_config_main_path(here, base_folder):
     return os.path.join(ROOT, base_folder)
 
 def main_executer(params, scenario_name, HERE):
-    
+    """Solve one scenario's datafile and convert/concatenate its results.
+
+    Builds and runs the solver command for the configured `params['solver']`
+    (glpk/cbc/cplex/gurobi, or an LP matrix dump via `create_matrix`) against
+    `chained_base(params, scenario_name)`'s `.txt` in `Executables/<scenario>_0/`, then
+    converts the `.sol` output to CSV via `otoole results` and, if `concat_otoole_csv`,
+    runs `concat_csvs` to produce `<scenario>_0_Output.csv`. Skips the solve/convert
+    steps when `execute_model` and `create_matrix` are both false. Runs in a separate
+    `multiprocessing.Process` per scenario when `params['parallel']` is set.
+
+    Args:
+        params: parsed Config_MOMF_T1_AB.yaml mapping (solver settings, thread/seed
+            options, `execute_model`, `create_matrix`, `concat_otoole_csv`, etc.).
+        scenario_name: scenario to solve (matches an `Executables/<scenario_name>_0/`
+            folder).
+        HERE: `scripts/pipeline` directory, used to locate `concat_csvs`.
+
+    Side effects:
+        Runs the solver as a subprocess (this is the multi-hour step); writes/overwrites
+        the `.sol`/`.lp`/output CSVs under `Executables/<scenario_name>_0/`.
+    """
     model_file = os.path.join(ROOT, params['osemosys_model'])
     folder_scenario = os.path.join(ROOT, params['executables'], scenario_name + '_0')                             
     

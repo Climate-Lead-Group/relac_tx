@@ -1,6 +1,4 @@
-"""A3_process.py
-==============
-Orchestrator for the A3 modification workflow in relac_tx, multi-scenario aware.
+"""Orchestrate the A3 modification workflow in relac_tx, multi-scenario aware.
 
 For each scenario folder under `A1_Outputs/A1_Outputs_<scenario>/`, this
 orchestrator runs three steps in order against the scenario's
@@ -72,12 +70,24 @@ The lid script writes a JSON change log inside each scenario dir
 recovery is via git. B1b makes its own timestamped backup file alongside the
 xlsx.
 
+Inputs:
+    inputs/config/A3_process/lid_rule.yaml (via P.A3_CONFIG; lowerlimit_scenarios,
+        historical_sync_through, historical_sync_protect_from_2026,
+        historical_sync_tx_follow_bau)
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx,
+        A-O_Demand.xlsx (existence checked; modified by the invoked sub-scripts)
+Outputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx, in place
+        (written by the invoked rules/extend/B1b/sync sub-scripts, not by this
+        module directly)
 Usage:
     python scripts/pipeline/A3_process.py                  # runs all scenarios
     python scripts/pipeline/A3_process.py --scenario BAU   # runs just BAU
     python scripts/pipeline/A3_process.py --scenario BAU,INV
+    python scripts/pipeline/A3_process.py --rules-script NAME.py  # override the lid script
     python scripts/pipeline/A3_process.py --list           # show discovered scenarios
     python scripts/pipeline/A3_process.py --skip-validation # skip B1b auto-fix step
+    python scripts/pipeline/A3_process.py --force-overwrite # let the lid overwrite prior values
     python scripts/pipeline/A3_process.py --skip-historical-sync # skip final BAU harmonization
 """
 from __future__ import annotations
@@ -348,6 +358,12 @@ def discover_scenarios() -> list[str]:
 
 
 def parse_cli_args() -> argparse.Namespace:
+    """Build the CLI parser and parse `sys.argv`.
+
+    Returns:
+        Namespace with `scenario`, `rules_script`, `list`, `skip_validation`,
+        `force_overwrite` and `skip_historical_sync` (see module Usage: for each flag).
+    """
     p = argparse.ArgumentParser(
         prog="A3_process.py",
         description=__doc__,
@@ -413,6 +429,28 @@ def run_for_scenario(scenario: str, rules_script: str,
                      force_overwrite: bool = False,
                      apply_lowerlimit: bool = False,
                      include_types: set[str] | None = None) -> None:
+    """Run the per-scenario A3 step chain: lid rule, optional lowerlimit extend, B1b.
+
+    Invokes, as subprocesses against `scenario`'s A-O_Parametrization.xlsx: `rules_script`
+    (always), `extend_lowerlimits_pwr.py` (only if `apply_lowerlimit`, scoped to
+    `include_types` or all PWR techs), then `B1b_Pre_solver_validation.py --auto-fix-all`
+    (unless `skip_validation`; its V3 feasibility relaxation always runs). All three are
+    called with `--modify-from-year MODIFY_FROM_YEAR` so years before it are untouched.
+    Exits the process (`sys.exit`) if the scenario folder, its workbooks or `rules_script`
+    are missing.
+
+    Args:
+        scenario: scenario name (folder suffix under `A1_Outputs_`).
+        rules_script: filename of the lid rule script under `rules_scripts/`.
+        skip_validation: if True, skip the B1b auto-fix step.
+        force_overwrite: forwarded as `--force-overwrite` to the lid and extend scripts.
+        apply_lowerlimit: whether to run `extend_lowerlimits_pwr.py` for this scenario.
+        include_types: PWR type codes to scope the lowerlimit extension to; `None` means
+            all PWR techs.
+
+    Side effects:
+        Modifies the scenario's A-O_Parametrization.xlsx in place via the sub-scripts.
+    """
     input_dir = A1_OUTPUTS_DIR / f"{SCENARIO_PREFIX}{scenario}"
     if not input_dir.is_dir():
         sys.exit(f"ERROR: scenario folder not found: {input_dir}")
@@ -515,6 +553,18 @@ def run_historical_sync(scenario: str, through_year: int,
 
 
 def main() -> int:
+    """CLI entry point: run the A3 workflow for the requested scenarios.
+
+    Discovers scenario folders, resolves the requested subset (or all of them),
+    loads `lowerlimit_scenarios` and the historical-sync settings from `lid_rule.yaml`,
+    runs `run_for_scenario` for each scenario in turn, then (unless
+    `--skip-historical-sync`) runs `run_historical_sync` for every scenario listed under
+    `historical_sync_through` that was part of this run (BAU itself is never a target).
+
+    Returns:
+        0 on success; exits the process directly via `sys.exit` on any fatal error
+        (unknown scenario, missing folder, missing sub-script).
+    """
     args = parse_cli_args()
 
     if not A3_PROCESS_DIR.is_dir():

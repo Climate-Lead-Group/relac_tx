@@ -1,8 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-Created on 2025
+"""Add transmission/dispatch technologies and remap ELC fuel codes for every scenario.
 
-@author: Climate Lead Group, Javier Monge-Matamoros, Andrey Salazar-Vargas
+Second A-stage script. For each (country, region) pair from the YAML country list, adds
+RNWTRN/RNWRPO/RNWNLI/PWRTRN/TRNRPO/TRNNLI (and DSPTRN when `enable_dsptrn`) technology
+entries to the "Secondary"/"Demand Techs" sheets and remaps `ELC*` fuel codes (00/01
+renewable/non-renewable plant output; 02 transmission line; 03/04 dispatch-ready /
+imported electricity when DSPTRN is enabled).
+
+Inputs:
+    inputs/config/Config_country_codes.yaml (country/region pairs, per-tech YAML config,
+        `enable_dsptrn`), via P.CONFIG_COUNTRY_CODES
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_*.xlsx
+Outputs:
+    same A-O_*.xlsx workbooks, in place
+Usage:
+    python scripts/pipeline/A2_AddTx.py [--yaml PATH] [--base PATH] [--proj PATH]
+        [--param PATH] [--demand PATH]
+Authors:
+    2025, Climate Lead Group, Javier Monge-Matamoros, Andrey Salazar-Vargas
 """
 
 import argparse
@@ -80,6 +95,25 @@ def ensure_columns(df, cols):
 # 1. Process A-O_AR_Model_Base_Year.xlsx
 # ---------------------------------------------------------------------------
 def process_base_year(path, pairs, enable_dsptrn=False):
+    """Rewrite fuel codes and add transmission techs in A-O_AR_Model_Base_Year.xlsx.
+
+    In the "Secondary" sheet, remaps `Fuel.O`/`Fuel.I` of PWR* output and PWRLDS/PWRSDS
+    storage-mode rows to `ELC<country><region>00` (renewable) or `...01` (non-renewable),
+    and, when `enable_dsptrn`, rewrites TRN interconnection techs' fuel codes from
+    `...01`/`...02` to `...03` (input side) / `...04` (output side). Then rebuilds the
+    "Demand Techs" sheet from scratch with one RNWTRN/RNWRPO/RNWNLI/PWRTRN/TRNRPO/TRNNLI
+    entry per (country, region) pair, plus a two-mode DSPTRN entry when `enable_dsptrn`.
+
+    Args:
+        path: path to A-O_AR_Model_Base_Year.xlsx; opened for append/overlay and
+            overwritten in place.
+        pairs: list of (country, region) code tuples.
+        enable_dsptrn: if True, add DSPTRN dispatch entries and remap interconnection
+            fuel codes to the 03/04 scheme.
+
+    Side effects:
+        Overwrites the "Secondary" and "Demand Techs" sheets of `path` in place.
+    """
     print(f"Processing '{path}' …")
     with pd.ExcelWriter(path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
         # ---------- Secondary sheet ----------
@@ -243,6 +277,25 @@ def process_base_year(path, pairs, enable_dsptrn=False):
 # 2. Process A-O_AR_Projections.xlsx
 # ---------------------------------------------------------------------------
 def process_projections(path, pairs, enable_dsptrn=False):
+    """Rewrite fuel codes and add transmission techs in A-O_AR_Projections.xlsx.
+
+    Same fuel-code remap as `process_base_year` but keyed on a single "Fuel" column plus
+    a "Direction" column ('Input'/'Output') instead of separate `Fuel.I`/`Fuel.O` columns.
+    Rebuilds the "Demand Techs" sheet with one Input row and one Output row per
+    RNWTRN/RNWRPO/RNWNLI/PWRTRN/TRNRPO/TRNNLI tech and per year column, each with
+    `Projection.Mode` set to "User defined"; adds four DSPTRN rows per pair (two modes x
+    Input/Output) when `enable_dsptrn`.
+
+    Args:
+        path: path to A-O_AR_Projections.xlsx; opened for append/overlay and overwritten
+            in place.
+        pairs: list of (country, region) code tuples.
+        enable_dsptrn: if True, add DSPTRN dispatch entries and remap interconnection
+            fuel codes to the 03/04 scheme.
+
+    Side effects:
+        Overwrites the "Secondary" and "Demand Techs" sheets of `path` in place.
+    """
     print(f"Processing '{path}' …")
     with pd.ExcelWriter(path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
         # ---------- Secondary ----------
@@ -432,6 +485,28 @@ PARAM_LIST = [
 ]
 
 def process_parametrization(path, pairs, yaml_data, enable_dsptrn=False):
+    """Add transmission techs to A-O_Parametrization.xlsx's FHP and Demand Techs sheets.
+
+    Assigns each transmission tech (RNWTRN/RNWRPO/RNWNLI/TRNRPO/TRNNLI/PWRTRN, plus DSPTRN
+    when `enable_dsptrn`) a sequential `Tech.ID` starting at 1, independent of the IDs used
+    by non-transmission techs already in "Fixed Horizon Parameters" (FHP). For each tech:
+    writes/updates `CapacityToActivityUnit` and `OperationalLife` in FHP from `yaml_data`;
+    drops any pre-existing "Demand Techs" rows for that tech and re-adds one row per
+    parameter in `PARAM_LIST` (CapitalCost, FixedCost, ResidualCapacity,
+    TotalAnnualMinCapacityInvestment, TotalAnnualMaxCapacity,
+    TotalAnnualMaxCapacityInvestment), with `Projection.Mode` set to "User defined" when
+    `yaml_data` supplies a value for that tech/parameter, else "EMPTY".
+
+    Args:
+        path: path to A-O_Parametrization.xlsx; opened for append/replace and overwritten
+            in place.
+        pairs: list of (country, region) code tuples.
+        yaml_data: parsed YAML config mapping tech prefix to its parameter values.
+        enable_dsptrn: if True, also generate DSPTRN entries.
+
+    Side effects:
+        Overwrites the "Fixed Horizon Parameters" and "Demand Techs" sheets of `path`.
+    """
     print(f"Processing '{path}' …")
 
     # ───── 1. Load sheets ───────────────────────────────────────────────────
@@ -633,6 +708,13 @@ def list_scenario_suffixes(base_dir: Path) -> List[str]:
 # CLI glue
 # ---------------------------------------------------------------------------
 def main():
+    """CLI entry point: run the four `process_*` steps for every scenario folder.
+
+    For each `A1_Outputs_<scenario>` folder under `inputs/A1_Outputs/`, parses
+    `--yaml`/`--base`/`--proj`/`--param`/`--demand` (defaulted to that scenario's files),
+    loads the country/region pairs and YAML tech config, then calls `process_base_year`,
+    `process_projections`, `process_parametrization` and `process_demand` in that order.
+    """
 
     script_dir = Path(__file__).resolve().parent
     OUTPUT_FOLDER = P.A1_OUTPUTS
