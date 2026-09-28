@@ -1,5 +1,19 @@
 # scripts/tests/test_relac_paths.py
-"""Cada constante de relac_paths apunta a algo que existe en el repo (tras el git mv)."""
+"""Assert every relac_paths constant exercised here points at something that exists.
+
+Checks MUST_EXIST (a representative sample of path constants across config, model inputs,
+pipeline scripts and figures scripts) plus a few derived-path identities (executables_dir,
+FIGURES_DASHBOARD/_REPORT/_PRESENTATION/_SCRIPTS).
+
+Inputs:
+    the files/dirs listed in MUST_EXIST (repo-wide; see common/relac_paths.py constants)
+Usage:
+    python scripts/tests/test_relac_paths.py   (exit 0 = OK)
+Notes:
+    - Written for the inputs/scripts/outputs restructure (post git-mv), to catch stale paths.
+    - Also calls P.ensure_output_dirs(), which creates any missing folders under outputs/
+      as a side effect of "just checking" the paths.
+"""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # -> scripts/
@@ -23,6 +37,7 @@ MUST_EXIST = [
 ]
 
 def main() -> int:
+    """Check MUST_EXIST paths and derived-path identities; creates missing output folders."""
     missing = [p for p in MUST_EXIST if not p.exists()]
     for p in missing:
         print("FALTA:", p)

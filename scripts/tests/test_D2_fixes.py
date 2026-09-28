@@ -1,11 +1,18 @@
-"""
-Verification tests for D2_update_secondary_techs.py fixes.
+"""Verification tests for D2_update_secondary_techs.py's fixes.
 
-Reads A-O_Parametrization.xlsx output files and verifies that each fix
-produces the expected results. Run after D2_update_secondary_techs.py.
+Reads one scenario's A-O_Parametrization.xlsx "Secondary Techs" sheet and checks FIX 1
+(investment Projection.Mode), FIX 3 (WAS ResidualCapacity preserved) and FIX 4 (no spurious
+UpperLimit/LowerLimit constraints, Projection.Mode consistency) as pass/fail tests; FIX 2
+(LowerLimit sums for 2025 per fuel) is printed as an informational diagnostic only.
 
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx ("Secondary Techs" sheet)
 Usage:
-    python scripts/tests/test_D2_fixes.py
+    python scripts/tests/test_D2_fixes.py   (exit 0 = OK)
+Notes:
+    - Run after D2_update_secondary_techs.py.
+    - Picks "BAU" as the test scenario when present under inputs/A1_Outputs/, else the
+      first scenario folder found.
 """
 import sys
 import openpyxl
@@ -250,6 +257,15 @@ def test_fix2_lower_limit_diagnostic(rows):
 
 
 def run_tests():
+    """Run FIX 1, FIX 3 and FIX 4 (pass/fail) plus FIX 2 (informational) on one scenario.
+
+    Picks a scenario under inputs/A1_Outputs/ (prefers "BAU"), loads its "Secondary Techs"
+    sheet, prints one pass/fail block per test plus a final LowerLimit diagnostic table.
+
+    Returns:
+        0 if FIX 1, FIX 3 and FIX 4 all pass (FIX 2 never fails the run) and the scenario's
+        Secondary Techs sheet was found; 1 otherwise.
+    """
     base_path = P.A1_OUTPUTS
 
     scenarios = find_scenarios(P.INPUTS)

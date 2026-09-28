@@ -1,5 +1,13 @@
 # scripts/tests/test_b2_chain_helper.py
-"""Regresion: chain_suffixes/chained_base reproducen los nombres actuales."""
+"""Regression test: B2's chain_suffixes/chained_base reproduce the current filename suffixes.
+
+Imports B2_Executing_OG_Model directly and checks that chain_suffixes() and chained_base()
+still produce the expected patcher-chain suffix strings (StorageDelayN5, OpenBCK,
+RMCarefulXLSX, FLOORED, VEGCON) and the `upto=` truncation used by run_open_pwrbck_patcher.
+
+Usage:
+    python scripts/tests/test_b2_chain_helper.py   (exit 0 = OK)
+"""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))

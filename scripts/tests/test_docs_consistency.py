@@ -1,13 +1,19 @@
 # scripts/tests/test_docs_consistency.py
-"""La documentacion de usuario no deriva del codigo.
+"""Check that user-facing documentation does not drift from the code.
 
-Comprueba, sobre docs/*.md (solo la raiz: las paginas publicadas) y README.md:
-  (a) cada ruta `scripts/**/*.py` citada existe en el repo;
-  (b) cada flag `--x` citado en la MISMA linea que un script existe en el
-      argparse de ese script (scripts sin argparse no se validan);
-  (c) cada clave top-level de inputs/config/Config_MOMF_T1_AB.yaml aparece en
-      algun doc de usuario.
-Uso:  python scripts/tests/test_docs_consistency.py   (exit 0 = OK)
+Checks, over docs/*.md (root only: the published pages) and README.md:
+  (a) every `scripts/**/*.py` path cited exists in the repo;
+  (b) every `--x` flag cited on the SAME line as a script exists in that script's
+      argparse (scripts without argparse are not validated);
+  (c) every top-level key of inputs/config/Config_MOMF_T1_AB.yaml appears in some
+      user doc.
+
+Inputs:
+    docs/*.md (root only), README.md
+    inputs/config/Config_MOMF_T1_AB.yaml
+    the scripts/**/*.py files cited in those docs (read for their argparse flags)
+Usage:
+    python scripts/tests/test_docs_consistency.py   (exit 0 = OK)
 """
 from __future__ import annotations
 

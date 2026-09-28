@@ -39,11 +39,21 @@ should PASS.
   residual diagnostic that does not affect the gate verdict. Exit code 0 if
   the gate passes, 1 otherwise.
 
+Inputs:
+    outputs/RELAC_TX*Combined_Inputs_Outputs*.csv (largest match under outputs/, via --csv
+        or relac_io.find_combined_csv())
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv
+Outputs:
+    outputs/fix_dispatch/test_floor_compliance.csv, test_cf_targets.csv,
+        test_scenario_separation.csv, test_idle_capacity.csv (non-gate mode only)
 Usage:
   python test_outputs.py                            # baseline combined CSV (default)
   python test_outputs.py --csv NEW_COMBINED.csv      # a new solve's combined CSV
   python test_outputs.py --csv NEW.csv --cf-basis total   # node-level idle incl. residual
   python test_outputs.py --csv NEW.csv --gate        # FLOOR-FIX GATE (pass/fail)
+Notes:
+    - Read-only; requires an already-solved combined inputs+outputs CSV on disk. Do not run
+      without one -- this script does not generate a solve itself.
 """
 
 from __future__ import annotations
@@ -190,6 +200,16 @@ def check_idle_capacity(cand: pd.DataFrame, out: dict, basis: str = "fleet") -> 
 
 
 def scenario_separation(out: dict) -> pd.DataFrame:
+    """Summarize one CHECK-3 diagnostic row per scenario (fossil, renewables, cost, CO2).
+
+    Args:
+        out: the dict returned by load_outputs() (uses "act_df", "cap", "cost", "emis").
+
+    Returns:
+        One row per scenario with total/average fossil PJ, renewable share (%), total
+        system cost, total CO2, and active-vs-total counts of dispatchable techs (fossil,
+        nuclear or storage; "active" means CF > IDLE_CF), sorted by scenario name.
+    """
     df = out["act_df"]
     rows = []
     for scen, g in df.groupby("Scenario"):
@@ -260,6 +280,18 @@ def residual_idle_gw_years(out: dict, cand_all: pd.DataFrame, present: list[str]
 
 
 def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
+    """Run the FLOOR-FIX GATE: 6 pass/fail checks plus one informational diagnostic.
+
+    Args:
+        cand_all: full candidate_floors.csv, one row per (scenario, tech, year) floor.
+        out: the dict returned by load_outputs().
+
+    Returns:
+        True if all 6 checks pass (feasibility, floors respected, CF target on fleet
+        basis, no backstop dispatch, BAU-vs-OPT scenario separation, no floored plant
+        idle), False otherwise. Also prints each check's verdict and the Tier-2
+        residual-idle GW-years diagnostic, which does not affect the return value.
+    """
     present = sorted({s for (s, _t, _y) in out["cap"]} & set(ALL_SCENARIOS))
     not_solved = [s for s in ALL_SCENARIOS if s not in present]
     print(f"Scenarios present in outputs: {present}")
@@ -342,6 +374,13 @@ def run_gate(cand_all: pd.DataFrame, out: dict) -> bool:
 
 
 def main():
+    """Parse CLI args, then run the FLOOR-FIX GATE or the four diagnostic checks.
+
+    Loads candidate_floors.csv and the combined CSV (--csv, or the baseline found by
+    relac_io.find_combined_csv()). With --gate, calls run_gate() and exits 0/1 on its
+    verdict; otherwise runs the four diagnostic checks and writes their CSVs under
+    outputs/fix_dispatch/.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", type=str, default=None,
                     help="Combined inputs+outputs CSV (default: baseline found in repo root)")

@@ -1,8 +1,17 @@
 # scripts/tests/test_scenario_subset.py
-"""ensure_scenario_subset / subset_is_current / load_column(scenarios=) sobre un CSV
-sintético pequeño (spec 2026-09-16 §5.2 y §7). Correr: python scripts/tests/test_scenario_subset.py
-(o pytest). OJO: importar dashboard_config autodetecta escenarios del CSV real (usa
-outputs/Figures/.scenarios_cache.json; la primera vez tarda ~1 min)."""
+"""Regression tests for dashboard_config.py / report_style.py's scenario-subset caching.
+
+Exercises ensure_scenario_subset / subset_is_current / load_column(scenarios=...) against a
+small synthetic CSV (spec 2026-09-16 §5.2 and §7).
+
+Inputs:
+    a synthetic CSV built in a temp dir by _make_csv() (not a repo file)
+Usage:
+    python scripts/tests/test_scenario_subset.py   (or pytest; exit 0 = OK)
+Notes:
+    - Importing figures.common.dashboard_config autodetects scenarios from the real combined
+      CSV (uses outputs/Figures/.scenarios_cache.json; the first time takes ~1 min).
+"""
 import io
 import json
 import os
