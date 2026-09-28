@@ -16,17 +16,20 @@ Motivation:
     Per-scenario factors live in SCENARIO_CONFIG. OPT is not configured (D4 does not cap
     OPT's transmission).
 
-Rule per tech/year Y (three blocks):
+Rule per tech/year Y (three blocks, boundaries = EQUAL_THROUGH_YEAR=2026,
+FLAT_FACTOR_THROUGH_YEAR=2030, CAP_START_YEAR/CAP_END_YEAR=2031/2050):
 
-    2023..2025  ->  cell left EMPTY (None): INV equals BAU (no cap). These are the
-                    historical/observed years; A3's final sync pins them to BAU anyway.
-                    Any value left by a previous run is cleared.
+    2023..2026  ->  cell left EMPTY (None): INV equals BAU (no cap). These are the
+                    historical/observed years plus 2026, aligned with
+                    TX_DIVERGE_YEAR=2027 in sync_historical_from_bau.py; A3's final sync
+                    pins them to BAU anyway. Any value left by a previous run is cleared.
 
-    2026..2030  ->  cap = NewCapacity_BAU[tech, Y] * 1.0     [GW]
+    2027..2030  ->  cap = NewCapacity_BAU[tech, Y] * 1.0     [GW]  (FLAT_FACTOR)
                     Cap = exactly what BAU built (no discount). This is where INV's
                     transmission starts diverging from BAU. Generation and the rest of the
-                    scenario stay = BAU through 2030 because sync_historical_from_bau.py
-                    was modified to NOT overwrite these TRN rows from 2026 onward.
+                    scenario stay = BAU through 2030 because sync_historical_from_bau.py's
+                    TX protection (TX_DIVERGE_YEAR=2027) stops overwriting these TRN rows
+                    from 2027 onward.
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
                     factor(Y) is linear between the scenario's cap_start_factor and
@@ -41,7 +44,7 @@ Rule per tech/year Y (three blocks):
                     fix_inv_transmission_caps.py; it now lives here as the single source
                     of truth for INV's transmission cap.)
 
-For 2026..2050, where BAU built 0 (or has no data) this writes 0, forbidding investment
+For 2027..2050, where BAU built 0 (or has no data) this writes 0, forbidding investment
 that year; the PWRBCK backstop (same node 02) covers the gap.
 
 Only TotalAnnualMaxCapacityInvestment is touched; TotalAnnualMinCapacityInvestment is not
