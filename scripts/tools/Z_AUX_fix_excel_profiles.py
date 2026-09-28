@@ -1,14 +1,22 @@
-"""
-Script to normalize demand profiles in Excel files A-O_Demand.xlsx
+"""Normalize SpecifiedDemandProfile sums to exactly 1.0 per country/year.
 
-This script fixes the SpecifiedDemandProfile sums in the "Profiles" sheet
-of A-O_Demand.xlsx files so they sum to exactly 1.0 per country/year.
+Fixes the "Profiles" sheet of A-O_Demand.xlsx: some countries have profile sums of 1.01 or
+0.99 instead of 1.0, which breaks the OSeMOSYS model. For each Fuel/Tech and year column,
+rescales every timeslice value by dividing by the current sum. Live: `normalize_excel_profiles`
+is imported by `A3_migrate_old_inputs_CLG.py` as part of its legacy migration path (see
+`scripts/pipeline/README.md` for that script's historical-one-shot status).
 
-Problem: Some countries have profiles that sum to 1.01 or 0.99 instead of 1.0,
-which causes errors in the OSeMOSYS model.
-
-Author: Claude Code
-Date: 2026-02-03
+Inputs:
+    A-O_Demand.xlsx of each scenario hardcoded in main() ("BAU", "NDC", "NDC+ELC",
+        "NDC_NoRPO"; sheet "Profiles", column A timeslice, column C Fuel/Tech,
+        columns J+ years 2023-2050)
+Outputs:
+    same A-O_Demand.xlsx file, in place (a timestamped backup is written first)
+Usage:
+    python scripts/tools/Z_AUX_fix_excel_profiles.py
+    Also imported by A3_migrate_old_inputs_CLG.py (normalize_excel_profiles).
+Authors:
+    2026 Claude Code
 """
 
 import openpyxl

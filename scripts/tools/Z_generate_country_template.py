@@ -1,21 +1,27 @@
-"""
-Template generator for adding a new country to OG_csvs_inputs.
+"""Generate the minimum CSV set for a new country in OG_csvs_inputs, from a reference country.
 
-Creates a set of CSV files with the minimum required data structure
-for a new country, using an existing country as a reference template.
+Country-management tool (see `docs/country-management.md`). Creates a set of CSV files with
+the minimum required data structure for a new country, copied from an existing reference
+country's rows in `OG_csvs_inputs`. Does NOT modify the original input files; the generated
+CSVs go to an output directory for manual review before merging. Two modes: YAML mode (default,
+no `--new`) processes every entry of the `template_generation` list in
+`Config_country_codes.yaml`; CLI mode (`--new` given) processes a single country, with CLI
+flags overriding the YAML's first entry.
 
+Inputs:
+    inputs/OG_csvs_inputs/*.csv (SETS_FILES, PARAM_FILES_WITH_TECH/FUEL/STORAGE)
+    inputs/config/Config_country_codes.yaml ("template_generation" section)
+Outputs:
+    new CSVs under the output directory (default `templates/<new_code>`, or
+        `templates/<new_code><region>` for a multi-region country), for manual review
 Usage:
-    python scripts/tools/Z_generate_country_template.py                  # reads from Config_country_codes.yaml
-    python scripts/tools/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY   # CLI overrides
-
-Configure the 'template_generation' section in Config_country_codes.yaml,
-then just run: python scripts/tools/Z_generate_country_template.py
-
-This script does NOT modify the original files in OG_csvs_inputs.
-It creates new CSV files in the output directory that can be manually
-reviewed and then merged into the input files.
-
-Author: Climate Lead Group, Andrey Salazar-Vargas
+    python scripts/tools/Z_generate_country_template.py
+        # YAML mode: reads Config_country_codes.yaml
+    python scripts/tools/Z_generate_country_template.py --new NCC --ref ARG -i BOL PRY
+        [--output DIR] [--region R] [--lat LAT] [--lon LON]
+        # CLI mode: overrides the YAML's first entry
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 
 import pandas as pd
@@ -696,6 +702,13 @@ def process_entry(new_cc, ref_cc, new_rr, ixn_raw, ixn_source,
 
 
 def main():
+    """Parse CLI args and dispatch to CLI mode or YAML mode.
+
+    CLI mode runs when --new is given (a single country, CLI flags override the YAML's first
+    entry). Otherwise, YAML mode processes every `template_generation` entry in
+    Config_country_codes.yaml and exits 1 if none are configured. Delegates the actual
+    generation to process_entry() for each country/entry.
+    """
     parser = argparse.ArgumentParser(
         description="Generate country template for OG_csvs_inputs. "
                     "Reads from Config_country_codes.yaml by default; "

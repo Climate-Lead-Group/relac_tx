@@ -1,28 +1,37 @@
 #!/usr/bin/env python3
-"""
-add_fuentes_sheet.py — agrega (o reemplaza) la hoja `Fuentes` en los libros de entrada del modelo.
+"""Add (or replace) the `Fuentes` documentation sheet in the model's input workbooks.
 
-La hoja documenta de dónde viene cada dato (fuente, archivo/hoja de origen y transformación). Su contenido vive en UNA sola tabla, `inputs/config/data_sources.csv`, para que los
-8 libros A-O_* de los 4 escenarios y `A-Xtra_Storage.xlsx` queden siempre idénticos entre sí.
+Already applied to inputs/ on 2026-09-14 (78/23/5 rows per workbook type, see
+`scripts/tools/data_patches/README.md`). The sheet documents where each data block comes from
+(source, origin file/sheet, and transformation). Its content lives in a single master table,
+`inputs/config/data_sources.csv`, so that the 8 A-O_* workbooks of the 4 scenarios and
+`A-Xtra_Storage.xlsx` always stay identical to each other. Idempotent: if the sheet already
+exists it is deleted and recreated from the CSV.
 
-Libros que toca (filtrando las filas del CSV por la columna `Archivo`, que admite varios nombres
-separados por `|`):
-  - inputs/A1_Outputs/A1_Outputs_<esc>/A-O_Parametrization.xlsx   (BAU, INV, OPT, VGB)
-  - inputs/A1_Outputs/A1_Outputs_<esc>/A-O_Demand.xlsx            (BAU, INV, OPT, VGB)
-  - inputs/A2_Extra_Inputs/A-Xtra_Storage.xlsx
-  - inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx  (plantillas: solo título y
-    encabezado, SIN filas, porque las plantillas no tienen datos; --no-templates para omitirlas)
+Workbooks touched (filtering the CSV rows by the `Archivo` column, which accepts several
+names separated by `|`): inputs/A1_Outputs/A1_Outputs_<scen>/A-O_Parametrization.xlsx and
+A-O_Demand.xlsx (BAU, INV, OPT, VGB); inputs/A2_Extra_Inputs/A-Xtra_Storage.xlsx; and
+inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx (templates: title
+and header only, no rows, since the templates carry no data; --no-templates skips them).
 
-La hoja se llama `Fuentes`, va al final del libro y NO tiene columnas de años, de modo que
-sync_historical_from_bau.py la salta ("no year columns"). B1_Compiler.py la excluye explícitamente
-(igual que hace con `growth_formula`). Ninguna otra hoja se modifica.
+The sheet is named `Fuentes`, placed at the end of the workbook, and has no year columns, so
+`sync_historical_from_bau.py` skips it ("no year columns") and `B1_Compiler.py` excludes it
+explicitly (the same way it excludes `growth_formula`). No other sheet is modified.
 
-Uso:
-    python scripts/tools/data_patches/add_fuentes_sheet.py            # dry-run: muestra qué haría
-    python scripts/tools/data_patches/add_fuentes_sheet.py --apply    # escribe
+Inputs:
+    inputs/config/data_sources.csv (master table, column `Archivo` filters by workbook)
+Outputs:
+    A-O_Parametrization.xlsx and A-O_Demand.xlsx for the 4 scenarios, A2_Extra_Inputs/
+        A-Xtra_Storage.xlsx, and (unless --no-templates) the 3 Miscellaneous/ templates —
+        sheet "Fuentes", in place — only with --apply
+Usage:
+    python scripts/tools/data_patches/add_fuentes_sheet.py
+        # dry-run: shows what it would do
+    python scripts/tools/data_patches/add_fuentes_sheet.py --apply
+        # writes
     python scripts/tools/data_patches/add_fuentes_sheet.py --apply --no-templates
-
-Idempotente: si la hoja ya existe se elimina y se vuelve a crear desde el CSV.
+Notes:
+    - Test: python scripts/tools/data_patches/test_add_fuentes_sheet.py
 """
 from __future__ import annotations
 

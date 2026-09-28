@@ -1,12 +1,24 @@
-"""
-AUX_Z_recalc_shares.py
+"""Back-calculate Diesel/Fuel oil/Bunker shares in Shares_PET_OIL_Split.xlsx from Old_Inputs.
 
-Back-calculates Diésel / Fuel oil / Búnker shares in Shares_PET_OIL_Split.xlsx
-so that D2_update_secondary_techs.py reproduces the ResidualCapacity values from
-Old_Inputs parametrization files.
+For each scenario sheet (`SharesBAU`, `SharesNDC`, see `SCENARIO_CONFIG`), derives the
+PET/OIL split target per country from the legacy `Old_Inputs` parametrization file, normalizes
+it to shares of OLADE petroleum capacity, and splits the OIL share between "Fuel oil" and
+"Búnker" using the existing ratio (new countries default to 100% Fuel oil). The goal is that
+`D2_update_secondary_techs.py` reproduces the `Old_Inputs` `ResidualCapacity` values when it
+applies these shares. Scenario scope is hardcoded (`SCENARIO_CONFIG`: BAU, NDC), no CLI flags.
 
+Inputs:
+    inputs/data/Shares_PET_OIL_Split.xlsx (sheets in SCENARIO_CONFIG)
+    inputs/data/OLADE - Capacidad instalada por fuente - Anual.xlsx (sheet "1.2023")
+    Old_Inputs A1_Outputs_{BAU,NDC}/A-O_Parametrization.xlsx (sheet "Secondary Techs")
+Outputs:
+    inputs/data/Shares_PET_OIL_Split.xlsx, in place (a ".xlsx.bak" backup is written first)
 Usage:
     python scripts/tools/AUX_Z_recalc_shares.py
+Notes:
+    - SHARES_YEARS covers 2023-2045; years outside that range in the Shares file are untouched.
+    - New countries (NEW_COUNTRIES: ARG, BRA, MEX) are appended as new blocks if not already
+      present in the sheet.
 """
 
 import shutil
@@ -287,6 +299,13 @@ def write_shares_to_excel(wb, sheet_name, new_shares, structure):
 
 
 def main():
+    """Run the recalculation for every scenario sheet in SCENARIO_CONFIG and save the workbook.
+
+    Backs up SHARES_FILE to a ".xlsx.bak" sibling, then for each configured sheet reads the
+    current shares and the Old_Inputs targets, computes the new normalized shares, and writes
+    them back into the same workbook object. Skips a sheet whose Old_Inputs path is missing
+    (with a warning) rather than failing. Saves SHARES_FILE in place at the end.
+    """
     print("=" * 70)
     print("AUX_Z_recalc_shares: Recalculating PET/OIL shares")
     print("=" * 70)

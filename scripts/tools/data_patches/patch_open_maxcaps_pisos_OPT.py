@@ -1,18 +1,23 @@
-"""
-Patch: abrir TotalAnnualMaxCapacityInvestment en OPT solo donde los pisos lo exigen
+"""Open TotalAnnualMaxCapacityInvestment in OPT only where the new floors require it.
 
-Complemento manual del paso que habria hecho A3: en A-O_Parametrization.xlsx de
-OPT (hoja 'Secondary Techs'), para las 24 techs del dataset Nueva_Capacidad_2040+,
-sube el tope Max SOLO en las celdas (tech, anio) donde el piso nuevo
-(TotalAnnualMinCapacityInvestment) supera el tope vigente y haria el modelo
-infeasible. Regla: Max_nuevo = piso * 1.01 (precedente VGB, Max=Min*1.01).
+Already applied to inputs/ on 2026-08-13 14:25 — log
+A1_Outputs/open_maxcaps_pisos_OPT_20260813_142555.json (82 cells, see
+`scripts/tools/data_patches/README.md`). Manual complement to a step A3 would otherwise have
+done: in OPT's A-O_Parametrization.xlsx (sheet "Secondary Techs"), for the 24 techs of the
+Nueva_Capacidad_2040+ dataset (TECHS24), raises the Max cap ONLY on the (tech, year) cells
+where the new floor (TotalAnnualMinCapacityInvestment) exceeds the current cap and would make
+the model infeasible. Rule: new_max = floor * 1.01 (SLACK, the VGB precedent of Max=Min*1.01).
+Max rows with Projection.Mode='EMPTY' or empty cells mean no cap (unlimited in OSeMOSYS) and
+are left untouched; years without a conflict keep their current cap.
 
-- Filas Max con Projection.Mode='EMPTY' o celdas vacias = sin tope (ilimitado)
-  en OSeMOSYS -> no se tocan.
-- Anios sin conflicto conservan su tope actual.
-
-Uso:
+Inputs:
+    A1_Outputs_OPT/A-O_Parametrization.xlsx / Secondary Techs
+Outputs:
+    same file, in place; a "*_backup_<ts>.xlsx" backup and a cell-level old->new change log
+        at A1_Outputs/open_maxcaps_pisos_OPT_<ts>.json
+Usage:
     python scripts/tools/data_patches/patch_open_maxcaps_pisos_OPT.py [--dry-run]
+    --dry-run reports the conflicts found without writing (today reports 0 conflicts).
 """
 import argparse
 import json
@@ -46,6 +51,13 @@ COL_TECH, COL_PARAM, COL_MODE = 2, 5, 7
 
 
 def main():
+    """Raise OPT's Max cap wherever the new floor exceeds it, then verify no conflict remains.
+
+    Reads Min/Max rows for TECHS24, raises Max to floor*SLACK on every (tech, year) in
+    2040-2050 where floor > cap (skipping rows not in "User defined" mode or with no cap),
+    saves the workbook with a backup and change log unless --dry-run, then rereads the file
+    and returns 1 if any Min > Max conflict remains.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()

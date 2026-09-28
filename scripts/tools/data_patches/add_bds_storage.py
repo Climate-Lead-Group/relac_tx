@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
-"""
-add_bds_storage.py — Clona la familia de almacenamiento SDS como BDS sobre
-el nodo no renovable ELC<ISO3>XX02.
+"""Clone the SDS storage family as BDS onto the non-renewable node ELC<ISO3>XX02.
 
-Spec: docs/superpowers/specs/2026-07-23-bds-storage-clone-design.md
+Already applied to inputs/ on 2026-09-04 with COUNTRIES = ["CHL", "PER"] (16 rows in
+A-Xtra_Storage.xlsx: 4+4+8; 4/4/4/22/2 rows per scenario, see
+`scripts/tools/data_patches/README.md`). Do not run with `DRY_RUN = False` / `dry_run=False`
+without a real need (e.g. after an A3 run, which regenerates the A-O workbooks and deletes
+BDS). Spec: docs/superpowers/specs/2026-07-23-bds-storage-clone-design.md.
 
-Transformación por país C:
-    PWRSDS{C}XX  -> PWRBDS{C}XX      (tecnología, lado potencia)
-    SDS{C}XX01   -> BDS{C}XX01       (instalación, lado energía)
-    ELC{C}XX00   -> ELC{C}XX02       (nodo eléctrico)
+Per-country transformation (country code C): PWRSDS{C}XX -> PWRBDS{C}XX (technology, power
+side); SDS{C}XX01 -> BDS{C}XX01 (storage facility, energy side); ELC{C}XX00 -> ELC{C}XX02
+(electric node). Idempotent by replacement: purges every PWRBDS*/BDS* row from the target
+sheets and reinserts them from COUNTRIES, so re-running converges to the list (also used to
+remove a country). ResidualCapacity and the BRA-2031 investment floor are NOT copied (BDS
+starts with no stock).
 
-Idempotente por reemplazo: borra toda fila PWRBDS*/BDS* de las hojas
-objetivo y reinserta según COUNTRIES. Re-correr converge al estado de la
-lista (sirve para agregar y quitar países).
-
-WATCHOUTS:
-  * Correr DESPUÉS de A3 (A3 regenera los A-O y borra BDS) y ANTES de B1.
-    Cadena: A3 -> add_bds_storage.py -> B1 -> B2.
-  * Layout nuevo (2026-09): rutas relativas a inputs/ (A1_Outputs/, A2_Extra_Inputs/,
-    config/) via scripts/common/relac_paths.py. YA APLICADO a inputs/ (ver README.md).
-  * D2_update_secondary_techs es seguro (edita por match de Tech).
-    B1b es seguro (los parámetros que valida están vacíos en PWRBDS).
-  * sync_historical_from_bau exige orden de filas idéntico entre
-    escenarios: este script itera sorted(COUNTRIES) SIEMPRE.
-  * Los residuales y el piso de inversión BRA-2031 NO se copian (BDS nace
-    sin stock).
-  * Restore: copiar de vuelta los archivos desde _bds_backups/<timestamp>/.
+Inputs:
+    A-O_AR_Model_Base_Year.xlsx (Secondary), A-O_AR_Projections.xlsx (Secondary),
+        A-O_Parametrization.xlsx (Fixed Horizon Parameters, Secondary Techs, VariableCost)
+        for the 4 scenarios; A2_Extra_Inputs/A-Xtra_Storage.xlsx (3 sheets);
+        Config_MOMF_T1_A.yaml / Config_MOMF_T1_AB.yaml in inputs/config/
+Outputs:
+    the same files, in place; with BACKUP=True, copies under
+        inputs/_bds_backups/<timestamp>/ (git-ignored) before writing
+Usage:
+    DRY_RUN is a module-level constant (False by default) — running this file directly
+    writes for real. Safe (dry-run) invocation, from scripts/tools/data_patches:
+python -c "import add_bds_storage as b; b.run(countries=['CHL','PER'], dry_run=True, backup=False)"
+Notes:
+    - Must run after A3 (which regenerates the A-O workbooks and deletes BDS) and before B1:
+      A3 -> add_bds_storage.py -> B1 -> B2.
+    - D2_update_secondary_techs.py is safe to run at any point (edits by Tech match); B1b is
+      safe too (the parameters it validates are empty on PWRBDS).
+    - sync_historical_from_bau.py requires identical row order between scenarios: this script
+      always iterates sorted(COUNTRIES).
+    - Restore by copying the files back from inputs/_bds_backups/<timestamp>/.
 """
 from __future__ import annotations
 

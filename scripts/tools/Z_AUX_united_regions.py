@@ -1,8 +1,30 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jul 29 11:20:29 2025
+"""One-shot Brazil region-consolidation tool (parametrization/demand/storage branches).
 
-@author: ClimateLeadGroup
+Unifies Brazil's regional split (BRACN/BRANW/BRANE/BRACW/BRASO/BRASE/BRAWE) into a single
+BRAXX region. With `parametrization=True`, replaces BRACN with BRAXX, drops the other BRA
+regional rows and merges BRA<->country TRN interconnections in "Fixed Horizon Parameters"
+(and the equivalent per-sheet consolidation for Secondary Techs/Demand Techs/Capacities/
+VariableCost) of `A-O_Parametrization.xlsx`. With `demand=True`, does the equivalent
+consolidation (grouping and summing year columns) for `A-O_Demand.xlsx`
+("Demand_Projection"/"Profiles"). With `storage=True`, does it for `A-Xtra_Storage.xlsx`
+("Fixed Horizon Parameters"/"CapitalCostStorage"/"TechnologyStorage"; TechnologyToStorage/
+TechnologyFromStorage are averaged across merged regions, other parameters summed). Which
+scenario (`folder`) and which branch runs are hardcoded module-level booleans/constants at
+the top of the file; only one branch is meant to run per invocation, no CLI.
+
+Inputs:
+    A-O_Parametrization.xlsx (parametrization branch), A-O_Demand.xlsx (demand branch) under
+        A1_Outputs_<folder>; A-Xtra_Storage.xlsx (storage branch, A2_Extra_Inputs)
+Outputs:
+    A-O_Parametrization_cleaned.xlsx (new file, parametrization branch); A-O_Demand.xlsx and
+        A-Xtra_Storage.xlsx, in place (demand/storage branches)
+Usage:
+    python scripts/tools/Z_AUX_united_regions.py
+    Edit `folder` and the `parametrization`/`demand`/`storage` flags at the top of the file
+    before running.
+Authors:
+    2025 ClimateLeadGroup
 """
 
 import pandas as pd

@@ -1,30 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-Z_AUX_update_transmission_iar.py
+"""Update the Input Activity Ratio (IAR) of transmission technologies per country.
 
-Actualiza el Input Activity Ratio (IAR) de las tecnologias de transmision por
-pais en los archivos AR de cada escenario, preservando el formato de los .xlsx.
+Updates the IAR of transmission technologies (6 prefixes x 19 countries = 114 techs) per
+scenario in the AR files' "Demand Techs" sheet, preserving the .xlsx formatting (openpyxl
+`save()`, following the pattern of reset_lowerlimits_from_base.py / extend_lowerlimits_pwr.py).
+Each tech code is <6-char prefix><3-char country>XX (e.g. RNWTRNARGXX). Prefix -> IAR category
+(eta = 1 - alpha*d; IAR = 1/eta), from the hardcoded IAR table: Non-renewable (PWRTRN, TRNNLI)
+-> "IAR No-Renovable" column; Renewable (RNWTRN, RNWNLI) -> "IAR Renovable" column;
+Repowered (RNWRPO, TRNRPO) -> "IAR Repotenciada" column.
 
-Las tecnologias de transmision (6 prefijos x 19 paises = 114 techs) viven en la
-hoja "Demand Techs" de ambos archivos:
-    A1_Outputs/A1_Outputs_<SCEN>/A-O_AR_Model_Base_Year.xlsx
-    A1_Outputs/A1_Outputs_<SCEN>/A-O_AR_Projections.xlsx
+What gets edited: in A-O_AR_Model_Base_Year.xlsx, column D "Value.Fuel.I" (one row per tech,
+mode 1); in A-O_AR_Projections.xlsx, the year columns 2023..2050 (I..AJ) only on rows with
+Direction == "Input" (rows with Direction == "Output" are left untouched).
 
-Cada codigo es <PREFIJO 6 chars><PAIS 3 chars>XX  (p.ej. RNWTRNARGXX).
-Mapeo prefijo -> categoria de IAR (η = 1 - α·d ; IAR = 1/η):
-    No Renovable : PWRTRN, TRNNLI -> columna "IAR No-Renovable"
-    Renovable    : RNWTRN, RNWNLI -> columna "IAR Renovable"
-    Repotenciada : RNWRPO, TRNRPO -> columna "IAR Repotenciada"
-
-Que se edita:
-    Base_Year   : columna D "Value.Fuel.I" (1 fila por tech, mode 1).
-    Projections : columnas de año 2023..2050 (I..AJ) SOLO en las filas con
-                  Direction == "Input" (las filas "Output" quedan intactas).
-
-Patron de edicion (openpyxl, save() preserva formato) siguiendo
-reset_lowerlimits_from_base.py / extend_lowerlimits_pwr.py.
-
-@author: Climate Lead Group
+Inputs:
+    A1_Outputs/A1_Outputs_<SCEN>/A-O_AR_Model_Base_Year.xlsx (sheet "Demand Techs")
+    A1_Outputs/A1_Outputs_<SCEN>/A-O_AR_Projections.xlsx (sheet "Demand Techs")
+Outputs:
+    same files, in place (writes by default; ".bak" backup unless --no-backup)
+Usage:
+    python scripts/tools/Z_AUX_update_transmission_iar.py [--scenario S ...] [--dry-run]
+        [--no-backup]
+    --scenario is repeatable (default: all SCENARIOS); --dry-run reports without writing.
+Authors:
+    Climate Lead Group
 """
 
 import argparse
@@ -246,6 +245,12 @@ def _report_file(tag, path, changed, n_techs, unmapped, unit="celdas",
 # Main
 # ---------------------------------------------------------------------------
 def main():
+    """Update Base_Year and Projections IAR values for every requested scenario.
+
+    For each scenario, runs update_base_year() then update_projections() on its two AR
+    files, counting cells changed and per-file errors; reports both, then exits 1 if any
+    file was missing or raised.
+    """
     ap = argparse.ArgumentParser(
         description="Actualiza el IAR de tecnologias de transmision en los archivos AR.")
     ap.add_argument("--scenario", action="append", choices=SCENARIOS,

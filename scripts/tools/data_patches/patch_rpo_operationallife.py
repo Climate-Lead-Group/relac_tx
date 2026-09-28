@@ -1,20 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Parche: OperationalLife de las tecnologias RPO en A-O_Parametrization.xlsx.
+"""Patch: OperationalLife of RPO technologies in A-O_Parametrization.xlsx.
 
-Edita la hoja "Fixed Horizon Parameters" de los escenarios BAU/INV/OPT/VGB:
-  - Filas objetivo: Tech contiene "RPO" y Parameter == OperationalLife.
-  - Verifica que TODAS esas filas tengan Value == 20; si alguna difiere,
-    el escenario se reporta y NO se modifica.
-  - Solo si la verificacion pasa, sustituye 20 -> 50 en la columna H (Value).
+Already applied to inputs/ on 2026-09-01, backups `.bak_20260901_*` in the stash (see
+`scripts/tools/data_patches/README.md`). Edits the "Fixed Horizon Parameters" sheet of the
+BAU/INV/OPT/VGB scenarios: target rows are every row whose Tech contains "RPO" (RNWRPO*,
+TRNRPO*: 38 techs) and whose Parameter == OperationalLife. Verifies that ALL those rows have
+Value == 20; if any differs, the scenario is reported and NOT modified. Only if the
+precondition holds, replaces 20 -> 50 in column H (Value). Runs in DRY-RUN by default (writes
+nothing); --apply writes the change, first creating a `<file>.bak_<timestamp>` backup next to
+the original.
 
-Por defecto corre en DRY-RUN (no guarda nada). Con --apply escribe los cambios,
-creando antes un backup <archivo>.bak_<timestamp> junto al original.
-
-Uso:
-    python patch_rpo_operationallife.py                 # dry-run, 4 escenarios
-    python patch_rpo_operationallife.py --apply         # aplica y guarda
-    python patch_rpo_operationallife.py --scenarios BAU OPT
+Inputs:
+    A-O_Parametrization.xlsx / Fixed Horizon Parameters, column H (4 scenarios)
+Outputs:
+    same file, in place — only with --apply (`.bak_<timestamp>` backup first)
+Usage:
+    python scripts/tools/data_patches/patch_rpo_operationallife.py
+        # dry-run, 4 scenarios
+    python scripts/tools/data_patches/patch_rpo_operationallife.py --apply
+        # applies and saves
+    python scripts/tools/data_patches/patch_rpo_operationallife.py --scenarios BAU OPT
+Notes:
+    - Against the current inputs/ this reports "NO SE SUSTITUYE: Value = 50" (already
+      applied).
 """
 
 import argparse
@@ -79,6 +88,22 @@ def filas_fuera_de_valor(ws, filas, valor):
 
 
 def procesar(scen, apply_changes):
+    """Patch one scenario's RPO OperationalLife rows, verifying before and after.
+
+    Args:
+        scen: scenario short code (must be in SCENARIOS).
+        apply_changes: if False, only verifies the precondition and reports what would
+            change; if True, writes OLD_VALUE -> NEW_VALUE on every RPO row and rereads the
+            file to confirm.
+
+    Returns:
+        True if every RPO row matched OLD_VALUE (dry-run) or was successfully written and
+        reread as NEW_VALUE (apply); False on any missing file, header mismatch, a row with an
+        unexpected existing value, or post-write verification failure.
+
+    Side effects:
+        With apply_changes=True, writes a ".bak_<timestamp>" backup and saves the workbook.
+    """
     path = ruta_escenario(scen)
     if not path.exists():
         print(f"[{scen}] ERROR: no existe {path}")

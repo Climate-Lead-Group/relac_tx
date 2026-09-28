@@ -1,28 +1,30 @@
-"""
-Z_TEMP_add_pwrbck_to_scenarios.py
+"""Upsert PWRBCK* rows into the BAU/INV/OPT Excel workbooks from OG_csvs_inputs.
 
-Upsert PWRBCK* rows en los Excel de los escenarios A1_Outputs_{BAU,INV,OPT},
-leyendo valores desde OG_csvs_inputs/. No toca filas no-PWRBCK. Filas nuevas
-se agregan al final de cada hoja.
+Reads PWRBCK values from `OG_csvs_inputs/` and upserts them into each scenario's Excel
+workbooks; non-PWRBCK rows are left untouched, new rows are appended at the end of each
+sheet. Sheets touched: A-O_Parametrization.xlsx / "Secondary Techs" (CapitalCost, FixedCost),
+"VariableCost" (VariableCost), "Fixed Horizon Parameters" (CapacityToActivityUnit);
+A-O_AR_Model_Base_Year.xlsx / "Secondary" (OutputActivityRatio, FUEL_I = None);
+A-O_AR_Projections.xlsx / "Secondary" (OutputActivityRatio, Direction = Output). If a PWRBCK
+row already exists in the target sheet its values are overwritten from the CSV; otherwise it
+is appended. Projection.Mode is set to 'User defined' on every sheet that has that column.
+Imports `assign_tech_type`/`parse_fuel_name`/`parse_tech_name`/`remap_pwrbck_output_fuel` from
+`scripts/pipeline/A1_Pre_processing_OG_csvs.py` to stay consistent with the A1 tech/fuel
+parsing.
 
-Hojas tocadas:
-  A-O_Parametrization.xlsx:
-    - Secondary Techs            <- CapitalCost, FixedCost
-    - VariableCost               <- VariableCost
-    - Fixed Horizon Parameters   <- CapacityToActivityUnit
-  A-O_AR_Model_Base_Year.xlsx:
-    - Secondary                  <- OutputActivityRatio (FUEL_I = None)
-  A-O_AR_Projections.xlsx:
-    - Secondary                  <- OutputActivityRatio (Direction = Output)
-
-Si una fila PWRBCK ya existe en la hoja destino, sobrescribe sus valores con
-los del CSV. Si no existe, se agrega al final. Projection.Mode se fija en
-'User defined' en todas las hojas que tengan esa columna.
-
+Inputs:
+    inputs/OG_csvs_inputs/ (CapitalCost, FixedCost, VariableCost, CapacityToActivityUnit,
+        OutputActivityRatio, InputActivityRatio)
+Outputs:
+    A-O_Parametrization.xlsx (Secondary Techs, VariableCost, Fixed Horizon Parameters),
+        A-O_AR_Model_Base_Year.xlsx / A-O_AR_Projections.xlsx (Secondary), in place — only
+        with --apply
 Usage:
-    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --dry-run
-    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --apply
-    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py --apply --scenarios BAU INV
+    python scripts/tools/Z_TEMP_add_pwrbck_to_scenarios.py [--dry-run|--apply]
+        [--scenarios BAU INV OPT] [--scen-paths ...] [--pwrbck-varcost VALUE]
+    --dry-run previews without writing (default); --apply writes and creates a timestamped
+    backup; --scen-paths overrides --scenarios with explicit scenario-folder paths;
+    --pwrbck-varcost overrides the sentinel VariableCost (999999) shipped by OG for PWRBCK.
 """
 from __future__ import annotations
 
@@ -362,6 +364,19 @@ def _save_with_backup(wb, path: Path, ts: str) -> Path:
 
 
 def process_scenario(label: str, scen_dir: Path, apply_changes: bool, csvs: dict[str, pd.DataFrame]) -> None:
+    """Upsert PWRBCK rows into one scenario's three workbooks and optionally save them.
+
+    Args:
+        label: scenario name, used only for logging.
+        scen_dir: scenario's A1_Outputs folder; skipped (with a message) if missing.
+        apply_changes: if True and a workbook received at least one change, saves it with a
+            timestamped backup; if False, only reports what would change.
+        csvs: dict of PWRBCK DataFrames keyed by parameter name (as built in main()).
+
+    Side effects:
+        Writes A-O_Parametrization.xlsx, A-O_AR_Model_Base_Year.xlsx and
+        A-O_AR_Projections.xlsx under scen_dir in place when apply_changes is True.
+    """
     param_path = scen_dir / "A-O_Parametrization.xlsx"
     mby_path = scen_dir / "A-O_AR_Model_Base_Year.xlsx"
     proj_path = scen_dir / "A-O_AR_Projections.xlsx"
@@ -444,6 +459,13 @@ def process_scenario(label: str, scen_dir: Path, apply_changes: bool, csvs: dict
 
 
 def main() -> None:
+    """Parse CLI args, load and remap the PWRBCK CSVs, then process every target scenario.
+
+    Loads the PWRBCK slice of each required parameter CSV, overrides VariableCost with
+    --pwrbck-varcost, applies the optional PWRBCK OutputActivityRatio FUEL remap
+    (ELC*01 -> ELC*02, a no-op unless enabled in Config_region_consolidation.yaml), then
+    calls process_scenario() for each scenario in --scenarios or --scen-paths.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     g = parser.add_mutually_exclusive_group()
     g.add_argument("--apply", action="store_true", help="escribe cambios (crea backup)")

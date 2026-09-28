@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
-"""
-validate_bds_structure.py — Auditor post-aplicación de la estructura BDS.
+"""Post-application auditor for the BDS storage structure (V1-V11). Read-only.
 
-Verifica que la clonación SDS->BDS (add_bds_storage.py) quedó completa y
-correcta en los archivos REALES. Independiente del clonador a propósito.
+Verifies that the SDS->BDS clone (`add_bds_storage.py`) is complete and correct in the real
+files; deliberately independent of the cloner's own code. Checks (spec
+docs/superpowers/specs/2026-07-23-bds-storage-clone-design.md): V1 full structure (counts per
+scenario x country); V2 modes and efficiencies (base year 1/1; flat Input=1, Output=0.85); V3
+node: every BDS fuel = ELC{C}XX02; V4 1:1 coupling and TechnologyStorage flags, no
+PWRBDS<->SDS cross-talk; V5 facility: StorageLevelStart=0, OperationalLifeStorage=30,
+CapitalCostStorage=32777.77, EMPTY/empty residual; V6 power: CapacityToActivityUnit=31.536,
+OperationalLife=30, CapitalCost=944, FixedCost=7.5745, empty residuals; V7 YAML configs
+(Storage list, delay prefixes, exclude prefixes); V8 cross-scenario consistency (same BDS
+country set); V9 cross-file consistency (scenarios == Xtra == config); V10 SDS/LDS left
+intact (counts and key values); V11 (optional) solver datafile via CHECK_TXT_PATH.
 
-Uso:
-    python scripts/tools/data_patches/validate_bds_structure.py
-Config: editar COUNTRIES / BASE_DIR / CHECK_TXT_PATH abajo.
-
-Validaciones (spec docs/superpowers/specs/2026-07-23-bds-storage-clone-design.md):
-    V1  Estructura completa (conteos por escenario x país)
-    V2  Modos y eficiencias (base year 1/1; Input=1, Output=0.85 planos)
-    V3  Nodo: todo fuel BDS = ELC{C}XX02
-    V4  Acople 1:1 y flags TechnologyStorage; sin cruces PWRBDS<->SDS
-    V5  Instalación: StorageLevelStart=0, OperationalLifeStorage=30,
-        CapitalCostStorage=32777.77 EMPTY, residual vacío
-    V6  Potencia: 31.536/30/944/7.5745/0.7/VarCost 0; residuales vacíos
-    V7  Configs YAML: Storage list, delay prefixes, exclude prefixes
-    V8  Consistencia cross-escenario (mismo set de países BDS)
-    V9  Consistencia cross-archivo (escenarios == Xtra == config)
-    V10 SDS/LDS intactos (conteos y valores clave)
-    V11 (opcional) datafile del solver via CHECK_TXT_PATH
+Inputs:
+    same files as add_bds_storage.py (read-only): A-O_AR_Model_Base_Year.xlsx,
+        A-O_AR_Projections.xlsx, A-O_Parametrization.xlsx per scenario,
+        A2_Extra_Inputs/A-Xtra_Storage.xlsx, Config_MOMF_T1_A.yaml, Config_MOMF_T1_AB.yaml;
+        optionally a Pre_processed_*.txt datafile for V11
+Outputs:
+    none (stdout report only)
+Usage:
+    python -c "import validate_bds_structure as v; v.audit(countries=['CHL','PER'])"
+    (with the default 19-country COUNTRIES list, V1 fails, because only CHL and PER were
+    cloned; edit COUNTRIES / BASE_DIR / CHECK_TXT_PATH at the top of the file, or pass them
+    to audit())
 """
 from __future__ import annotations
 
@@ -240,6 +243,17 @@ def v5_facility(ctx) -> list[str]:
 
 
 def v6_power(ctx) -> list[str]:
+    """Check the BDS power-side tech against its fixed expected parameter values.
+
+    Verifies CapacityToActivityUnit=31.536, OperationalLife=30, CapitalCost=944 and
+    FixedCost=7.5745 for every (scenario, country) BDS power tech.
+
+    Args:
+        ctx: dict built by load_ctx(), keyed by 'scenarios' -> scenario -> sheet rows.
+
+    Returns:
+        List of failure message strings (empty if V6 passes).
+    """
     fails = []
     for scen, d in ctx['scenarios'].items():
         for c in ctx['countries']:
@@ -394,6 +408,17 @@ CHECKS = [
 
 
 def audit(countries=None, base_dir=None, check_txt=None) -> int:
+    """Run every V1-V10 check (plus V11 when check_txt is given) and print a report.
+
+    Args:
+        countries: list of ISO3 codes to audit; defaults to module-level COUNTRIES.
+        base_dir: inputs/ root; defaults to module-level BASE_DIR.
+        check_txt: path to a Pre_processed_*.txt datafile for V11; defaults to
+            module-level CHECK_TXT_PATH (None skips V11).
+
+    Returns:
+        0 if every check passes, 1 if any check fails (or no A1_Outputs_* scenario is found).
+    """
     countries = sorted(COUNTRIES if countries is None else countries)
     base_dir = Path(BASE_DIR if base_dir is None else base_dir)
     check_txt = CHECK_TXT_PATH if check_txt is None else check_txt

@@ -1,27 +1,37 @@
-"""
-Patch: Nueva Capacidad 2040+ (solo OPT) + adelanto de interconexiones (4 escenarios)
+"""New Capacity 2040+ floors (OPT only) plus interconnection advance (4 scenarios).
 
-Aplica dos cambios sobre A-O_Parametrization.xlsx (hoja 'Secondary Techs'):
+Already applied to inputs/ on 2026-08-13 14:02 — log
+A1_Outputs/nueva_capacidad_tx_changes_20260813_140245.json (396 cells: 200 OPT floors + 8
+ResidualCapacity and 41 UpperLimit changes per scenario, see
+`scripts/tools/data_patches/README.md`). Applies two changes to A-O_Parametrization.xlsx,
+sheet "Secondary Techs":
 
-1. PISOS (solo escenario OPT):
-   Lee Nueva_Capacidad_2040+_LAC.xlsx (hoja ReLAC_Gen_SecondaryTechs) y escribe
-   los valores 2040-2050 de TotalAnnualMinCapacityInvestment para las 24 techs.
-   Fija Projection.Mode='User defined' (corrige las 7 filas EMPTY del dataset).
-   Solo escribe celdas con valor en el Excel; no toca años previos a 2040.
+1. FLOORS (OPT only): reads the external dataset `Nueva_Capacidad_2040+_LAC - copia.xlsx`
+   (sheet "ReLAC_Gen_SecondaryTechs", `--xlsx` path, default under
+   `Downloads/_Dataset_Transmission/`) and writes its 2040-2050
+   TotalAnnualMinCapacityInvestment values for 24 techs, setting Projection.Mode='User
+   defined' (fixing the dataset's 7 EMPTY rows). Only writes cells that have a value in the
+   source Excel; years before 2040 are untouched.
 
-2. INTERCONEXIONES (BAU, INV, OPT, VGB):
-   - TRNCOLXXPANXX: ResidualCapacity=0.4  y UpperLimit=12.614 en 2029-2050
-     (antes: entrada 2033, limite decreciente 10.6->8.19)
-   - TRNBOLXXBRAXX: ResidualCapacity=0.42 y UpperLimit=13.245 en 2032-2050
-     (antes: entrada 2036, limite decreciente 13.35->10.89)
-   Los ceros previos al anio de entrada se conservan (linea bloqueada antes).
+2. INTERCONNECTIONS (BAU, INV, OPT, VGB): TRNCOLXXPANXX gets ResidualCapacity=0.4 and
+   TotalTechnologyAnnualActivityUpperLimit=12.614 from 2029 (previously: entry in 2033, a
+   decreasing limit 10.6->8.19); TRNBOLXXBRAXX gets ResidualCapacity=0.42 and
+   TotalTechnologyAnnualActivityUpperLimit=13.245 from 2032 (previously: entry in 2036, a
+   decreasing limit 13.35->10.89). Zeros before the new entry year are kept (the line was
+   blocked before that year).
 
-Uso:
+Inputs:
+    Nueva_Capacidad_2040+_LAC - copia.xlsx (external dataset, --xlsx path; only needed for
+        the floors change, not with --only-tx)
+    A-O_Parametrization.xlsx / Secondary Techs (4 scenarios)
+Outputs:
+    same file, in place, per scenario; a "*_backup_<ts>.xlsx" backup per modified file and a
+        cell-level old->new change log at A1_Outputs/nueva_capacidad_tx_changes_<ts>.json
+Usage:
     python scripts/tools/data_patches/patch_nueva_capacidad_2040_tx_advance.py [--dry-run]
         [--xlsx RUTA] [--only-floors | --only-tx]
-
-Genera backup *_backup_<ts>.xlsx por archivo modificado y un JSON de cambios
-(old->new por celda) en A1_Outputs/nueva_capacidad_tx_changes_<ts>.json.
+    --dry-run reports without writing; --only-floors/--only-tx restrict to one of the two
+    changes (--only-tx does not require the external xlsx).
 """
 import argparse
 import json
@@ -144,6 +154,25 @@ def apply_cells(ws, row_idx, target, ycols, changes, scen, tech, param):
 
 
 def process_scenario(scen, floors, do_floors, do_tx, dry_run, changes):
+    """Apply the floors and/or interconnection changes to one scenario's workbook.
+
+    Args:
+        scen: scenario short code (e.g. "OPT").
+        floors: {tech: {year: value}} from read_floors(); only used if scen in
+            FLOORS_SCENARIOS and do_floors.
+        do_floors: whether to apply the OPT floors change.
+        do_tx: whether to apply the TX_CHANGES interconnection change.
+        dry_run: if True, computes and reports the cell diffs but does not save the workbook.
+        changes: list appended in place with one entry per changed cell (old -> new), used to
+            build the JSON change log.
+
+    Returns:
+        Number of cells changed (or that would change, in dry-run).
+
+    Side effects:
+        When not dry_run and cells changed, writes a timestamped backup and saves the
+        workbook in place.
+    """
     path = BASE_PATH / f"A1_Outputs_{scen}" / "A-O_Parametrization.xlsx"
     if not path.exists():
         raise FileNotFoundError(path)
@@ -227,6 +256,12 @@ def verify(floors, do_floors, do_tx):
 
 
 def main():
+    """Parse CLI args, read the floors source if needed, patch every scenario and verify.
+
+    Calls process_scenario() for each scenario in TX_SCENARIOS, writes the JSON change log
+    when not --dry-run, then (unless --dry-run) calls verify() and returns 1 if it reports
+    any error.
+    """
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--dry-run", action="store_true", help="No guarda nada; solo reporta")
     ap.add_argument("--xlsx", type=Path, default=DEFAULT_XLSX, help="Excel Nueva_Capacidad_2040+")

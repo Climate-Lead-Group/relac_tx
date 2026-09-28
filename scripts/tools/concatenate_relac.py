@@ -1,8 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-Created on 2025
+"""Concatenate one scenario's otoole per-parameter result CSVs into a single wide CSV.
 
-@author: ClimateLeadGroup, Andrey Salazar-Vargas
+Live script: invoked as a subprocess by `scripts/pipeline/B2_Executing_OG_Model.py`
+(`params['concat_csvs']`) right after `otoole results` converts the solver's `.sol` output into
+per-parameter CSVs. Reads every CSV in the results folder, keeps only the OSeMOSYS dimension
+columns plus VALUE, then outer-joins all parameters on the dimension columns so each parameter
+becomes its own column.
+
+Inputs:
+    <outputs_folder> (positional arg 1): directory of otoole per-parameter CSVs
+        (YEAR, TECHNOLOGY, TIMESLICE, FUEL, EMISSION, MODE_OF_OPERATION, REGION, SEASON,
+        DAYTYPE, DAILYTIMEBRACKET, STORAGE dimensions, one file per parameter)
+Outputs:
+    <output_file>.csv (positional arg 2 + ".csv"): one row per dimension combination, one
+        column per parameter
+Usage:
+    python scripts/tools/concatenate_relac.py <outputs_folder> <output_file>
+    Positional arguments only (no argparse); normally invoked by B2, not run standalone.
+Notes:
+    - CSV file order is sorted for a deterministic column/row order across runs.
+    - Rows/columns are merged with an outer join, so missing parameter values become NaN.
+Authors:
+    2025 ClimateLeadGroup, Andrey Salazar-Vargas
 """
 
 import os

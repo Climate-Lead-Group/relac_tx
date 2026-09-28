@@ -1,49 +1,34 @@
-"""
-Apply Parametrization Review adjustments to A-O_Parametrization.xlsx
+"""Apply audit-review Conservar_con_ajuste/Quitar actions onto A-O_Parametrization.xlsx.
 
-Reads the review files produced by the audit pipeline and applies
-their Conservar_con_ajuste / Quitar actions onto the target sheets of
-A-O_Parametrization.xlsx for each scenario.
+Reads the review workbooks produced by the audit pipeline (Review_PWR -> "Secondary Techs",
+Review_Tx -> "Demand Techs") for BAU and INV, and applies their actions onto
+TotalAnnualMinCapacityInvestment: "Conservar_con_ajuste" writes Value_GW_Sugerido, "Quitar"
+clears the year cell (None); both set Projection.Mode to 'User defined'. "Conservar" is a
+no-op. Match key is (Tech, Parameter) -> row, Year -> column (dynamic from header).
+"Omisiones_Detectadas" rows (Review_Tx only) are ignored. Missing review files are skipped
+with a warning.
 
-Scenarios processed (BAU, INV):
-    Review_PWR -> 'Secondary Techs'
-    Review_Tx  -> 'Demand Techs'
-    Missing review files are skipped with a warning.
+After the review writes, runs a post-write consistency sweep on every (Tech, Year) of each
+target sheet, independent of which rows the review touched: (1) per-year, raises
+TotalAnnualMaxCapacityInvestment to min(y) * 1.01 wherever it is numeric and <=
+TotalAnnualMinCapacityInvestment(y) > 0; (2) cumulative, raises TotalAnnualMaxCapacity(y) to
+(ResidualCapacity(y) + sum of min(y') for y' in [y-OperationalLife+1, y]) * 1.01 wherever it is
+numeric and <= that sum, mirroring the OSeMOSYS TotalCapacityAnnual constraint (every prior
+investment whose plant is still operational). OperationalLife comes from "Fixed Horizon
+Parameters" (DEFAULT_OPLIFE for missing techs); missing ResidualCapacity defaults to 0; empty
+max cells are left untouched (= unbounded). Both sweep adjustments also set Projection.Mode.
 
-Mapping:
-    A-O_Parametrization_Review_PWR.xlsx  ->  'Secondary Techs'
-    A-O_Parametrization_Review_Tx.xlsx   ->  'Demand Techs'
-
-Parameter targeted: TotalAnnualMinCapacityInvestment.
-Match key: (Tech, Parameter) -> row; Year -> column (dynamic from header).
-
-Actions:
-    - Conservar               : no-op
-    - Conservar_con_ajuste    : write Value_GW_Sugerido; set Projection.Mode = 'User defined'
-    - Quitar                  : clear the year cell (None);   set Projection.Mode = 'User defined'
-
-Omisiones_Detectadas (Review_Tx only) are ignored.
-
-Post-write consistency sweep (independent of review actions):
-    After applying review writes, scan every (Tech, Year) on each target
-    sheet and enforce:
-    1. PER-YEAR: If TotalAnnualMaxCapacityInvestment is numeric and <=
-       TotalAnnualMinCapacityInvestment(y) > 0, set it to min(y) * 1.01.
-    2. CUMULATIVE: If TotalAnnualMaxCapacity(y) is numeric and <=
-       ResidualCapacity(y) + Sum(min(y') for y' in [y-OperationalLife+1, y]),
-       set it to (Residual + accumulated_min) * 1.01. The cumulative window
-       reflects the OSeMOSYS TotalCapacityAnnual constraint, which sums
-       every prior new investment whose plant is still operational.
-       OperationalLife is read from 'Fixed Horizon Parameters'; missing
-       techs default to DEFAULT_OPLIFE. Missing ResidualCapacity is treated
-       as 0; empty max cells are left untouched (= unbounded).
-    Both adjustments also set Projection.Mode = 'User defined' on the
-    affected row. The sweep covers ALL rows, including those whose min was
-    not changed by the review (e.g. action = Conservar).
-
+Inputs:
+    A-O_Parametrization_Review_PWR.xlsx, A-O_Parametrization_Review_Tx.xlsx per scenario
+        (sheet "Review_MinCapInvestment")
+    A-O_Parametrization.xlsx (sheet "Fixed Horizon Parameters", for OperationalLife)
+Outputs:
+    A-O_Parametrization.xlsx, in place — only when run with --apply (timestamped backup first)
 Usage:
-    python scripts/tools/Z_AUX_apply_parametrization_review.py              # dry-run (default)
-    python scripts/tools/Z_AUX_apply_parametrization_review.py --apply      # write + timestamped backup
+    python scripts/tools/Z_AUX_apply_parametrization_review.py [--dry-run|--apply]
+        [--scenario BAU|INV|ALL]
+    --dry-run reports only (default); --apply writes and creates a timestamped backup;
+    --scenario restricts to one scenario (default: ALL).
 """
 import argparse
 import shutil

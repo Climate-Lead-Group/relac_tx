@@ -1,16 +1,25 @@
-"""
-Set TRN Interconnection Activity Limits from Bilateral Flow Data
+"""Pre-populate TRN interconnection activity limits from bilateral flow data.
 
-Reads estimated bilateral energy flows from flujos_energia_estimados_optimizacion.xlsx
-and writes Lower/Upper activity limits into Secondary_Techs_Editor.xlsx.
+Reads estimated bilateral energy flows (GWh) from
+flujos_energia_estimados_optimizacion.xlsx and derives, per country pair,
+TotalTechnologyAnnualActivityLowerLimit = Flujo Total (PJ) * 0.95 (-5%) and
+TotalTechnologyAnnualActivityUpperLimit = Flujo Total (PJ) * 1.05 (+5%), converting GWh to PJ
+with GWH_TO_PJ. Years 2023-2025 use the actual flow data; years 2026-2050 use a flat
+projection from the 2025 value (FLAT_PROJECTION_BASE_YEAR). Live: `read_flow_data` and
+`fill_trn_sheet` are imported by `scripts/pipeline/D2_update_secondary_techs.py`, which is
+the normal way this data reaches `Secondary_Techs_Editor.xlsx`; running this script's `main()`
+writes the same limits into the Editor sheet directly via `fill_editor`.
 
-- LowerLimit = Flujo Total (PJ) * 0.95  (-5%)
-- UpperLimit = Flujo Total (PJ) * 1.05  (+5%)
-- Years 2023-2025: actual flow data
-- Years 2026-2050: flat projection from 2025 value
-
+Inputs:
+    flujos_energia_estimados_optimizacion.xlsx (matriz-de-balance folder, sheet
+        "Flujos por Interconexion")
+Outputs:
+    inputs/data/Secondary_Techs_Editor.xlsx, in place (Editor sheet via fill_editor, or the
+        dedicated "TRN_Flow_Limits" sheet via fill_trn_sheet)
 Usage:
-    python scripts/tools/Z_AUX_D1b_set_trn_limits_from_flows.py
+    python scripts/tools/Z_AUX_D1b_set_trn_limits_from_flows.py [--scenarios BAU,NDC]
+    --scenarios: comma-separated scenario list (default "ALL" applies to all scenarios).
+    Also imported by D2_update_secondary_techs.py (read_flow_data, fill_trn_sheet).
 """
 import argparse
 import openpyxl
@@ -470,6 +479,11 @@ def fill_trn_sheet(editor_path, flow_data, scenarios=None, sheet_name='TRN_Flow_
 # ============================================================================
 
 def main():
+    """Read flow data and upsert Lower/Upper TRN activity limits into the Editor sheet.
+
+    Parses --scenarios, validates that both input files exist (prints an error and returns
+    without raising if not), then calls read_flow_data() and fill_editor() in sequence.
+    """
     parser = argparse.ArgumentParser(
         description="Pre-populate TRN interconnection activity limits in Secondary_Techs_Editor.xlsx from bilateral flow data."
     )

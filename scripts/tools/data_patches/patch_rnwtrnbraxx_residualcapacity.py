@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Parche puntual: ResidualCapacity de RNWTRNBRAXX en A-O_Parametrization.xlsx.
+"""Point patch: ResidualCapacity of RNWTRNBRAXX in A-O_Parametrization.xlsx.
 
-Edita la hoja "Demand Techs" de los escenarios BAU/INV/OPT/VGB:
-  - Fila objetivo: Tech == RNWTRNBRAXX y Parameter == ResidualCapacity.
-  - Verifica que las columnas I..AJ (2023-2050) tengan el valor plano 52.990319556.
-  - Solo si la verificacion pasa, sustituye por 85.40 en esas 28 celdas.
+Already applied to inputs/ on 2026-09-02 (see `scripts/tools/data_patches/README.md`). Edits
+the "Demand Techs" sheet of the BAU/INV/OPT/VGB scenarios: locates the row where Tech ==
+RNWTRNBRAXX and Parameter == ResidualCapacity, verifies that columns I..AJ (2023-2050) all
+hold the flat value 52.990319556, and only if that precondition holds, replaces it with 85.40
+in those 28 cells. Runs in DRY-RUN by default (writes nothing); --apply writes the change,
+first creating a `<file>.bak_<timestamp>` backup next to the original.
 
-Por defecto corre en DRY-RUN (no guarda nada). Con --apply escribe los cambios,
-creando antes un backup <archivo>.bak_<timestamp> junto al original.
-
-Uso:
-    python patch_rnwtrnbraxx_residualcapacity.py                 # dry-run, 4 escenarios
-    python patch_rnwtrnbraxx_residualcapacity.py --apply         # aplica y guarda
-    python patch_rnwtrnbraxx_residualcapacity.py --scenarios BAU OPT
+Inputs:
+    A-O_Parametrization.xlsx / Demand Techs, row for RNWTRNBRAXX/ResidualCapacity
+        (4 scenarios)
+Outputs:
+    same file, in place — only with --apply (`.bak_<timestamp>` backup first)
+Usage:
+    python scripts/tools/data_patches/patch_rnwtrnbraxx_residualcapacity.py
+        # dry-run, 4 scenarios
+    python scripts/tools/data_patches/patch_rnwtrnbraxx_residualcapacity.py --apply
+        # applies and saves
+    python scripts/tools/data_patches/patch_rnwtrnbraxx_residualcapacity.py --scenarios BAU OPT
+Notes:
+    - Against the current inputs/ this reports "NO SE SUSTITUYE: = 85.4" (already applied).
 """
 
 import argparse
@@ -81,6 +89,21 @@ def celdas_fuera_de_valor(ws, fila, valor):
 
 
 def procesar(scen, apply_changes):
+    """Patch one scenario's RNWTRNBRAXX ResidualCapacity row, verifying before and after.
+
+    Args:
+        scen: scenario short code (must be in SCENARIOS).
+        apply_changes: if False, only verifies the precondition and reports what would
+            change; if True, writes OLD_VALUE -> NEW_VALUE and rereads the file to confirm.
+
+    Returns:
+        True if the row matched OLD_VALUE (dry-run) or was successfully written and reread as
+        NEW_VALUE (apply); False on any missing file, header mismatch, wrong existing value,
+        or post-write verification failure.
+
+    Side effects:
+        With apply_changes=True, writes a ".bak_<timestamp>" backup and saves the workbook.
+    """
     path = ruta_escenario(scen)
     if not path.exists():
         print(f"[{scen}] ERROR: no existe {path}")

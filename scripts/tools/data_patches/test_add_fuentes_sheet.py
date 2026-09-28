@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""
-Test de add_fuentes_sheet.py sobre copias temporales (no toca inputs/ real).
+"""Test suite for add_fuentes_sheet.py, run against temporary copies (never touches inputs/).
 
-Verifica:
-  1. La hoja `Fuentes` se crea al final, con las filas del CSV que corresponden a ese libro.
-  2. Ninguna otra hoja cambia (valores celda a celda).
-  3. Idempotencia: aplicar dos veces deja el mismo resultado y no duplica hojas.
-  4. El filtro por `Archivo` (con `|`) reparte bien las filas entre los 3 tipos de libro.
-  5. La lectura estilo B1 (pandas ExcelFile) sigue funcionando al excluir `Fuentes`, y
-     sync_historical_from_bau.year_columns() no ve columnas de año en la hoja nueva.
-  6. Las plantillas de Miscellaneous reciben la hoja con encabezado pero sin filas de datos.
+Verifies: (1) the `Fuentes` sheet is created at the end, with the CSV rows that match that
+workbook; (2) no other sheet changes (checked cell by cell); (3) idempotency: applying twice
+gives the same result and does not duplicate sheets; (4) the `Archivo` filter (with `|`)
+correctly splits rows across the 3 workbook types; (5) B1-style reading (pandas ExcelFile)
+still works when `Fuentes` is excluded, and sync_historical_from_bau.year_columns() sees no
+year columns on the new sheet; (6) the Miscellaneous templates get the sheet with a header but
+no data rows.
 
-Uso:
+Inputs:
+    same files as add_fuentes_sheet.py (copied to a temporary directory, not modified in place)
+Outputs:
+    none in the real tree; writes only to temporary copies
+Usage:
     python scripts/tools/data_patches/test_add_fuentes_sheet.py
 """
 from __future__ import annotations
@@ -50,6 +52,16 @@ def snapshot(path: Path, skip: str) -> dict[str, list[tuple]]:
 
 
 def main() -> int:
+    """Run all add_fuentes_sheet.py checks against temporary copies of the real workbooks.
+
+    Copies A-O_Parametrization.xlsx, A-O_Demand.xlsx, A-Xtra_Storage.xlsx and one Miscellaneous
+    template to a temp sandbox, applies the sheet (twice, to check idempotency) and asserts the
+    six behaviors listed in the module docstring. Prints one line per check and a final
+    pass/fail count.
+
+    Returns:
+        0 if every check passed, 1 otherwise.
+    """
     rows = afs.load_rows()
     check(len(rows) > 50, f"CSV maestro con {len(rows)} filas")
     by_key = {k: afs.rows_for(rows, k) for k in afs.WORKBOOK_FILES}

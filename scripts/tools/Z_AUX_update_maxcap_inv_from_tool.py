@@ -1,42 +1,41 @@
-"""
-Z_AUX_update_maxcap_inv_from_tool.py
+"""Merge TotalAnnualMaxCapacityInvestment from the LAC maxcap tool into Secondary Techs.
 
-Copia TotalAnnualMaxCapacityInvestment hacia la hoja 'Secondary Techs' de
-A-O_Parametrization.xlsx de cada escenario listado en SCENARIOS (de momento solo
-BAU), combinando DOS fuentes:
+Copies TotalAnnualMaxCapacityInvestment into the "Secondary Techs" sheet of
+A-O_Parametrization.xlsx for each scenario in SCENARIOS (today only BAU is populated with
+data), combining two sources: (A) LAC_maxcap_tool.xlsx, sheet "Export", the "LOGISTIC x
+HEADROOM ... saturating cap" table (12 PWRSPV*/PWRWON* techs for BRA/MEX/CHL/ARG/COL/PER);
+(B) LAC_maxcap_tool_complementary.xlsx, sheet "Updated" (flat table with every PWR* tech and
+its TotalAnnualMaxCapacityInvestment). Merge rule: writes every tech from A (A's values) plus
+the techs from B that are NOT in A (B's values); where a tech is in both, A takes precedence
+and is never overwritten by B.
 
-    A) LAC_maxcap_tool.xlsx, hoja 'Export', tabla "LOGISTIC x HEADROOM ...
-       saturating cap" (12 techs PWRSPV*/PWRWON* de BRA/MEX/CHL/ARG/COL/PER).
-    B) LAC_maxcap_tool_complementary.xlsx, hoja 'Updated' (tabla plana con todas
-       las techs PWR* y su TotalAnnualMaxCapacityInvestment).
+Strict scope (nothing else is touched): only technologies present in A or B; only the
+TotalAnnualMaxCapacityInvestment parameter; only year cells present in both the source and
+the target; Projection.Mode (column G) is copied from the source row only on rows that
+received at least one value (mirrors the source, today "User defined") — no other row,
+parameter or technology is modified.
 
-Merge: se escriben las techs de A (con sus valores) MAS las techs de B que NO
-estan en A (con valores de B). En las techs presentes en ambas, A tiene
-precedencia (no se sobreescriben con B).
+The "Export" sheet stacks several tables separated by blank rows; the LOGISTIC table is
+selected by its title (contains LOGISTIC + HEADROOM + SATURATING CAP, and NOT
+GEOMETRIC/COMPOUNDING), and reading stops at the first row with an empty Tech (double
+safeguard against reading the GEOMETRIC table below it).
 
-Alcance estricto (NO se toca nada mas):
-    - Solo las tecnologias presentes en A o en B.
-    - Solo el parametro 'TotalAnnualMaxCapacityInvestment'.
-    - Solo las celdas de año presentes tanto en la entrada como en la salida.
-    - Projection.Mode (col G) se copia desde la fila de entrada SOLO en las
-      filas que recibieron al menos un valor (replica la fuente: hoy "User
-      defined"). Ninguna otra fila, parametro o tecnologia se modifica.
+The source year cells are formulas, but are read via their cached values (`data_only=True`).
+If the tool file was edited by code and Excel never recalculated/saved it, the cached values
+can be missing: if a year cell comes back as a string (formula text), the script aborts and
+asks that the tool be reopened/saved in Excel.
 
-La hoja 'Export' tiene varias tablas apiladas separadas por filas en blanco; se
-selecciona la tabla LOGISTIC por su titulo (contiene LOGISTIC + HEADROOM +
-SATURATING CAP, y NO GEOMETRIC/COMPOUNDING) y la lectura se detiene en la primera
-fila con Tech vacio (doble defensa para no leer la tabla GEOMETRIC de abajo).
-
-Las celdas de año de la entrada son formulas, pero se leen sus VALORES CACHEADOS
-con data_only=True. Si el archivo se edito por codigo y Excel no recalculo/guardo,
-los valores cacheados pueden faltar: si una celda de año llega como string (texto
-de formula) el script aborta pidiendo reabrir/guardar el tool en Excel.
-
+Inputs:
+    inputs/data/LAC_maxcap_tool.xlsx (sheet "Export"), LAC_maxcap_tool_complementary.xlsx
+        (sheet "Updated")
+Outputs:
+    A-O_Parametrization.xlsx / Secondary Techs, in place — only with --apply (backup unless
+        --no-backup)
 Usage:
-    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py            # dry-run (default)
-    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --apply    # escribe (con backup)
-    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --apply --no-backup
-    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py --scenario BAU
+    python scripts/tools/Z_AUX_update_maxcap_inv_from_tool.py [--dry-run|--apply]
+        [--no-backup] [--scenario BAU] [--tool PATH] [--complementary PATH]
+    --dry-run previews without writing (default); --apply writes and creates a backup unless
+    --no-backup; --scenario restricts to a comma-separated subset of SCENARIOS (default: all).
 """
 from __future__ import annotations
 
@@ -365,6 +364,13 @@ def write_scenario(scenario: str, table: dict, apply_changes: bool,
 
 
 def main() -> None:
+    """Parse CLI args, read sources A and B, merge them and write each target scenario.
+
+    Reads source A (LOGISTIC table, precedence on ties) and source B (Updated table, only its
+    techs missing from A), merges them, then calls write_scenario() for each scenario in
+    --scenario. Raises SystemExit if an unknown scenario is requested, or if --apply left any
+    post-write verification violation.
+    """
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     group = parser.add_mutually_exclusive_group()

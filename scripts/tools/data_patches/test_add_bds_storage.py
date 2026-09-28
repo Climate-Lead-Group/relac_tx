@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""
-Test pre para add_bds_storage.py.
+"""Test suite for add_bds_storage.py, run against a temporary sandbox.
 
-Corre el clonador contra un SANDBOX temporal (copia de los archivos reales)
-y verifica su comportamiento sin tocar nada real.
+Copies the real files into a temporary sandbox (`%TEMP%/bds_sandbox_*`) and runs the cloner
+and the validator against that copy only; never touches the real inputs/. Covers pure
+transforms, sandbox setup, pre-validation, the per-scenario writers, the global (Xtra/YAML)
+writer, a full run(), dry-run, the country filter, validation aborts and the post-application
+validator (see TESTS for the full list).
 
-Uso:
+Inputs:
+    same files as add_bds_storage.py (read-only source for the sandbox copy)
+Outputs:
+    none in the real tree; writes/deletes only under the temporary sandbox directory
+Usage:
     python scripts/tools/data_patches/test_add_bds_storage.py
 """
 import shutil
@@ -35,6 +41,7 @@ def check(cond: bool, msg: str) -> None:
 # T0 — transforms puras
 # ---------------------------------------------------------------------------
 def t0_transforms() -> None:
+    """Check the pure name-transform helpers (src/dst tech, storage, fuel) for known inputs."""
     check(bds.src_tech('ARG') == 'PWRSDSARGXX', "src_tech('ARG')")
     check(bds.dst_tech('ARG') == 'PWRBDSARGXX', "dst_tech('ARG')")
     check(bds.src_storage('CRI') == 'SDSCRIXX01', "src_storage('CRI')")
@@ -191,6 +198,11 @@ def t_preval() -> None:
 # T-writers — escritores por escenario aplicados a un escenario del sandbox
 # ---------------------------------------------------------------------------
 def t_writers() -> None:
+    """Check write_base_year() and write_projections() on a 2-country sandbox slice.
+
+    Verifies row counts, mode 1/2 charge/discharge wiring against ELC{C}XX02, fuel names and
+    the transformed Tech.Name for Base_Year and Projections.
+    """
     sb = new_sandbox()
     try:
         sd = bds.discover_scenarios(sb)[0]
@@ -304,6 +316,12 @@ def t_writers() -> None:
 # T-globals — Xtra_Storage y parcheo YAML
 # ---------------------------------------------------------------------------
 def t_globals() -> None:
+    """Check write_xtra() on a 2-country sandbox slice of A-Xtra_Storage.xlsx.
+
+    Verifies row counts per sheet (Fixed Horizon Parameters, CapitalCostStorage,
+    TechnologyStorage), StorageLevelStart/OperationalLifeStorage, new STORAGE.ID values,
+    the transformed STORAGE.Name, and the CapitalCostStorage=32777.77/EMPTY bug-compat value.
+    """
     sb = new_sandbox()
     try:
         two = ['ARG', 'CRI']
@@ -612,6 +630,11 @@ def t_validation_aborts() -> None:
 # T-validator — el auditor post detecta estados buenos y malos
 # ---------------------------------------------------------------------------
 def t_validator() -> None:
+    """Check validate_bds_structure.audit() on unapplied, applied and corrupted sandboxes.
+
+    Verifies audit() returns 1 on a sandbox where the clone was never applied, 0 after a full
+    run(), and 1 again once a BDS CapitalCost cell is corrupted by hand (V6 must catch it).
+    """
     # 1) sandbox SIN aplicar: debe fallar (estructura BDS ausente)
     sb = new_sandbox()
     try:

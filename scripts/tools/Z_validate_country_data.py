@@ -1,11 +1,20 @@
-"""
-Validation script for OG_csvs_inputs data.
-Validates that a country has all required data in the OSeMOSYS CSV input files.
+"""Validate that a country has all required sets and parameters in OG_csvs_inputs.
 
+Country-management tool (see `docs/country-management.md`). Read-only: checks that the
+country's rows meet the minimum entry counts in REQUIRED_SETS (TECHNOLOGY/FUEL/EMISSION/
+STORAGE) and that every parameter in REQUIRED_PARAMS has data, printing a pass/fail summary
+per country (or a detailed report with --report).
+
+Inputs:
+    inputs/OG_csvs_inputs/*.csv
+    inputs/config/Config_country_codes.yaml (via common.Z_AUX_config_loader.get_countries)
+Outputs:
+    none (stdout only)
 Usage:
-    python scripts/tools/Z_validate_country_data.py                  # Validate all RELAC countries
-    python scripts/tools/Z_validate_country_data.py --country ARG    # Validate specific country
-    python scripts/tools/Z_validate_country_data.py --country NCC --report  # Generate detailed report
+    python scripts/tools/Z_validate_country_data.py [--country ARG] [--report] [--quiet]
+    --country validates one country (default: all RELAC countries from
+    Config_country_codes.yaml); --report prints a detailed report; --quiet shows only the
+    summary. Exits 1 if any validated country fails.
 """
 
 import pandas as pd
@@ -580,6 +589,12 @@ def generate_summary(country_code, results):
 
 
 def main():
+    """Validate every requested country and print a global summary; exit 1 on any failure.
+
+    Runs validate_country() + generate_summary() per country (--country, or every
+    OSTRAM_COUNTRIES if omitted), then, when more than one country was checked, prints a
+    GLOBAL SUMMARY pass/fail table.
+    """
     parser = argparse.ArgumentParser(
         description="Validate country data in OG_csvs_inputs"
     )
