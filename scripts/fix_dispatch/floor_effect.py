@@ -26,8 +26,10 @@ Inputs:
 Outputs:
     outputs/fix_dispatch/floor_effect_report.csv (or --out FILE)
 Usage:
-    python scripts/fix_dispatch/floor_effect.py                      # demo on existing floors
-    python scripts/fix_dispatch/floor_effect.py --candidates FILE    # FILE: scenario,tech,year,floor_PJ
+    python scripts/fix_dispatch/floor_effect.py                # demo on existing floors
+    python scripts/fix_dispatch/floor_effect.py --candidates FILE
+        # FILE: scenario,tech,year,floor_PJ
+    python scripts/fix_dispatch/floor_effect.py --out FILE     # write the report to FILE
 Notes:
     - floor_PJ, fuel_input_PJ, CO2, country_demand_PJ are in PJ; cum_forced_GW and
       cap_max_GW are in GW.

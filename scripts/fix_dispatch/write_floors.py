@@ -36,9 +36,9 @@ Outputs:
     outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt.bak (one-time backup)
     outputs/fix_dispatch/upstream_floor_rows.csv
 Usage:
-    python scripts/fix_dispatch/write_floors.py                    # all scenarios in the CSV
-    python scripts/fix_dispatch/write_floors.py --scenarios BAU OPT  # just BAU and OPT
-    python scripts/fix_dispatch/write_floors.py --dry-run           # compute + report, write nothing
+    python scripts/fix_dispatch/write_floors.py               # all scenarios in the CSV
+    python scripts/fix_dispatch/write_floors.py --scenarios BAU OPT   # just BAU and OPT
+    python scripts/fix_dispatch/write_floors.py --dry-run      # compute + report, write nothing
 Notes:
     - floor_PJ / existing_floor_PJ / final_floor_PJ are in PJ; forced_GW is in GW.
     - A candidate can only RAISE a floor, never lower one.

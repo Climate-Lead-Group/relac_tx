@@ -1,8 +1,8 @@
 """Shared read-only IO/parsing library for the dispatch-floor fix (fix_dispatch chain).
 
-Library module imported by every other script in this folder (feasibility.py,
+Library module imported by six scripts in this folder: feasibility.py,
 make_candidates.py, write_floors.py, validate_constraints.py, floor_effect.py,
-fig_floor_effect.py). Authoritative sources, per the revised division of labor:
+fig_floor_effect.py. Authoritative sources, per the revised division of labor:
   - Activity limits (LowerLimit / UpperLimit) + forced builds (MinCapacityInvestment)
       -> parsed directly from the per-scenario preprocessed GLPK/MathProg txt
          outputs/Executables/<SCEN>_0/
