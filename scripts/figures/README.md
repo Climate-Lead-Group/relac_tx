@@ -80,9 +80,9 @@ fig_costo_unitario: {enabled: true, args: ["--years", "2030", "2050"]}   # with 
 
 The master warns if a key has no matching `.py`, or if a `fig_*.py` exists on disk but is missing
 from the YAML (so new figures are not forgotten). `--only a b` runs only those, ignoring their
-`true/false`. At the end it prints a table `script | status (OK/AVISO/ERROR/OMITIDO) | seconds |
-output` and returns exit code 1 if any script errored (a `SystemExit("Sin datos ...")` counts as a
-warning, not an error).
+`true/false`. At the end it prints a table `script | estado  | segundos | salida` (status / seconds /
+output; `estado` is one of OK/AVISO/ERROR/OMITIDO) and returns exit code 1 if any script errored (a
+`SystemExit("Sin datos ...")` counts as a warning, not an error).
 
 `run_all.yaml`: `report`, `presentation`, `dashboard`, `tablas` -> `true|false`.
 
