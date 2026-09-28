@@ -1,6 +1,8 @@
-"""
-preflight_separation.py  --  Phase D preflight scenario-separation gate
-(read-only, INPUT SIDE ONLY, no model solve).
+"""Phase D preflight scenario-separation gate (read-only, INPUT SIDE ONLY, no model solve).
+
+Called once by scripts/pipeline/B2_Executing_OG_Model.py, before the
+per-scenario loop, when dispatch_floors_active (preflight_separation_active)
+is set; a non-zero exit aborts B2 before any floor is written.
 
 Fossil dispatch floor (candidate_floors.csv) as a SHARE of electricity
 demand (SpecifiedAnnualDemand), per scenario. Demand is IDENTICAL across all
@@ -24,9 +26,16 @@ Asserts (exit code 1 with a clear message on failure, 0 on pass):
   (c) non-crossing gap: for every year >= 2035, OPT share >= BAU share
       (likewise VGB vs INV).
 
+Inputs:
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv (or --candidates FILE)
+    A2 otoole SpecifiedAnnualDemand, BAU only (via floor_effect.TechPhysics)
+Outputs:
+    none (read-only; prints a report to stdout, exits 1 on failure)
 Usage:
-  python preflight_separation.py
-  python preflight_separation.py --candidates FILE
+    python scripts/fix_dispatch/preflight_separation.py
+    python scripts/fix_dispatch/preflight_separation.py --candidates FILE
+Notes:
+    - Floor and demand values are in PJ; share/gap values are dimensionless.
 """
 
 from __future__ import annotations
@@ -160,6 +169,16 @@ def assert_noncrossing(system_df: pd.DataFrame, a: str, b: str, from_year: int, 
 
 
 def main():
+    """Run the preflight gate: load candidates + demand, print the BAU/OPT and
+    INV/VGB separation reports, then check assertions (a)-(c) from the module
+    docstring.
+
+    Side effects:
+        Prints reports and results to stdout.
+
+    Raises:
+        SystemExit: 1 if any assertion fails, 0 on pass.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", type=str, default=str(DEFAULT_CANDIDATES))
     args = ap.parse_args()

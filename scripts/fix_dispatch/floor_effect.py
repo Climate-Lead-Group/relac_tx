@@ -1,5 +1,4 @@
-"""
-floor_effect.py  --  STEP 2 deterministic floor-effect calculator (read-only, no solve).
+"""STEP 2 deterministic floor-effect calculator (read-only, no solve; standalone QA).
 
 Given candidate floors (scenario, tech, year, floor_PJ) it computes ONLY what a
 TotalTechnologyAnnualActivityLowerLimit mathematically GUARANTEES, and leaves
@@ -18,13 +17,20 @@ Per candidate floor it reports:
 
 Everything not derivable from the floor alone is labelled "left to optimizer."
 
-Sources: efficiency (OAR/IAR), emissions (EAR), demand (SpecifiedAnnualDemand)
-         from the A2 otoole per-scenario CSVs; caps/availability/life from the
-         feasibility model (preprocessed txt + otoole CSVs).
-
+Inputs:
+    --candidates FILE (scenario,tech,year,floor_PJ), default: demo_candidates() built
+        from the existing floor-universe TotalTechnologyAnnualActivityLowerLimit
+    A2 otoole OutputActivityRatio, InputActivityRatio, EmissionActivityRatio,
+        SpecifiedAnnualDemand (via TechPhysics)
+    preprocessed txt + A2 otoole CSVs (via feasibility.Feasibility)
+Outputs:
+    outputs/fix_dispatch/floor_effect_report.csv (or --out FILE)
 Usage:
-  python floor_effect.py                      # demo on existing working-set floors
-  python floor_effect.py --candidates FILE    # FILE: scenario,tech,year,floor_PJ
+    python scripts/fix_dispatch/floor_effect.py                      # demo on existing floors
+    python scripts/fix_dispatch/floor_effect.py --candidates FILE    # FILE: scenario,tech,year,floor_PJ
+Notes:
+    - floor_PJ, fuel_input_PJ, CO2, country_demand_PJ are in PJ; cum_forced_GW and
+      cap_max_GW are in GW.
 """
 
 from __future__ import annotations
@@ -130,6 +136,22 @@ class TechPhysics:
 
 
 def evaluate(candidates: pd.DataFrame) -> pd.DataFrame:
+    """Compute the guaranteed-minimum consequences of each candidate floor.
+
+    For every (scenario, tech, year, floor_PJ) row, evaluates feasibility
+    (Feasibility.feasible_floor), implied fuel input and CO2 (via
+    TechPhysics.per_output_ratio on IAR/OAR and EAR/OAR), efficiency, and demand
+    share. See the module docstring for the full list of computed fields and
+    their units.
+
+    Args:
+        candidates: DataFrame with columns scenario, tech, year, floor_PJ.
+
+    Returns:
+        One row per candidate with the computed fields (floor_PJ, cum_forced_GW,
+        cap_max_GW, feasibility fields, fuel_input_PJ[_lo/_hi], CO2[_lo/_hi],
+        country_demand_PJ, demand_share, etc.).
+    """
     rows = []
     phys_cache, feas_cache = {}, {}
     for scen in candidates["scenario"].unique():
@@ -225,6 +247,18 @@ def demo_candidates() -> pd.DataFrame:
 
 
 def print_aggregates(res: pd.DataFrame):
+    """Print aggregated summaries of an evaluate() result to stdout.
+
+    Prints forced generation (PJ) by scenario x year, by scenario x country and
+    by scenario x fuel, guaranteed CO2 by scenario, and a list of any
+    infeasible candidate floors.
+
+    Args:
+        res: DataFrame as returned by evaluate().
+
+    Side effects:
+        Prints to stdout only; writes nothing to disk.
+    """
     print("\n" + "=" * 78)
     print("FLOOR-EFFECT: guaranteed-minimum consequences of the candidate floors")
     print("(all values are GUARANTEED MINIMUMS forced by the floor; fuel source,")

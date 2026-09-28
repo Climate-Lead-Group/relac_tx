@@ -1,5 +1,4 @@
-"""
-validate_constraints.py  --  STEP 1 read-only input validator.
+"""STEP 1 read-only input validator (standalone QA; not called by B2).
 
 Reads (never writes) the authoritative inputs and flags, per scenario:
 
@@ -15,12 +14,19 @@ Reads (never writes) the authoritative inputs and flags, per scenario:
   PIPELINE_MISMATCH        floors / forced builds parsed from the txt disagree with the
                            same columns in the combined CSV.
 
-Outputs:  outputs/fix_dispatch/validation_report.txt   (readable)
-          outputs/fix_dispatch/validation_flags.csv    (machine-readable)
-
-Sources:  limits + forced builds -> preprocessed txt (authoritative)
-          OperationalLife/ResidualCapacity/C2A/Max*/AF -> feasibility model
-          combined CSV columns -> pipeline-integrity cross-check only
+Inputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt (limits + forced builds,
+        authoritative, via relac_io/feasibility)
+    outputs/A2_Outputs_Params_otoole/<SCEN>/*.csv (OperationalLife, ResidualCapacity, C2A,
+        Max*, AF; via feasibility)
+    outputs/RELAC_TX*Combined_Inputs_Outputs*.csv (pipeline-integrity cross-check only)
+Outputs:
+    outputs/fix_dispatch/validation_report.txt   (readable)
+    outputs/fix_dispatch/validation_flags.csv    (machine-readable)
+Usage:
+    python scripts/fix_dispatch/validate_constraints.py
+Notes:
+    - Floor/ceiling values are in PJ; capacities are in GW.
 """
 
 from __future__ import annotations
@@ -65,6 +71,17 @@ def _category(tech: str) -> str:
 
 
 def collect_flags():
+    """Run every check listed in the module docstring across io.SCENARIOS.
+
+    Returns:
+        Tuple (flags, feas, txt_lower, txt_forced, pipeline_summary):
+            flags: list of flag dicts (scenario, check, tech, country, fuel,
+                year, severity, value_a, value_b, detail).
+            feas: {scenario: Feasibility} used by the checks.
+            txt_lower: {scenario: {(tech, year): floor_PJ}} from the preprocessed txt.
+            txt_forced: {scenario: {(tech, year): forced_GW}} from the preprocessed txt.
+            pipeline_summary: {param_label: mismatch_count} for PIPELINE_MISMATCH.
+    """
     flags = []  # dict rows
 
     def add(scenario, check, tech, year, severity, detail, va=None, vb=None):
@@ -224,6 +241,21 @@ def collect_flags():
 
 
 def write_outputs(flags, feas, txt_lower, txt_forced, pipeline_summary):
+    """Write validation_flags.csv and validation_report.txt from collect_flags() output.
+
+    Args:
+        flags: list of flag dicts, as returned by collect_flags().
+        feas: {scenario: Feasibility}, as returned by collect_flags().
+        txt_lower: {scenario: {(tech, year): floor_PJ}}, as returned by collect_flags().
+        txt_forced: {scenario: {(tech, year): forced_GW}}, as returned by collect_flags().
+        pipeline_summary: {param_label: mismatch_count}, as returned by collect_flags().
+
+    Returns:
+        Tuple (df, report_text): the flags DataFrame and the full report text.
+
+    Side effects:
+        Writes FLAGS_CSV and REPORT_TXT.
+    """
     df = pd.DataFrame(flags, columns=["scenario", "check", "tech", "country", "fuel",
                                       "year", "severity", "value_a", "value_b", "detail"])
     df.to_csv(FLAGS_CSV, index=False)

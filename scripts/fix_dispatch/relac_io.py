@@ -1,7 +1,8 @@
-"""
-relac_io.py  --  shared read-only IO / parsing for the dispatch-floor fix.
+"""Shared read-only IO/parsing library for the dispatch-floor fix (fix_dispatch chain).
 
-Authoritative sources (per the revised division of labor):
+Library module imported by every other script in this folder (feasibility.py,
+make_candidates.py, write_floors.py, validate_constraints.py, floor_effect.py,
+fig_floor_effect.py). Authoritative sources, per the revised division of labor:
   - Activity limits (LowerLimit / UpperLimit) + forced builds (MinCapacityInvestment)
       -> parsed directly from the per-scenario preprocessed GLPK/MathProg txt
          outputs/Executables/<SCEN>_0/
@@ -12,8 +13,17 @@ Authoritative sources (per the revised division of labor):
   - Model outputs (TotalCapacityAnnual, TotalTechnologyAnnualActivity, production, CF...)
       -> the combined inputs+outputs CSV in outputs/.
 
-NOTHING here writes to any live input. The only writes are parquet caches under
-outputs/fix_dispatch/cache/.
+Inputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt (preprocessed MathProg)
+    outputs/A2_Outputs_Params_otoole/<SCEN>/*.csv (A2 otoole per-scenario CSVs)
+    outputs/RELAC_TX*Combined_Inputs_Outputs*.csv (combined inputs+outputs CSV)
+Outputs:
+    outputs/fix_dispatch/cache/*.parquet (parquet cache of extract_combined() only)
+Usage:
+    import relac_io as io   # from any script in this folder
+Notes:
+    - Nothing here writes to any live input; the only writes are the parquet caches.
+    - CapacityToActivityUnit default (C2A_DEFAULT) is 31.536 (GW-yr -> PJ).
 """
 
 from __future__ import annotations
@@ -76,12 +86,20 @@ WORKING_SET = [
 # Technology name parsing (see CLAUDE.md "Technology naming")
 # --------------------------------------------------------------------------- #
 def parse_tech(tech: str) -> dict:
-    """Return {kind, fuel, country, is_fossil, is_renewable, is_nuclear, is_storage}.
+    """Classify a technology code by its OSeMOSYS naming convention.
 
-    kind in {plant, tx, interconnector, other}.
-    For plants  PWR+fuel(3)+country(3)+suffix : fuel=t[3:6], country=t[6:9].
-    For interconnectors TRN+C1(3)+XX+C2(3)+XX : country=C1=t[3:6], to=t[8:11].
-    Domestic Tx prefixes carry a country at t[6:9] but no combustion fuel.
+    kind is one of {plant, tx, interconnector, other}. For plants (PWR+fuel(3)+
+    country(3)+suffix): fuel=t[3:6], country=t[6:9]. For interconnectors
+    (TRN+C1(3)+XX+C2(3)+XX): country=C1=t[3:6], country2=C2=t[8:11]. Domestic Tx
+    prefixes (PWRTRN/RNWTRN/TRNNLI/RNWNLI/TRNRPO/RNWRPO) carry a country at
+    t[6:9] but no combustion fuel.
+
+    Args:
+        tech: technology code, e.g. "PWRNGSMEXXX".
+
+    Returns:
+        dict with keys kind, fuel, country, country2, is_fossil, is_renewable,
+        is_nuclear, is_storage.
     """
     t = str(tech)
     out = {"kind": "other", "fuel": None, "country": None, "country2": None,
@@ -103,10 +121,12 @@ def parse_tech(tech: str) -> dict:
 
 
 def tech_country(tech: str) -> str | None:
+    """Return the 3-letter country code parsed from tech, or None (see parse_tech)."""
     return parse_tech(tech)["country"]
 
 
 def tech_fuel(tech: str) -> str | None:
+    """Return the 3-letter fuel code parsed from tech, or None (see parse_tech)."""
     return parse_tech(tech)["fuel"]
 
 
@@ -117,12 +137,22 @@ _PARAM_DECL = re.compile(r"^\s*param\s+default\s+(\S+)\s*:\s*(\w+)\s*:=\s*$")
 
 
 def executable_txt(scenario: str) -> Path:
-    """The ORIGINAL preprocessed txt for the canonical
+    """Locate the ORIGINAL preprocessed txt for the canonical
     StorageDelayN5_OpenBCK_RMCarefulXLSX build. Excludes the *.warnings.txt log
     and *_FLOORED.txt copies so that once write_floors.py drops a floored copy
     next to the original, every reader (feasibility, validators, write_floors
     itself on a re-run) still resolves to the true original and never
-    floors-on-top-of-floors."""
+    floors-on-top-of-floors.
+
+    Args:
+        scenario: one of io.SCENARIOS (e.g. "BAU").
+
+    Returns:
+        Path to the matching Pre_processed_<SCEN>_0_...txt file.
+
+    Raises:
+        FileNotFoundError: if no matching txt exists for the scenario.
+    """
     folder = EXECUTABLES / f"{scenario}_0"
     matches = sorted(
         p for p in folder.glob(
@@ -136,25 +166,43 @@ def executable_txt(scenario: str) -> Path:
 
 
 def floored_txt(scenario: str) -> Path:
-    """Path where write_floors.py writes the floored COPY (may not exist yet).
+    """Return the path where write_floors.py writes the floored COPY (may not exist yet).
 
     Derived from the resolved original so the copy sits right next to it and
     carries the same build tag, e.g.
     Pre_processed_<SCEN>_0_StorageDelayN5_OpenBCK_RMCarefulXLSX_FLOORED.txt.
     The '_FLOORED.txt' exclusion in executable_txt() keeps this copy from ever
-    being mistaken for an original (no floors-on-floors on a re-run)."""
+    being mistaken for an original (no floors-on-floors on a re-run).
+
+    Args:
+        scenario: one of io.SCENARIOS.
+
+    Returns:
+        Path to the (possibly not-yet-existing) floored txt copy.
+    """
     orig = executable_txt(scenario)
     return orig.with_name(orig.stem + "_FLOORED.txt")
 
 
 def solver_txt(scenario: str) -> Path:
-    """The txt the solver ACTUALLY consumed: the most-patched variant present.
+    """Locate the txt the solver ACTUALLY consumed: the most-patched variant present.
 
     Patch chain: original -> _FLOORED (write_floors.py) -> _FLOORED_VEGCON
     (veg_tx_constraints.py). Each step writes a copy next to its source and the
     repo may carry only the final variant (intermediates get cleaned up), so
     this resolves by explicit preference instead of deriving the name from
-    executable_txt() like floored_txt() does."""
+    executable_txt() like floored_txt() does.
+
+    Args:
+        scenario: one of io.SCENARIOS.
+
+    Returns:
+        Path to the highest-priority existing variant (_FLOORED_VEGCON.txt,
+        then _FLOORED.txt).
+
+    Raises:
+        FileNotFoundError: if neither patched variant exists for the scenario.
+    """
     folder = EXECUTABLES / f"{scenario}_0"
     base = f"Pre_processed_{scenario}_0_StorageDelayN5_OpenBCK_RMCarefulXLSX"
     for suffix in ("_FLOORED_VEGCON.txt", "_FLOORED.txt"):
@@ -167,11 +215,20 @@ def solver_txt(scenario: str) -> Path:
 
 
 def parse_mathprog(scenario: str, wanted: list[str]) -> dict[str, pd.DataFrame]:
-    """Parse the requested 'param default X : NAME :=  ... ;' list-blocks.
+    """Parse the requested 'param default X : NAME :=  ... ;' list-blocks from the
+    scenario's preprocessed MathProg txt (executable_txt()).
 
     Every target block here is 4-token per row: REGION TECHNOLOGY YEAR VALUE.
-    Returns {param: DataFrame[REGION, TECHNOLOGY, YEAR, VALUE]}; missing params
-    yield an empty DataFrame. The block default is attached as df.attrs['default'].
+
+    Args:
+        scenario: one of io.SCENARIOS.
+        wanted: list of MathProg parameter names to extract (e.g.
+            "TotalTechnologyAnnualActivityLowerLimit").
+
+    Returns:
+        {param: DataFrame[REGION, TECHNOLOGY, YEAR, VALUE]}; missing params yield
+        an empty DataFrame. The block default value is attached as
+        df.attrs['default'].
     """
     path = executable_txt(scenario)
     wanted_set = set(wanted)
@@ -215,7 +272,16 @@ def parse_mathprog(scenario: str, wanted: list[str]) -> dict[str, pd.DataFrame]:
 # otoole A2 per-scenario CSVs  -- other inputs
 # --------------------------------------------------------------------------- #
 def load_otoole(scenario: str, param: str) -> pd.DataFrame:
-    """Read outputs/A2_Outputs_Params_otoole/<SCEN>/<param>.csv verbatim."""
+    """Read outputs/A2_Outputs_Params_otoole/<SCEN>/<param>.csv verbatim.
+
+    Args:
+        scenario: one of io.SCENARIOS.
+        param: otoole parameter name (CSV file stem), e.g. "ResidualCapacity".
+
+    Returns:
+        The CSV as a DataFrame (YEAR coerced to nullable Int64 if present), or an
+        empty DataFrame if the file does not exist.
+    """
     path = OTOOLE / scenario / f"{param}.csv"
     if not path.exists():
         return pd.DataFrame()
@@ -229,10 +295,17 @@ def load_otoole(scenario: str, param: str) -> pd.DataFrame:
 # Fossil-fleet enumeration -- floor universe
 # --------------------------------------------------------------------------- #
 def nonren_floor_techs(scenario: str) -> list[str]:
-    """All fossil techs (fuel in FLOOR_FUELS) that carry any residual
+    """List all fossil techs (fuel in FLOOR_FUELS) that carry any residual
     capacity, any forced build (TotalAnnualMinCapacityInvestment), or any
     existing dispatch floor (TotalTechnologyAnnualActivityLowerLimit) in this
-    scenario. This is the full flooring universe, replacing WORKING_SET."""
+    scenario. This is the full flooring universe, replacing WORKING_SET.
+
+    Args:
+        scenario: one of io.SCENARIOS.
+
+    Returns:
+        Sorted list of technology codes.
+    """
     techs: set[str] = set()
 
     resid = load_otoole(scenario, "ResidualCapacity")
@@ -256,6 +329,15 @@ def nonren_floor_techs(scenario: str) -> list[str]:
 # Combined inputs+outputs CSV  -- outputs + input cross-check
 # --------------------------------------------------------------------------- #
 def find_combined_csv() -> Path:
+    """Locate the combined inputs+outputs CSV under outputs/.
+
+    Returns:
+        The largest file matching outputs/RELAC_TX*Combined_Inputs_Outputs*.csv
+        (the full inputs+outputs file, not a dated slice).
+
+    Raises:
+        FileNotFoundError: if no matching CSV exists.
+    """
     cands = sorted(P.OUTPUTS.glob("RELAC_TX*Combined_Inputs_Outputs*.csv"))
     if not cands:
         raise FileNotFoundError("No combined inputs+outputs CSV in outputs/")
@@ -271,11 +353,25 @@ def extract_combined(params: list[str], csv_path: Path | None = None,
                      cache_tag: str | None = None,
                      rebuild: bool = False,
                      chunksize: int = 400_000) -> dict[str, pd.DataFrame]:
-    """One streaming pass over the (large) combined CSV; one tidy parquet per param.
+    """Make one streaming pass over the (large) combined CSV; one tidy parquet per param.
 
-    Returns {param: DataFrame} with only the index columns that are ever populated
-    for that param (plus VALUE). Cached under fix_dispatch/cache/<tag>__<param>.parquet.
-    Only Future==0 rows are kept (deterministic model).
+    Args:
+        params: combined-CSV value columns to extract (e.g.
+            "TotalTechnologyAnnualActivity").
+        csv_path: combined CSV to read; defaults to find_combined_csv().
+        cache_tag: cache-file tag; defaults to csv_path.stem (sanitized).
+        rebuild: if True, re-read csv_path and overwrite the cache even if present.
+        chunksize: pandas.read_csv chunk size (rows).
+
+    Returns:
+        {param: DataFrame} with only the index columns that are ever populated
+        for that param (plus VALUE). Cached under
+        fix_dispatch/cache/<tag>__<param>.parquet. Only Future==0 rows are kept
+        (deterministic model).
+
+    Side effects:
+        Writes one parquet file per param to CACHE; reads from cache instead of
+        csv_path when the cache is already complete and rebuild is False.
     """
     csv_path = Path(csv_path) if csv_path else find_combined_csv()
     tag = cache_tag or csv_path.stem
@@ -320,7 +416,16 @@ def extract_combined(params: list[str], csv_path: Path | None = None,
 # Small helpers
 # --------------------------------------------------------------------------- #
 def to_lookup(df: pd.DataFrame, keys: list[str], value: str = "VALUE") -> dict:
-    """DataFrame -> {tuple(keys): value}. Last write wins on duplicates."""
+    """Convert a DataFrame to a {tuple(keys): value} lookup dict.
+
+    Args:
+        df: source DataFrame; None or empty returns {}.
+        keys: column names forming the lookup key tuple, in order.
+        value: column name to use as the value.
+
+    Returns:
+        dict keyed by tuple(keys). Last write wins on duplicate keys.
+    """
     if df is None or len(df) == 0:
         return {}
     out = {}

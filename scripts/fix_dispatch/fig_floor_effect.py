@@ -1,6 +1,6 @@
-"""
-fig_floor_effect.py  --  read-only. Renders the before/after effect of the
-dispatch-floor fix as a 3-panel figure.
+"""Render the before/after effect of the dispatch-floor fix as a 3-panel figure.
+
+Read-only; standalone analysis, not called by B2.
 
 Data sources:
   - Baseline (pre-floor) combined inputs+outputs CSV: outputs/
@@ -19,7 +19,20 @@ Data sources:
     just the CSV form of the same input.
   - Working-set forced capacity (forced_GW) and contracted_CF: candidate_floors.csv.
 
-No model input is written. Only fig_floor_effect.png and cache/*.parquet.
+Inputs:
+    outputs/RELAC_TX_StorageDelay_Combined_Inputs_Outputs_2026-06-19.csv (baseline)
+    outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Combined_Inputs_Outputs.csv
+    outputs/fix_dispatch/solved_FLOORED/RELAC_TX_FLOORED_Inputs.csv
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt (via relac_io)
+Outputs:
+    outputs/fix_dispatch/fig_floor_effect.png
+    outputs/fix_dispatch/cache/*.parquet (via relac_io.extract_combined)
+Usage:
+    python scripts/fix_dispatch/fig_floor_effect.py
+Notes:
+    - No model input is written. BAU+OPT only (INV/VGB were not solved in this run).
+    - Activity/floor values are PJ/yr; CF (capacity factor) values are dimensionless.
 """
 
 from __future__ import annotations
@@ -134,6 +147,23 @@ def panel_b_series(orig_ll: pd.DataFrame, floored_ll: pd.DataFrame) -> dict:
 
 def panel_c_data(baseline_act: pd.DataFrame, floored_act: pd.DataFrame, cand: pd.DataFrame,
                   snapshot_year: int = LAST_YEAR) -> pd.DataFrame:
+    """Build the per-tech before/after capacity-factor table for Panel C (OPT, snapshot_year).
+
+    For every tech in io.WORKING_SET with a positive forced_GW candidate row at
+    snapshot_year under OPT, computes the implied CF (activity / (forced_GW *
+    C2A)) before and after the floor.
+
+    Args:
+        baseline_act: pre-floor TotalTechnologyAnnualActivity (Scenario,
+            TECHNOLOGY, YEAR, VALUE), as returned by load_activity().
+        floored_act: post-floor TotalTechnologyAnnualActivity, same shape.
+        cand: candidate_floors.csv rows (BAU+OPT), as returned by load_candidates().
+        snapshot_year: year to read (default: LAST_YEAR / 2050, so every plant is
+            past commissioning and at steady state).
+
+    Returns:
+        DataFrame with tech, label, contracted_CF, CF_forced_before, CF_forced_after.
+    """
     # all 11 working-set techs are forced under OPT; use OPT for a single
     # consistent scenario across every plant (BAU only forces 2 of the 11).
     # A single terminal-year (2050) snapshot is used rather than an average
@@ -176,6 +206,21 @@ def panel_c_data(baseline_act: pd.DataFrame, floored_act: pd.DataFrame, cand: pd
 # plotting
 # --------------------------------------------------------------------------- #
 def plot(panel_a: dict, panel_b: dict, panel_c: pd.DataFrame):
+    """Render and save the 3-panel before/after figure.
+
+    Panel A: non-renewable generation (PJ/yr), BAU/OPT, before vs after.
+    Panel B: activity floor (PJ/yr), broken y-axis (pre-2026 legacy floor is
+        ~15x the new post-2026 floor).
+    Panel C: per-tech capacity factor on forced capacity, before vs after, 2050.
+
+    Args:
+        panel_a: dict from panel_a_series().
+        panel_b: dict from panel_b_series().
+        panel_c: DataFrame from panel_c_data().
+
+    Side effects:
+        Writes OUT_PNG (outputs/fix_dispatch/fig_floor_effect.png).
+    """
     from matplotlib.gridspec import GridSpecFromSubplotSpec
 
     fig = plt.figure(figsize=(10, 16), dpi=150)
@@ -297,6 +342,17 @@ def plot(panel_a: dict, panel_b: dict, panel_c: pd.DataFrame):
 
 
 def main():
+    """Load the baseline and floored data sources, build the 3 panels, print
+    summary numbers, and render the figure (see the module docstring Inputs).
+
+    Side effects:
+        Reads the baseline/floored combined CSVs and candidate_floors.csv;
+        writes/reads the extract_combined() parquet cache; calls plot(), which
+        writes OUT_PNG.
+
+    Raises:
+        AssertionError: if any of the required source files is missing.
+    """
     assert BASELINE_COMBINED.exists(), f"missing baseline combined CSV: {BASELINE_COMBINED}"
     assert FLOORED_COMBINED.exists(), f"missing floored combined CSV: {FLOORED_COMBINED}"
     assert FLOORED_INPUTS.exists(), f"missing floored inputs CSV: {FLOORED_INPUTS}"

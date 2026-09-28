@@ -1,5 +1,4 @@
-"""
-make_candidates.py  --  generate candidate dispatch floors (read-only).
+"""Generate candidate dispatch floors 2027-2050 (read-only; manual step, not called by B2).
 
 Floors the FULL fossil fleet (relac_io.nonren_floor_techs), not the old
 11-tech WORKING_SET. WORKING_SET excluded any tech that already had a
@@ -39,6 +38,20 @@ CF_BY_FUEL_FALLBACK below and re-run this script, then re-run write_floors.py.
 
 CF provenance: cf_table_working_set.py in the _Dataset_Power working folder
 (Phase A; to be widened by a Phase B in-folder research pass).
+
+Inputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt (via feasibility.Feasibility)
+    outputs/A2_Outputs_Params_otoole/<SCEN>/*.csv (via feasibility.Feasibility)
+Outputs:
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv (Scenario, TECHNOLOGY, country,
+        fuel, YEAR, fleet_GW, forced_GW, residual_GW, contracted_CF, cf_source,
+        cf_quality, floor_PJ, profile, status, commissioning_year)
+Usage:
+    python scripts/fix_dispatch/make_candidates.py
+Notes:
+    - Manual step: not called by B2; re-run only to change a CF (approval-required,
+      see scripts/fix_dispatch/README.md Gotchas).
+    - Capacities (fleet_GW, forced_GW, residual_GW) are in GW; floor_PJ is in PJ.
 """
 
 from __future__ import annotations
@@ -174,6 +187,19 @@ def permissive_cf(start: float, year: int) -> float:
 
 
 def build() -> pd.DataFrame:
+    """Build the full candidate_floors table for every scenario, tech and year.
+
+    For each scenario in io.SCENARIOS and each tech in
+    io.nonren_floor_techs(scenario), computes a per-tech committed CF
+    (plan_grounded -> historical_implied -> fuel_fallback), applies it flat
+    (COMMITTED scenarios) or via permissive_cf() (PERMISSIVE scenarios), and
+    emits one row per (scenario, tech, year) for year in
+    [FIRST_FLOOR_YEAR, LAST] where the tech's total_available_capacity > 0.
+
+    Returns:
+        DataFrame sorted by Scenario, TECHNOLOGY, YEAR with the columns written
+        to candidate_floors.csv (see the module docstring Outputs).
+    """
     # historical_implied is read off the frozen 2023-2026 block, which is
     # identical across scenarios by the model's own symmetry constraint, so
     # it is computed once against a single anchor scenario and reused.

@@ -1,9 +1,11 @@
-"""
-feasibility.py  --  shared feasibility model for dispatch floors.
+"""Shared feasibility model for dispatch floors: FloorVerdict, Feasibility.
 
 feasible_floor(tech, year, floor_PJ) answers: can this technology physically
 deliver at least `floor_PJ` of annual generation in `year`, given the capacity
 ceilings and availability the model actually imposes?
+
+Library module imported by make_candidates.py, write_floors.py, floor_effect.py
+and validate_constraints.py.
 
 It is a NECESSARY-condition check (a generous upper bound on producible energy):
   1. floor_PJ <= Cap_max * CapacityToActivityUnit * AvailabilityFactor
@@ -14,10 +16,21 @@ It is a NECESSARY-condition check (a generous upper bound on producible energy):
      default -1 means "unbounded" for the Max* parameters.
   2. floor_PJ <= TotalTechnologyAnnualActivityUpperLimit(tech, year) if present  [txt]
 
-Sources:
-  - TotalAnnualMaxCapacity, TotalAnnualMaxCapacityInvestment, AvailabilityFactor,
-    TotalTechnologyAnnualActivityUpperLimit, TotalAnnualMinCapacityInvestment  -> preprocessed txt
-  - ResidualCapacity, CapacityToActivityUnit, OperationalLife                  -> A2 otoole CSVs
+Inputs:
+    TotalAnnualMaxCapacity, TotalAnnualMaxCapacityInvestment, AvailabilityFactor,
+        TotalTechnologyAnnualActivityUpperLimit, TotalAnnualMinCapacityInvestment
+        (preprocessed txt, via relac_io.parse_mathprog)
+    ResidualCapacity, CapacityToActivityUnit, OperationalLife (A2 otoole CSVs,
+        via relac_io.load_otoole)
+Outputs:
+    none (in-memory model only; no files written)
+Usage:
+    from feasibility import Feasibility
+    verdict = Feasibility("OPT").feasible_floor(tech, year, floor_PJ)
+Notes:
+    - All capacity values are in GW; all energy/floor values are in PJ.
+    - This is a NECESSARY condition, not a dispatch prediction: passing it does
+      not mean the optimizer will actually dispatch at or above the floor.
 """
 
 from __future__ import annotations
@@ -42,6 +55,11 @@ NEAR_CAP_FRAC = 0.05  # flag floors within 5% of the binding ceiling
 
 @dataclass
 class FloorVerdict:
+    """Result of Feasibility.feasible_floor(): whether a candidate floor_PJ is
+    feasible for (tech, year), plus the binding ceiling and headroom used to
+    reach that verdict. All capacity fields are in GW, all energy fields in PJ.
+    """
+
     scenario: str
     tech: str
     year: int
@@ -61,11 +79,21 @@ class FloorVerdict:
     implied_CF: float | None   # floor / (cap_max * c2a)
 
     def as_row(self) -> dict:
+        """Return this verdict as a flat dict (dataclasses.asdict), for building a report row."""
         return asdict(self)
 
 
 class Feasibility:
+    """Per-scenario feasibility model: loads the txt/otoole parameters once, then
+    answers capacity and feasibility queries against them (see feasible_floor).
+    """
+
     def __init__(self, scenario: str):
+        """Load every parameter this model needs for one scenario.
+
+        Args:
+            scenario: one of relac_io.SCENARIOS (e.g. "BAU").
+        """
         self.scenario = scenario
         mp = io.parse_mathprog(scenario, _TXT_PARAMS)
         self.maxcap = io.to_lookup(mp["TotalAnnualMaxCapacity"], ["TECHNOLOGY", "YEAR"])
@@ -92,15 +120,19 @@ class Feasibility:
 
     # -- primitive accessors -------------------------------------------------
     def c2a_of(self, tech: str) -> float:
+        """Return tech's CapacityToActivityUnit (GW-yr -> PJ), or io.C2A_DEFAULT if absent."""
         return self.c2a.get(tech, io.C2A_DEFAULT)
 
     def availability(self, tech: str, year: int) -> float:
+        """Return AvailabilityFactor(tech, year) as a fraction, defaulting to 1.0."""
         return float(self.avail.get((tech, year), 1.0))
 
     def operational_life(self, tech: str) -> float:
+        """Return OperationalLife(tech) in years, defaulting to 30.0 if absent."""
         return float(self.oplife.get(tech, 30.0))
 
     def residual(self, tech: str, year: int) -> float:
+        """Return ResidualCapacity(tech, year) in GW, defaulting to 0.0 if absent."""
         return float(self.resid.get((tech, year), 0.0))
 
     # -- capacity ceiling ----------------------------------------------------
@@ -155,6 +187,21 @@ class Feasibility:
 
     # -- the check -----------------------------------------------------------
     def feasible_floor(self, tech: str, year: int, floor_PJ: float) -> FloorVerdict:
+        """Check whether floor_PJ is a NECESSARY-condition feasible annual floor.
+
+        Compares floor_PJ against the tighter of two ceilings: the capacity-based
+        max energy (capacity_upper_bound() * CapacityToActivityUnit *
+        AvailabilityFactor) and TotalTechnologyAnnualActivityUpperLimit, if
+        present. See the module docstring for the full rule.
+
+        Args:
+            tech: technology code.
+            year: model year.
+            floor_PJ: candidate annual floor to test, in PJ.
+
+        Returns:
+            FloorVerdict with feasible, binding ceiling, headroom and near_cap.
+        """
         c2a = self.c2a_of(tech)
         af = self.availability(tech, year)
         cap, cap_src = self.capacity_upper_bound(tech, year)

@@ -1,5 +1,8 @@
-"""
-write_floors.py  --  writer: produce floored COPIES of the preprocessed txt.
+"""Writer: produce floored COPIES of the preprocessed txt (the only script B2 calls).
+
+Called by scripts/pipeline/B2_Executing_OG_Model.py per scenario (--scenarios
+<name>), right after patch_activity_upper_limit, when dispatch_floors_active
+(dispatch_floors_script) is set.
 
 Reads inputs/tx_chain/fix_dispatch/candidate_floors.csv (THE swappable input --
 see the header comment in that file / make_candidates.py). Changing floor
@@ -25,10 +28,20 @@ floor rows in the upstream otoole shape (REGION,TECHNOLOGY,YEAR,VALUE, one
 section per scenario) for later manual promotion into inputs/OG_csvs_inputs --
 NOT wired into the pipeline by this script.
 
+Inputs:
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt (target, via relac_io)
+Outputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._FLOORED.txt (per scenario)
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._*.txt.bak (one-time backup)
+    outputs/fix_dispatch/upstream_floor_rows.csv
 Usage:
-  python write_floors.py                        # all scenarios present in the CSV
-  python write_floors.py --scenarios BAU OPT     # just BAU and OPT
-  python write_floors.py --dry-run               # compute + report, write nothing
+    python scripts/fix_dispatch/write_floors.py                    # all scenarios in the CSV
+    python scripts/fix_dispatch/write_floors.py --scenarios BAU OPT  # just BAU and OPT
+    python scripts/fix_dispatch/write_floors.py --dry-run           # compute + report, write nothing
+Notes:
+    - floor_PJ / existing_floor_PJ / final_floor_PJ are in PJ; forced_GW is in GW.
+    - A candidate can only RAISE a floor, never lower one.
 """
 
 from __future__ import annotations
@@ -99,6 +112,36 @@ def find_lower_limit_block(lines: list[str]) -> tuple[int, int, float]:
 
 
 def process_scenario(scenario: str, cand: pd.DataFrame, dry_run: bool) -> dict:
+    """Apply this scenario's candidate floors to a floored copy of its preprocessed txt.
+
+    For each (tech, year) row in `cand`, raises the existing
+    TotalTechnologyAnnualActivityLowerLimit to max(existing, candidate) when
+    feasible (Feasibility.feasible_floor); infeasible raises are skipped and
+    logged, never written. Writes the result to io.floored_txt(scenario), never
+    to the original.
+
+    Args:
+        scenario: one of io.SCENARIOS.
+        cand: candidate_floors.csv rows for this scenario (TECHNOLOGY, YEAR,
+            floor_PJ, and optionally forced_GW, contracted_CF for reporting).
+        dry_run: if True, compute and report but write no files (not even the
+            .bak backup).
+
+    Returns:
+        dict with scenario, orig_path, out_path, and per-row outcome lists
+        (replaced, inserted, unchanged, skipped_infeasible) plus a full `detail`
+        record list used for reporting.
+
+    Raises:
+        ValueError: if the original txt has unexpected line endings, fails the
+            split/join round-trip check, or has no
+            TotalTechnologyAnnualActivityLowerLimit block.
+
+    Side effects:
+        Writes a one-time `.bak` backup of the original txt (unless dry_run) and
+        the floored copy at io.floored_txt(scenario) (unless dry_run). Never
+        modifies the original txt.
+    """
     orig_path = io.executable_txt(scenario)
     raw = orig_path.read_bytes()
     if b"\n" in raw.replace(b"\r\n", b""):
@@ -214,6 +257,13 @@ def write_upstream_rows(results: list[dict]):
 
 
 def main():
+    """Parse CLI args, run process_scenario() for each requested scenario, then
+    write upstream_floor_rows.csv and print a summary.
+
+    Side effects:
+        Writes the floored txt copies (via process_scenario) and
+        outputs/fix_dispatch/upstream_floor_rows.csv, unless --dry-run.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenarios", nargs="+", default=None,
                     help="Subset of scenarios to process (default: all present in candidate_floors.csv)")

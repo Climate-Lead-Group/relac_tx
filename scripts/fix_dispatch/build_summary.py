@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-build_summary.py
-Step 6: one row per country per tier, plus a compact terminal table.
+"""STEP 6 summary: one row per country per tier, plus a compact terminal table.
 
-Run: python build_summary.py
-Reads: inputs/tx_chain/fix_dispatch/candidate_floors.csv
-Writes: outputs/fix_dispatch/candidate_floors_summary.csv
+Standalone QA; not called by B2. Groups candidate_floors.csv rows by (tier,
+country), using one representative scenario per tier to avoid double counting
+(BAU for tier "FILTERED", OPT for every other tier).
+
+Inputs:
+    inputs/tx_chain/fix_dispatch/candidate_floors.csv
+Outputs:
+    outputs/fix_dispatch/candidate_floors_summary.csv (tier, country, n_techs, n_rows,
+        total_forced_GW, total_floor_PJ_2050, year_min, year_max, cf_stated_pct,
+        cf_derived_pct, cf_proxy_pct, filtered_available, scenario_source)
+Usage:
+    python scripts/fix_dispatch/build_summary.py
+Notes:
+    - total_forced_GW is in GW; total_floor_PJ_2050 is in PJ.
+    - Reads columns "tier", "cf_basis" and "scenario_source" that the current
+      make_candidates.py does not write to candidate_floors.csv (it writes
+      "profile", "cf_source", "cf_quality" instead): running this script against
+      the current schema raises a KeyError.
 """
 import csv
 import sys
@@ -29,6 +42,13 @@ def is_proxy(basis):
 
 
 def main():
+    """Build the per-(tier, country) summary from SRC and write it, plus a
+    compact terminal table of FILTERED vs FULL GW and top techs by GW.
+
+    Side effects:
+        Writes OUT_CSV (outputs/fix_dispatch/candidate_floors_summary.csv) and
+        prints the summary table to stdout.
+    """
     with open(SRC, encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
 
