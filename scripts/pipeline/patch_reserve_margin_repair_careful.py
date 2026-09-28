@@ -1,16 +1,29 @@
 """Careful reserve-margin repair with per-country-region firm capacity caps.
 
-Library behind patch_reserve_margin_repair_careful_xlsx.py (the blunt
-patch_reserve_margin_repair.py it derived from is no longer part of the pipeline).
-It does not edit the input datafile in place.
+Library behind patch_reserve_margin_repair_careful_xlsx.py and patch_activity_upper_limit.py
+(the blunt patch_reserve_margin_repair.py it derived from is no longer part of the
+pipeline). It does not edit the input datafile in place. Also usable as its own CLI, with
+fallbacks supplied via CSV/CLI assignments instead of an xlsx workbook, though that CLI is
+not wired into the B2 chain (see patch_reserve_margin_repair_careful_xlsx.py for that).
 
-Main differences:
+Main differences from the blunt patcher it replaced:
 - Reserve tags can still be added for PWRBCK and PWRCCS.
 - TotalAnnualMaxCapacity (stock) and TotalAnnualMaxCapacityInvestment (flow)
   are patched independently.
 - Firm fossil cap values come from per-country-region fallbacks.
 - Only sentinel values are replaced by default: 0 and 9999.
 - Suspicious stock/flow combinations are reported as warnings.
+
+Inputs:
+    <input_file> (positional arg, own CLI only): OSeMOSYS .txt datafile to read.
+    --fallback-csv (own CLI only): CSV of CR plus stock/flow fallback columns.
+Outputs:
+    -o/--output (own CLI only): patched .txt datafile.
+Usage:
+    Library: imported by patch_reserve_margin_repair_careful_xlsx.py (tag/capacity patching
+        functions) and by patch_activity_upper_limit.py (`find_param_block`, `fmt_number`).
+    Own CLI: python scripts/pipeline/patch_reserve_margin_repair_careful.py <input> -o
+        <output> [--fallback-csv <path>] [--stock-fallback CR=VALUE ...] [flags]
 """
 
 from __future__ import annotations
@@ -29,6 +42,12 @@ FLOW_PARAM = "TotalAnnualMaxCapacityInvestment"
 
 @dataclass(frozen=True)
 class CapFallback:
+    """One firm-capacity fallback rule: a value for `parameter` scoped by prefix/CR/year.
+
+    `prefix`, `cr` and `year` may be the literal wildcard "*", matched by `resolve_fallback`
+    from most to least specific.
+    """
+
     parameter: str
     prefix: str
     cr: str
@@ -37,12 +56,14 @@ class CapFallback:
 
 
 def fmt_number(value: float) -> str:
+    """Format `value` as an integer string when it is whole, else 12 significant digits."""
     if abs(value - round(value)) < 1e-9:
         return str(int(round(value)))
     return f"{value:.12g}"
 
 
 def parse_float(value: str, label: str) -> float:
+    """Parse `value` as a float, raising ValueError tagged with `label` on failure."""
     try:
         return float(value)
     except ValueError as exc:
@@ -50,6 +71,18 @@ def parse_float(value: str, label: str) -> float:
 
 
 def find_param_block(lines: list[str], name: str) -> tuple[int, int]:
+    """Return the (start, end) line indices of a `param ... <name> := ... ;` block.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        name: OSeMOSYS parameter name to locate (matched as a substring of the header).
+
+    Returns:
+        (start, end): header line index and the index of the terminating `;` line.
+
+    Raises:
+        ValueError: if the header or its terminating `;` is not found.
+    """
     start = None
     pattern = re.compile(rf"^\s*param\b.*\b{name}\b.*:=\s*$")
     for idx, line in enumerate(lines):
@@ -66,6 +99,16 @@ def find_param_block(lines: list[str], name: str) -> tuple[int, int]:
 
 
 def extract_simple_set(lines: list[str], name: str) -> list[str]:
+    """Return the members of a `set <name> := ...;` block, in file order.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        name: GMPL set name to locate.
+
+    Returns:
+        List of whitespace-separated tokens found between `:=` and the terminating `;`;
+        empty if the set is not found.
+    """
     items: list[str] = []
     in_set = False
     pattern = re.compile(rf"^\s*set\s+{re.escape(name)}\s*:=")
@@ -90,6 +133,7 @@ def extract_simple_set(lines: list[str], name: str) -> list[str]:
 
 
 def select_years(lines: list[str]) -> list[str]:
+    """Return the YEAR set members, falling back to regex-scanning 4-digit years (20xx)."""
     years = extract_simple_set(lines, "YEAR")
     if not years:
         years = sorted(set(re.findall(r"\b(20\d{2})\b", "\n".join(lines))), key=int)
@@ -97,6 +141,11 @@ def select_years(lines: list[str]) -> list[str]:
 
 
 def infer_items(lines: list[str], prefixes: list[str]) -> list[str]:
+    """Return distinct tokens starting with any of `prefixes`, in first-seen order.
+
+    Fallback used when the TECHNOLOGY set cannot be extracted directly (e.g. a stripped
+    or partially patched datafile).
+    """
     pattern = re.compile(r"\b(" + "|".join(re.escape(p) for p in prefixes) + r"\S*)\b")
     seen = set()
     items: list[str] = []
@@ -109,6 +158,7 @@ def infer_items(lines: list[str], prefixes: list[str]) -> list[str]:
 
 
 def select_techs(lines: list[str], prefixes: list[str]) -> list[str]:
+    """Return TECHNOLOGY set members (or inferred tokens) matching any of `prefixes`."""
     technologies = extract_simple_set(lines, "TECHNOLOGY")
     if not technologies:
         technologies = infer_items(lines, prefixes)
@@ -116,6 +166,10 @@ def select_techs(lines: list[str], prefixes: list[str]) -> list[str]:
 
 
 def split_prefix_and_cr(technology: str, prefixes: list[str]) -> tuple[str, str] | None:
+    """Split a tech code into (matched_prefix, country_region_suffix), or None if no match.
+
+    Tries `prefixes` longest-first so a more specific prefix wins over a shorter one.
+    """
     for prefix in sorted(prefixes, key=len, reverse=True):
         if technology.startswith(prefix) and len(technology) > len(prefix):
             return prefix, technology[len(prefix) :]
@@ -123,6 +177,19 @@ def split_prefix_and_cr(technology: str, prefixes: list[str]) -> tuple[str, str]
 
 
 def parse_assignment_list(values: list[str], parameter: str) -> list[CapFallback]:
+    """Parse `["CR=VALUE", ...]` CLI-style items into wildcard-prefix/year `CapFallback`s.
+
+    Args:
+        values: strings of the form "CR=VALUE".
+        parameter: `CapFallback.parameter` to assign to every entry (STOCK_PARAM or
+            FLOW_PARAM).
+
+    Returns:
+        One `CapFallback` per item, with prefix="*" and year="*".
+
+    Raises:
+        ValueError: if an item lacks "=" or has an empty CR.
+    """
     fallbacks: list[CapFallback] = []
     for item in values:
         if "=" not in item:
@@ -144,6 +211,7 @@ def parse_assignment_list(values: list[str], parameter: str) -> list[CapFallback
 
 
 def pick_column(row: dict[str, str], *candidates: str) -> str | None:
+    """Return the first non-empty value among `candidates` column names (case-insensitive)."""
     lower_map = {key.lower(): key for key in row.keys()}
     for candidate in candidates:
         key = lower_map.get(candidate.lower())
@@ -155,6 +223,19 @@ def pick_column(row: dict[str, str], *candidates: str) -> str | None:
 
 
 def load_fallback_csv(path: Path) -> list[CapFallback]:
+    """Read per-country-region firm-capacity fallbacks from a CSV.
+
+    Args:
+        path: CSV with a CR column (or COUNTRY_REGION/REGION_CODE/REGION) and optional
+            TECH_PREFIX/YEAR columns, plus STOCK_PARAM/FLOW_PARAM-like value columns.
+
+    Returns:
+        List of `CapFallback` entries: a STOCK_PARAM entry when the row has a stock-like
+        column, a FLOW_PARAM entry when it has a flow-like column; a row may yield both.
+
+    Raises:
+        ValueError: if a row is missing its CR value.
+    """
     fallbacks: list[CapFallback] = []
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -199,6 +280,10 @@ def load_fallback_csv(path: Path) -> list[CapFallback]:
 
 
 def make_fallback_lookup(fallbacks: list[CapFallback]) -> dict[tuple[str, str, str, str], float]:
+    """Index `fallbacks` by (parameter, prefix, cr, year) for `resolve_fallback`.
+
+    Later entries with the same key overwrite earlier ones.
+    """
     lookup: dict[tuple[str, str, str, str], float] = {}
     for fallback in fallbacks:
         key = (fallback.parameter, fallback.prefix, fallback.cr, fallback.year)
@@ -213,6 +298,14 @@ def resolve_fallback(
     cr: str,
     year: str,
 ) -> float | None:
+    """Resolve a fallback value for (parameter, prefix, cr, year), most specific first.
+
+    Tries 8 candidate keys in order, from exact (parameter, prefix, cr, year) down to the
+    fully wildcarded (parameter, "*", "*", "*"), wildcarding year before prefix before cr.
+
+    Returns:
+        The matched value, or None if no candidate key is in `lookup`.
+    """
     candidates = [
         (parameter, prefix, cr, year),
         (parameter, prefix, cr, "*"),
@@ -230,6 +323,7 @@ def resolve_fallback(
 
 
 def is_sentinel(value: float, sentinels: list[float], tolerance: float = 1e-9) -> bool:
+    """Return True if `value` matches any of `sentinels` within `tolerance`."""
     return any(abs(value - sentinel) <= tolerance for sentinel in sentinels)
 
 
@@ -237,6 +331,21 @@ def patch_reserve_tags(
     lines: list[str],
     targets: dict[tuple[str, str], float],
 ) -> tuple[list[str], int, int]:
+    """Set ReserveMarginTagTechnology values for the given (tech, year) targets.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        targets: {(tech, year): tag_value} to write; typically built by `build_tag_targets`.
+
+    Returns:
+        (patched_lines, n_updated, n_inserted): existing rows are updated in place;
+        targets with no existing row and a non-zero value get a new row appended to the
+        block.
+
+    Raises:
+        ValueError: if `targets` is non-empty and the ReserveMarginTagTechnology block is
+            not found (propagated from `find_param_block`).
+    """
     if not targets:
         return lines, 0, 0
 
@@ -287,6 +396,20 @@ def build_tag_targets(
     backstop_prefixes: list[str],
     ccs_prefixes: list[str],
 ) -> tuple[dict[tuple[str, str], float], dict[str, int]]:
+    """Build ReserveMarginTagTechnology targets for backstop/CCS techs across all years.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        years: years to set a tag value for, for every matched tech.
+        backstop_credit: tag value for techs matching `backstop_prefixes`; None to skip.
+        ccs_credit: tag value for techs matching `ccs_prefixes`; None to skip.
+        backstop_prefixes: tech-name prefixes selecting the backstop (e.g. PWRBCK) family.
+        ccs_prefixes: tech-name prefixes selecting the CCS (e.g. PWRCCS) family.
+
+    Returns:
+        (targets, counts): `targets` is {(tech, year): credit}; `counts` reports
+        "backstop_techs"/"ccs_techs" tech counts (only for the credits that were set).
+    """
     targets: dict[tuple[str, str], float] = {}
     counts: dict[str, int] = {}
 
@@ -312,6 +435,16 @@ def read_param_values(
     parameter: str,
     target_prefixes: list[str],
 ) -> dict[tuple[str, str], float]:
+    """Read {(tech, year): value} for `parameter` rows whose tech matches `target_prefixes`.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        parameter: OSeMOSYS parameter name to read (a `GLOBAL <tech> <year> <value>` block).
+        target_prefixes: tech-name prefixes to keep (via `split_prefix_and_cr`).
+
+    Returns:
+        {(tech, year): value} for matching rows.
+    """
     values: dict[tuple[str, str], float] = {}
     start, end = find_param_block(lines, parameter)
     row_pattern = re.compile(r"^\s*GLOBAL\s+(\S+)\s+(\d{4})\s+([-+0-9.eE]+)\s*$")
@@ -330,6 +463,18 @@ def capacity_floors(
     lines: list[str],
     target_prefixes: list[str],
 ) -> tuple[dict[tuple[str, str], float], dict[tuple[str, str], float]]:
+    """Compute minimum-allowed stock/flow caps per (tech, year), from existing minima.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        target_prefixes: tech-name prefixes to consider.
+
+    Returns:
+        (stock_floors, flow_floors): stock_floors[(tech, year)] =
+        max(TotalAnnualMinCapacity, ResidualCapacity + TotalAnnualMinCapacityInvestment);
+        flow_floors[(tech, year)] = TotalAnnualMinCapacityInvestment. Used by
+        `patch_capacity_param` to never write a fallback below an existing minimum.
+    """
     residual = read_param_values(lines, "ResidualCapacity", target_prefixes)
     min_stock = read_param_values(lines, "TotalAnnualMinCapacity", target_prefixes)
     min_flow = read_param_values(lines, "TotalAnnualMinCapacityInvestment", target_prefixes)
@@ -350,6 +495,11 @@ def techs_with_any_min_investment(
     lines: list[str],
     target_prefixes: list[str],
 ) -> set[str]:
+    """Return techs (matching `target_prefixes`) with a nonzero min-investment in any year.
+
+    Used by `patch_capacity_param` to skip replacing FLOW_PARAM sentinels for techs that
+    have a forced minimum investment somewhere in the horizon.
+    """
     min_flow = read_param_values(lines, "TotalAnnualMinCapacityInvestment", target_prefixes)
     return {
         tech
@@ -368,6 +518,31 @@ def patch_capacity_param(
     skip_techs: set[str] | None = None,
     modify_from_year: int | None = None,
 ) -> tuple[list[str], int, int, list[str]]:
+    """Replace sentinel values of a capacity parameter with resolved fallbacks.
+
+    For each `GLOBAL <tech> <year> <value>` row of `parameter` whose tech matches
+    `target_prefixes`: skips years before `modify_from_year` (left untouched, e.g.
+    historical years); skips non-sentinel values; skips (with a warning) techs in
+    `skip_techs`; otherwise resolves a fallback via `resolve_fallback`, raises it to
+    `floors[(tech, year)]` if lower (with a warning), and writes it in place.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        parameter: capacity parameter to patch (STOCK_PARAM or FLOW_PARAM).
+        target_prefixes: tech-name prefixes to consider.
+        sentinels: values eligible for replacement (e.g. [0.0, 9999.0]).
+        lookup: fallback table from `make_fallback_lookup`.
+        floors: {(tech, year): minimum allowed value}, from `capacity_floors`; default 0.0.
+        skip_techs: techs to leave untouched regardless of sentinel status (with a warning).
+        modify_from_year: if set, years before this are never modified.
+
+    Returns:
+        (patched_lines, n_changed, n_skipped, warnings).
+
+    Raises:
+        ValueError: if the `parameter` block is not found (propagated from
+            `find_param_block`).
+    """
     patched = lines[:]
     floors = floors or {}
     skip_techs = skip_techs or set()
@@ -438,6 +613,11 @@ def stock_flow_warnings(
     lines: list[str],
     target_prefixes: list[str],
 ) -> list[str]:
+    """Report suspicious stock/flow combinations for `target_prefixes` techs, as warnings.
+
+    Flags, per (tech, year): stock=0 with flow>0 ("Inconsistent cap"), stock>0 with flow=0
+    ("Investment blocked"), and stock>0 with flow>stock ("Stock likely binds flow").
+    """
     stock = read_param_values(lines, STOCK_PARAM, target_prefixes)
     flow = read_param_values(lines, FLOW_PARAM, target_prefixes)
     warnings: list[str] = []
@@ -467,6 +647,7 @@ def stock_flow_warnings(
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and return this module's own CLI arguments (see module docstring for `Usage`)."""
     parser = argparse.ArgumentParser(
         description=(
             "Patch reserve tags and carefully replace sentinel firm-capacity caps "
@@ -529,6 +710,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Parse CLI args, apply the reserve-tag/capacity patch, and write the output.
+
+    Side effects:
+        Writes `--output` (patched datafile) and, if warnings occurred and
+        `--warnings-file` is given, a text file of those warnings; prints a run summary to
+        stdout and warnings to stderr.
+    """
     args = parse_args()
     input_path = Path(args.input_file)
     output_path = Path(args.output)

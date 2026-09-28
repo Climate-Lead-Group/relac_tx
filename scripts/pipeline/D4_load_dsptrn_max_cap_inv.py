@@ -1,62 +1,70 @@
-"""
-D4_load_dsptrn_max_cap_inv.py
+"""Cap TotalAnnualMaxCapacityInvestment for node-02 transmission technologies.
 
-Escribe TotalAnnualMaxCapacityInvestment (GW) para las tecnologias de TRANSMISION
-que inyectan en el nodo 02 (no para el sumador DSPTRN) en la hoja 'Demand Techs'
-de A-O_Parametrization.xlsx del escenario destino INV (ver --scenario; OPT esta
-desactivado a proposito para no alterar sus datos).
+Writes TotalAnnualMaxCapacityInvestment (GW) for the TRANSMISSION technologies feeding
+node 02 (not the DSPTRN aggregator) on the 'Demand Techs' sheet of A-O_Parametrization.xlsx
+for the target scenario INV (see --scenario; OPT is deliberately unconfigured so its data
+is never touched).
 
-Motivacion:
-    El sumador DSPTRN{ISO3}XX tiene capacidad residual 9999 y costo cero, asi que
-    cualquier tope sobre el NUNCA es vinculante (BAU daba la misma inversion en
-    transmision). En su lugar, topamos directamente las tecnologias de transmision
-    reales, usando como cuota lo que BAU ya construyo (NewCapacity), escalado por un
-    factor por escenario.
-      - INV: factor < 1 (restringe). Como el respaldo PWRBCK inyecta en el mismo
-        nodo 02, cubre la diferencia: menos transmision, mas respaldo -> el
-        contraste INV vs BAU que se busca, manteniendo factibilidad.
-    Los factores por escenario viven en SCENARIO_CONFIG. OPT no esta configurado
-    (D4 no topa la transmision de OPT).
+Motivation:
+    The DSPTRN{ISO3}XX aggregator has residual capacity 9999 and zero cost, so any cap on
+    it is never binding (BAU would still get the same transmission investment). Instead,
+    this script caps the real transmission technologies directly, using what BAU already
+    built (NewCapacity) as the quota, scaled by a per-scenario factor.
+      - INV: factor < 1 (restricts). Because the PWRBCK backstop feeds the same node 02, it
+        covers the difference: less transmission, more backstop -> the intended INV vs BAU
+        contrast, while keeping the model feasible.
+    Per-scenario factors live in SCENARIO_CONFIG. OPT is not configured (D4 does not cap
+    OPT's transmission).
 
-Regla por tech/ano Y (tres bloques):
+Rule per tech/year Y (three blocks):
 
-    2023..2025  ->  celda VACIA (None): INV igual a BAU (sin tope). Son los anos
-                    historicos/observados; el sync final de A3 los fija a BAU igual.
-                    Se LIMPIA cualquier valor que corridas anteriores hubieran dejado.
+    2023..2025  ->  cell left EMPTY (None): INV equals BAU (no cap). These are the
+                    historical/observed years; A3's final sync pins them to BAU anyway.
+                    Any value left by a previous run is cleared.
 
     2026..2030  ->  cap = NewCapacity_BAU[tech, Y] * 1.0     [GW]
-                    Tope = exactamente lo que BAU construyo (sin descuento). Es aqui
-                    donde la Transmision de INV empieza a divergir de BAU. La
-                    generacion y demas siguen = BAU hasta 2030 porque
-                    sync_historical_from_bau.py fue modificado para NO pisar estas
-                    filas TRN desde 2026.
+                    Cap = exactly what BAU built (no discount). This is where INV's
+                    transmission starts diverging from BAU. Generation and the rest of the
+                    scenario stay = BAU through 2030 because sync_historical_from_bau.py
+                    was modified to NOT overwrite these TRN rows from 2026 onward.
 
     2031..2050  ->  cap = NewCapacity_BAU[tech, Y] * factor(Y)     [GW]
-                    factor(Y) es lineal entre cap_start_factor y cap_end_factor
-                    del escenario (INV: 0.99->0.80 restringe). Ver SCENARIO_CONFIG.
+                    factor(Y) is linear between the scenario's cap_start_factor and
+                    cap_end_factor (INV: 0.99 -> 0.80, restricting). See SCENARIO_CONFIG.
 
-                    EXCEPCION por pais (solo INV, exempt_countries = PER, CRI, PAN, COL):
-                    esos paises NO reciben el descuento; usan factor 1.0 (senda
-                    BAU completa) + head-room EXEMPT_MARGIN (CRI: +5%). Sus seis
-                    techs de transmision nodo-02 activaban el respaldo PWRBCK
-                    (VariableCost 1750) al quedar topadas por debajo del pico;
-                    restaurar la senda BAU lo elimina. (Antes esto se hacia
-                    aguas abajo en fix_inv_transmission_caps.py; ahora vive aqui
-                    como unica fuente de verdad del tope de transmision INV.)
+                    PER-COUNTRY EXCEPTION (INV only, exempt_countries = PER, CRI, PAN,
+                    COL): these countries do NOT get the discount; they use factor 1.0
+                    (full BAU path) plus an exempt_margin head-room (CRI: +5%). Their six
+                    node-02 transmission techs were activating the PWRBCK backstop
+                    (VariableCost 1750) once capped below peak demand; restoring the BAU
+                    path removes that. (This used to be done downstream in
+                    fix_inv_transmission_caps.py; it now lives here as the single source
+                    of truth for INV's transmission cap.)
 
-En 2026..2050, donde BAU construyo 0 (o no hay dato) se escribe 0 -> prohibe
-inversion ese ano; el respaldo PWRBCK (mismo nodo 02) cubre.
+For 2026..2050, where BAU built 0 (or has no data) this writes 0, forbidding investment
+that year; the PWRBCK backstop (same node 02) covers the gap.
 
-Solo se toca TotalAnnualMaxCapacityInvestment; el piso TotalAnnualMinCapacityInvestment
-NO se escribe.
+Only TotalAnnualMaxCapacityInvestment is touched; TotalAnnualMinCapacityInvestment is not
+written.
 
-NewCapacity de BAU se lee de RELAC_TX_Combined_Inputs_Outputs.csv (formato largo;
-columnas Scenario, YEAR, TECHNOLOGY, NewCapacity). Ese CSV contiene BAU/INV/OPT;
-aqui filtramos Scenario == 'BAU'.
+BAU's NewCapacity is read from RELAC_TX_Combined_Inputs_Outputs.csv (long format; columns
+Scenario, YEAR, TECHNOLOGY, NewCapacity). That CSV holds BAU/INV/OPT; this script filters
+to Scenario == 'BAU'.
 
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv (BAU's NewCapacity, filtered to
+        Scenario == 'BAU' and TRN_PREFIXES technologies)
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx (sheet 'Demand Techs')
+Outputs:
+    Same workbook, 'Demand Techs' sheet, in place (a timestamped .backup-trn-maxinv-*.xlsx
+        copy is written first), when --apply is passed.
 Usage:
     python scripts/pipeline/D4_load_dsptrn_max_cap_inv.py --dry-run
     python scripts/pipeline/D4_load_dsptrn_max_cap_inv.py --apply
+    python scripts/pipeline/D4_load_dsptrn_max_cap_inv.py --apply --scenario INV
+Notes:
+    - Only INV is configured in SCENARIO_CONFIG; OPT is intentionally excluded.
+    - EQUAL_THROUGH_YEAR = 2026 (cells left empty / equal to BAU through this year).
 """
 from __future__ import annotations
 
@@ -344,6 +352,12 @@ def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> in
 
 
 def main() -> None:
+    """Parse CLI args, load BAU's NewCapacity, and run each requested scenario.
+
+    Raises:
+        SystemExit: if an unconfigured scenario is requested, or (with --apply) if
+            post-write verification finds any violation.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--apply', action='store_true', help='escribe cambios (crea backup)')

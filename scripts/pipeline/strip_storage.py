@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""
-strip_storage.py - Diagnostic patcher for OSTRAM Pre_processed_*.txt files.
+"""Diagnostic patcher: disable selected storage facilities in a preprocessed .txt datafile.
 
-Produces a NEW .txt file with selected storage facilities + their feeding
-PWR technologies disabled. The source file is never modified.
-
-Designed to plug into the existing B2 pipeline pattern (cf. inject_DaysInDayType.py)
-but invoked manually as a one-off diagnostic step between the DaysInDayType
-injector and the `glpsol --wlp` LP-build step.
+Produces a NEW .txt file with selected storage facilities and their feeding PWR
+technologies disabled. The source file is never modified. Designed to plug into the
+existing B2 pipeline pattern (cf. inject_DaysInDayType.py).
 
 Three modes:
   --mode tech   --targets SDSLKAXX01 [SDSBGDXX01 ...]
@@ -32,24 +28,34 @@ What "disable" does, atomically:
      etc.) so that even if the tech is otherwise referenced, no capacity
      can be built. Existing TotalAnnualMaxCapacity rows for these techs
      are dropped first to avoid duplicate-tuple errors.
+  6. Strips rows for the disabled techs from the tech-side minimum-capacity/
+     minimum-activity parameter blocks (TotalAnnualMinCapacity,
+     TotalAnnualMinCapacityInvestment, TotalTechnologyAnnualActivityLowerLimit,
+     TotalTechnologyModelPeriodActivityLowerLimit), to avoid a min-vs-max=0
+     presolve infeasibility.
 
+Inputs:
+    <input> (positional arg): preprocessed OSeMOSYS .txt datafile to read.
+Outputs:
+    -o/--output: sibling .txt datafile with the targeted storage disabled (source
+        untouched).
 Usage:
-    python strip_storage.py Pre_processed_BAU_0.txt \
-        -o Pre_processed_BAU_0_NoStorage.txt \
-        --mode all
+    python scripts/pipeline/strip_storage.py Pre_processed_BAU_0.txt \
+        -o Pre_processed_BAU_0_NoStorage.txt --mode all
 
-    python strip_storage.py Pre_processed_BAU_0.txt \
-        -o Pre_processed_BAU_0_NoLKASDS.txt \
-        --mode tech --targets SDSLKAXX01
+    python scripts/pipeline/strip_storage.py Pre_processed_BAU_0.txt \
+        -o Pre_processed_BAU_0_NoLKASDS.txt --mode tech --targets SDSLKAXX01
 
-    python strip_storage.py Pre_processed_BAU_0.txt \
-        -o Pre_processed_BAU_0_NoSDS.txt \
-        --mode class --targets SDS
-
-After patching, run the rest of the pipeline manually:
-    glpsol -m <osemosys_model.txt> -d <patched.txt> \
-        --wlp <patched>.lp --check
-    cplex -c "read <patched>.lp" "optimize" "write <patched>.sol"
+    python scripts/pipeline/strip_storage.py Pre_processed_BAU_0.txt \
+        -o Pre_processed_BAU_0_NoSDS.txt --mode class --targets SDS
+Notes:
+    - Called by B2_Executing_OG_Model.py when `strip_storage_active` is set in
+      Config_MOMF_T1_AB.yaml (output suffix `NoStorage`, per `strip_storage_suffix`;
+      mutually exclusive with `storage_delay_active`).
+    - After patching, the rest of the pipeline can be run manually:
+        glpsol -m <osemosys_model.txt> -d <patched.txt> \
+            --wlp <patched>.lp --check
+        cplex -c "read <patched>.lp" "optimize" "write <patched>.sol"
 """
 
 from __future__ import annotations
@@ -295,6 +301,17 @@ def inject_zero_max_capacity(lines: list[str], techs: set[str]) -> list[str]:
 # -----------------------------------------------------------------------------
 
 def main() -> int:
+    """Parse CLI args, disable the targeted storage/techs, and write the sibling output.
+
+    Returns:
+        0 on success. Exits via `sys.exit` (non-zero / message) on invalid CLI args or
+        an unresolvable target set.
+
+    Side effects:
+        Reads `input`, applies the six-step disable sequence (see module docstring), and
+        writes `--output` as a new sibling .txt file; prints the facilities/techs disabled
+        and the next manual solve commands.
+    """
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,

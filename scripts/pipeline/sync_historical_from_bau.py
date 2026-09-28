@@ -1,62 +1,64 @@
-"""
-sync_historical_from_bau.py
-===========================
+"""Copy BAU's early-year cell values into other scenarios' A-O_Parametrization.xlsx.
 
-Copia los valores de los primeros anos desde el escenario BAU hacia los demas
-escenarios (INV, OPT, VGB, ...) en A-O_Parametrization.xlsx. La VENTANA de anos
-a copiar se pasa con --years: A3_process.py la fija POR ESCENARIO segun
-historical_sync_through en lid_rule.yaml (INV->2030, OPT->2026, VGB->2030). Los
-DEFAULT_* de abajo solo aplican a corridas manuales sin --scenarios/--years.
+Copies the values of the first years from the BAU scenario into the other scenarios (INV,
+OPT, VGB, ...) in A-O_Parametrization.xlsx. The year WINDOW to copy is passed via --years:
+A3_process.py sets it PER SCENARIO from `historical_sync_through` in lid_rule.yaml
+(INV->2030, OPT->2026, VGB->2030). The DEFAULT_* constants below only apply to manual runs
+without --scenarios/--years.
 
-Motivacion
-----------
-Los anos historicos/observados (2023-2025) deben ser identicos en todos los
-escenarios, y ademas algunos escenarios deben espejar a BAU mas alla de los
-historicos para no divergir antes de tiempo (OPT hasta 2026; INV/VGB hasta 2030,
-donde D4 empieza a topar la transmision de INV). Este script garantiza ese punto
-de partida comun: para cada hoja con columnas de ano, copia las celdas de BAU a
-cada escenario destino dentro de la ventana indicada. Las divergencias
-deliberadas se preservan con --protect-params y con la proteccion TX (ver abajo).
+Motivation:
+    Historical/observed years (2023-2025) must be identical across all scenarios, and some
+    scenarios must also mirror BAU beyond the historical years so they do not diverge too
+    early (OPT through 2026; INV/VGB through 2030, where D4 starts capping INV's
+    transmission). This script guarantees that common starting point: for every sheet with
+    year columns, it copies BAU's cells into each target scenario within the given window.
+    Deliberate divergences are preserved via --protect-params and the built-in TX
+    protection (see below).
 
-Alcance
--------
-- Solo A-O_Parametrization.xlsx (no toca Demand, Projections, etc.).
-- Todas las hojas que tengan columnas de ano (encabezado int 2023 o string
-  "2023"). Las hojas sin columnas de ano (p.ej. 'Fixed Horizon Parameters')
-  se omiten automaticamente.
-- Solo los anos en --years (default 2023,2024,2025 para corridas manuales; en
-  la cadena, A3 pasa la ventana por escenario segun historical_sync_through).
-- EXCEPCION: en la hoja 'Demand Techs', las filas de
-  TotalAnnualMaxCapacityInvestment de tecnologias de transmision (TRN*) NO se
-  copian para anos >= 2027. Ahi manda el tope que escribe
-  D4_load_dsptrn_max_cap_inv.py (la Transmision de INV diverge de BAU desde
-  2027). Los anos <= 2026 si se copian (todos los escenarios igualan a BAU
-  hasta 2026, incluida la TX). Esta proteccion TX se desactiva por corrida con
-  --no-protect-tx, para escenarios que D4 NO topa y que igualan a BAU en TX en
-  toda su ventana (p.ej. OPT).
-- EXCEPCION GENERICA (--protect-params): los parametros nombrados en
-  --protect-params NO se copian para anos >= 2027 (en cualquier hoja). Sirve
-  para escenarios que divergen deliberadamente de BAU en un parametro desde
-  2027 y cuya divergencia debe sobrevivir al sync (que de otro modo lo
-  sobre-escribe en la ventana sincronizada). Los anos <= 2026 si se copian
-  (igualan a BAU). Ej.: VGB protege TotalTechnologyAnnualActivityLowerLimit
-  (piso solo en renovables) y TotalAnnualMinCapacityInvestment (PEGs = OPT).
+Scope:
+    - A-O_Parametrization.xlsx only (does not touch Demand, Projections, etc.).
+    - Every sheet with year columns (int header 2023 or string header "2023"). Sheets
+      without year columns (e.g. 'Fixed Horizon Parameters') are skipped automatically.
+    - Only the years in --years (default 2023,2024,2025 for manual runs; in the chain, A3
+      passes the per-scenario window from `historical_sync_through`).
+    - EXCEPTION: on the 'Demand Techs' sheet, TotalAnnualMaxCapacityInvestment rows for
+      transmission technologies (TRN*) are NOT copied for years >= TX_DIVERGE_YEAR (2027).
+      There, the cap written by D4_load_dsptrn_max_cap_inv.py governs (INV's transmission
+      diverges from BAU starting 2027). Years <= 2026 are still copied (every scenario
+      equals BAU through 2026, including TX). This TX protection is turned off per run with
+      --no-protect-tx, for scenarios D4 does not cap and that should equal BAU in TX for
+      their whole window (e.g. OPT).
+    - GENERIC EXCEPTION (--protect-params): parameters named in --protect-params are NOT
+      copied for years >= PROTECT_PARAMS_FROM_YEAR (2027), on any sheet. This lets a
+      scenario deliberately diverge from BAU in a parameter starting 2027, without the sync
+      overwriting that divergence within the synced window. Years <= 2026 are still copied
+      (equal to BAU). E.g. VGB protects TotalTechnologyAnnualActivityLowerLimit (renewables
+      floor) and TotalAnnualMinCapacityInvestment (PEGs = OPT).
+    - Projection.Mode is not copied by this script: only columns matching a year header are
+      touched, and Projection.Mode is not a year column.
 
-Seguridad
----------
-- Las tres workbooks (BAU/INV/OPT) tienen el mismo numero de filas por hoja, asi
-  que la copia es POSICIONAL. Antes de copiar se verifica que (a) la hoja exista
-  en ambos, (b) el numero de filas y el encabezado coincidan, y (c) la columna
-  'Parameter' coincida fila a fila (guard contra desalineacion). Si algo no
-  cuadra, el script aborta sin escribir.
-- --apply hace backup timestamped de cada xlsx destino antes de escribir.
+Safety:
+    - The BAU/INV/OPT workbooks have the same number of rows per sheet, so the copy is
+      POSITIONAL. Before copying, this script verifies that (a) the sheet exists in both
+      workbooks, (b) the row count and header row match, and (c) the 'Parameter' column
+      matches row by row (guards against misalignment). If anything does not match, the
+      script aborts without writing.
+    - --apply makes a timestamped backup of each target xlsx before writing.
 
-Uso
----
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_BAU/A-O_Parametrization.xlsx (source)
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx (per --scenarios target)
+Outputs:
+    Target scenarios' A-O_Parametrization.xlsx, in place (timestamped backup first), when
+        --apply is passed.
+Usage:
     python scripts/pipeline/sync_historical_from_bau.py --dry-run     # preview (default)
     python scripts/pipeline/sync_historical_from_bau.py --apply
     python scripts/pipeline/sync_historical_from_bau.py --apply --scenarios INV
     python scripts/pipeline/sync_historical_from_bau.py --years 2023,2024,2025
+Notes:
+    - Called by A3_process.py's final harmonization step, once for all scenarios, per
+      `historical_sync_through` in lid_rule.yaml.
 """
 from __future__ import annotations
 
@@ -264,6 +266,16 @@ def sync_scenario(src_ws_map, src_wb, tgt_path: Path, years: set[int],
 
 
 def main() -> int:
+    """Parse CLI args, sync each target scenario from BAU, and print a per-sheet summary.
+
+    Returns:
+        0 on completion (aborts via `sys.exit` if a source/target workbook is missing, or
+        via a propagated `ValueError` from `sync_scenario` on any structural mismatch).
+
+    Side effects:
+        For each target scenario, writes its A-O_Parametrization.xlsx in place (after a
+        timestamped backup) when `--apply` is passed; otherwise previews without writing.
+    """
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

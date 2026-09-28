@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-================================================================================
-CAPITAL INVESTMENT ANNUALIZATION SCRIPT FOR MOMF
-================================================================================
-Author: Climate Lead Group, Andrey Salazar-Vargas
-Purpose: This script reads a CSV file containing OSeMOSYS model outputs,
-         calculates the annualized capital investment for each technology,
-         and adds a new column with the accumulated annualized values.
+"""Add an annualized capital-investment column to the combined outputs CSV.
 
-The annualization uses the Capital Recovery Factor (CRF) formula to convert
-upfront capital investments into equivalent annual payments over the asset's
-lifetime, with temporal accumulation of overlapping payment periods.
-================================================================================
+Reads a CSV of OSeMOSYS model outputs, computes the annualized capital investment per
+technology via the Capital Recovery Factor (CRF), and adds a new column with the
+accumulated annualized values, using temporal accumulation of overlapping payment periods.
+
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv (default `INPUT_FILENAME`; column
+        `CapitalInvestment`, grouped by `GROUPING_COLUMNS`)
+Outputs:
+    Same CSV, in place, with the `CapitalInvestmentAnnualized` column added (no backup is
+        created).
+Usage:
+    Imported and called as `annualize_capital_investment(...)` by
+    B2_Executing_OG_Model.py when `annualize_capital: true` in Config_MOMF_T1_AB.yaml.
+    Also runnable standalone: python scripts/pipeline/Z_AUX_capital_annualization_script.py
+Notes:
+    - DISCOUNT_RATE and ASSET_LIFETIME are module-level constants overridable per call to
+      `annualize_capital_investment`.
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 
 # ================================

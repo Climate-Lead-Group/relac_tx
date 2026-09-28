@@ -1,11 +1,20 @@
-"""sync_patched_csvs_from_txt.py
+"""Overwrite otoole-format CSVs in an A2 output folder from a patched OSeMOSYS .txt.
 
-Extract parameter blocks from a patched OSeMOSYS GMPL datafile (.txt) and
-overwrite the matching otoole-format CSVs in the original A2 folder in place.
+Extracts named parameter blocks from a patched OSeMOSYS GMPL datafile (.txt) and rewrites
+the matching CSVs in the original A2 folder in place, so the combined input/output CSVs
+reflect the patched inputs the solver actually consumed.
 
-Intended to be called from B2 between the patcher chain and
-generate_combined_input_file() so the Combined_Inputs_Outputs.csv reflects
-the patched inputs the solver actually consumed.
+Inputs:
+    --txt (patched .txt datafile)
+    --csv-folder (A2 otoole CSV folder, e.g. outputs/A2_Outputs_Params_otoole/<scenario>/)
+Outputs:
+    <csv-folder>/<param>.csv for each name in --params, overwritten in place.
+Usage:
+    python scripts/pipeline/sync_patched_csvs_from_txt.py --txt <path> --csv-folder <dir>
+        --params <name1> <name2> ...
+Notes:
+    - Called by B2_Executing_OG_Model.py between the patcher chain and
+      generate_combined_input_file(), i.e. BEFORE the solve, when `sync_patched_csvs_active`.
 """
 
 from __future__ import annotations
@@ -17,6 +26,19 @@ from pathlib import Path
 
 
 def find_param_block(lines: list[str], param_name: str) -> tuple[int, int] | None:
+    """Return the (start, end) line indices of a `param ... : <param_name> := ... ;` block.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        param_name: OSeMOSYS parameter name to locate.
+
+    Returns:
+        (start, end) indices into `lines` (header line, terminating `;` line), or None if
+        the parameter header is not found.
+
+    Raises:
+        RuntimeError: if the block is opened but never terminated by a `;` line.
+    """
     header_re = re.compile(
         rf"^\s*param(?:\s+default\s+\S+)?\s*:\s*{re.escape(param_name)}\s*:=\s*$"
     )
@@ -36,6 +58,16 @@ def find_param_block(lines: list[str], param_name: str) -> tuple[int, int] | Non
 
 
 def parse_param_rows(lines: list[str], param_name: str) -> list[list[str]] | None:
+    """Return the whitespace-split data rows of a parameter block, or None if not found.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        param_name: OSeMOSYS parameter name to locate.
+
+    Returns:
+        List of rows (each a list of whitespace-split tokens), or None if the block is
+        missing.
+    """
     block = find_param_block(lines, param_name)
     if block is None:
         return None
@@ -54,6 +86,23 @@ def sync_csv_from_txt(
     csv_path: Path,
     param_name: str,
 ) -> bool:
+    """Overwrite `csv_path` with the rows of `param_name` parsed from `txt_lines`.
+
+    Args:
+        txt_lines: full text of the patched .txt datafile, split into lines.
+        csv_path: otoole CSV file to overwrite; skipped (not created) if it does not exist.
+        param_name: OSeMOSYS parameter name; must match `csv_path`'s header column count.
+
+    Returns:
+        True if the CSV was rewritten, False if it was skipped (missing CSV or missing
+        parameter block in the .txt).
+
+    Raises:
+        RuntimeError: if a parsed row's width does not match the CSV header's column count.
+
+    Side effects:
+        Overwrites `csv_path` in place when the sync succeeds.
+    """
     if not csv_path.exists():
         print(f"[skip] no CSV for {param_name}: {csv_path}")
         return False
@@ -80,6 +129,12 @@ def sync_csv_from_txt(
 
 
 def main() -> int:
+    """Parse CLI args, sync each requested parameter's CSV, and print a summary.
+
+    Returns:
+        0 on completion (including partial syncs where individual params were skipped),
+        1 if `--txt` or `--csv-folder` does not exist.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--txt", required=True, help="Patched .txt datafile.")
     parser.add_argument(

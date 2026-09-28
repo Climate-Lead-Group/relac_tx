@@ -1,11 +1,25 @@
-"""
-Update Secondary Techs from Editor Template
+"""Apply Secondary_Techs_Editor.xlsx edits back to each scenario's A-O_Parametrization.xlsx.
 
-This script reads the Secondary_Techs_Editor.xlsx file and applies
-the changes to the corresponding A-O_Parametrization.xlsx files.
+Reads the edited Secondary_Techs_Editor.xlsx (produced by D1_generate_editor_template.py)
+and writes the requested changes into each scenario's "Secondary Techs" sheet, via the
+`SecondaryTechsUpdater` class. When the editor's OLADE config block enables it, also derives
+and writes OLADE-based technology shares, electricity demand, activity lower/upper limits,
+and TRN interconnection limits from bilateral flow data. Every patched cell's
+Projection.Mode is set to "User defined" so downstream aggregation counts it. Petroleum
+shares can be split PET/OIL using an optional Shares workbook.
 
+Inputs:
+    inputs/data/Secondary_Techs_Editor.xlsx (sheet "Editor", plus optional auxiliary sheets
+        such as "TRN_Flow_Limits" and "Interconnections")
+    inputs/data/OLADE*.xlsx, inputs/data/Shares_PET_OIL_Split.xlsx (optional, OLADE-driven
+        share/demand/activity-limit derivation)
+Outputs:
+    inputs/A1_Outputs/A1_Outputs_<scenario>/A-O_Parametrization.xlsx, in place (timestamped
+        backup first)
 Usage:
     python scripts/pipeline/D2_update_secondary_techs.py
+Notes:
+    - Run after editing inputs/data/Secondary_Techs_Editor.xlsx by hand (see D1's output).
 """
 import openpyxl
 import re
@@ -1044,6 +1058,30 @@ def read_shares_total_data(shares_total_path):
 
 
 class SecondaryTechsUpdater:
+    """Apply Secondary_Techs_Editor.xlsx edits and OLADE-derived data to each scenario.
+
+    Orchestrates the whole D2 run via `run()`: reads the editor's "Editor" instructions
+    (`read_editor_file`, `validate_instruction`) and applies them per scenario
+    (`apply_instructions_batch`, `apply_instruction_to_scenario`); optionally also derives
+    and writes OLADE-based technology shares, demand, activity lower/upper limits and TRN
+    interconnection limits, when the corresponding `*_enabled` flags are set in the editor's
+    OLADE config block (read by `read_olade_config`, module-level). Every worksheet it
+    writes is timestamp-backed up first via `create_backup`. Logs progress to `self.log_lines`
+    (also printed) and can persist that log via `save_log`.
+
+    Args:
+        editor_path: path to Secondary_Techs_Editor.xlsx.
+        base_path: base A1_Outputs directory containing the per-scenario
+            A1_Outputs_<scenario>/A-O_*.xlsx workbooks to update.
+        olade_file_path: optional OLADE generation-mix workbook (for share derivation).
+        shares_file_path: optional Shares workbook, used to split petroleum into PET/OIL.
+        generation_file_path: optional OLADE generation-data workbook (for demand/activity
+            limit derivation).
+        shares_total_file_path: optional Shares_Total workbook (for activity limits).
+        trade_balance_file_path: optional trade-balance workbook (import/export adjustment
+            to demand).
+    """
+
     def __init__(self, editor_path, base_path, olade_file_path=None, shares_file_path=None, generation_file_path=None, shares_total_file_path=None, trade_balance_file_path=None):
         self.editor_path = editor_path
         self.base_path = base_path

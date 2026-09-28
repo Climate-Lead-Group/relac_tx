@@ -1,16 +1,28 @@
 """Cap TotalTechnologyAnnualActivityUpperLimit using fractions from an xlsx.
 
-The user adds rows to the "Secondary Techs" sheet of A-O_Parametrization.xlsx
-with Parameter == params['activity_upper_limit_parameter_label'] (default
-"TotalTechnologyAnnualActivityUpperLimit_fraction"). Each year column holds a
-fraction in [0, 1] of the per-country electricity demand. This module reads
-those fractions, maps each tech to its country-level demand fuel via
-OutputActivityRatio, multiplies fraction * demand / OAR to get an absolute
-activity cap, and rewrites the TotalTechnologyAnnualActivityUpperLimit block
-of an OSeMOSYS GMPL datafile (.txt).
+The user adds rows to the "Secondary Techs" sheet of A-O_Parametrization.xlsx with
+Parameter == params['activity_upper_limit_parameter_label'] (default
+"TotalTechnologyAnnualActivityUpperLimit_fraction"). Each year column holds a fraction in
+[0, 1] of the per-country electricity demand. This module reads those fractions, maps each
+tech to its country-level demand fuel via OutputActivityRatio, multiplies
+fraction * demand / OAR to get an absolute activity cap, and rewrites the
+TotalTechnologyAnnualActivityUpperLimit block of an OSeMOSYS GMPL datafile (.txt).
 
-Exposed as an importable module — there is no CLI. B2_Executing_OG_Model.py
-calls `apply(...)` directly with paths resolved from the YAML.
+Exposed as an importable module — there is no CLI.
+
+Inputs:
+    input_txt (arg to `apply`): preprocessed OSeMOSYS .txt datafile to read.
+    xlsx_path (arg to `apply`): scenario's A-O_Parametrization.xlsx (sheet "Secondary
+        Techs"), source of the per-tech/year fractions.
+    demand_csv, oar_csv (args to `apply`): SpecifiedAnnualDemand and OutputActivityRatio
+        CSVs used to convert fractions into absolute activity caps.
+Outputs:
+    output_txt (arg to `apply`): sibling .txt datafile with the
+        TotalTechnologyAnnualActivityUpperLimit block patched (source untouched).
+Usage:
+    Imported and called as `apply(...)` by B2_Executing_OG_Model.py when
+    `activity_upper_limit_active` is set in Config_MOMF_T1_AB.yaml (output suffix
+    `ActUpLim`, per `activity_upper_limit_suffix`); no standalone CLI.
 """
 from __future__ import annotations
 

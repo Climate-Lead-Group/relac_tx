@@ -1,15 +1,25 @@
-"""
-Load LAC Market-Realistic Capacity Ceilings into A-O_Parametrization.xlsx
+"""Load LAC market-realistic capacity ceilings into BAU's A-O_Parametrization.xlsx.
 
-Source: inputs/A1_Outputs/A1_Outputs_BAU/LAC_Capacity_Ceilings_Consolidated.md
-Target: hoja 'Secondary Techs', parametro TotalAnnualMaxCapacityInvestment
-        para PWRSPV{ISO3}XX y PWRWON{ISO3}XX (19 paises LAC, 38 filas).
+Historical one-shot loader (not part of the normal A/B chain; see scripts/pipeline/README.md).
+Writes TotalAnnualMaxCapacityInvestment caps, hardcoded in-script per ISO3/technology/period
+(documented against LAC_Capacity_Ceilings_Consolidated.md), for PWRSPV{ISO3}XX and
+PWRWON{ISO3}XX (19 LAC countries, 38 rows) into BAU only, for years 2025-2050 (2023-2024
+excluded by user decision). Where a cap would fall at or below the existing
+TotalAnnualMinCapacityInvestment for a given year, raises it to Min * 1.01 to keep Max >=
+Min. Also sets Projection.Mode = "User defined" on every patched row, and re-reads the
+saved file to verify Max >= Min and Projection.Mode for every cell.
 
-Regla de coherencia con Min:
-    Si Max_MD <= Min_existente para un ano dado, entonces Max = Min * 1.01
-
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_BAU/A-O_Parametrization.xlsx (sheet "Secondary Techs")
+    inputs/A1_Outputs/A1_Outputs_BAU/LAC_Capacity_Ceilings_Consolidated.md (documents the
+        hardcoded caps; not read by this script)
+Outputs:
+    Same workbook, "Secondary Techs" sheet, in place (a timestamped .backup-*.xlsx copy of
+        the workbook is written first).
 Usage:
     python scripts/pipeline/D3_load_lac_max_capacity_caps.py
+Notes:
+    - BAU only.
 """
 import openpyxl
 import shutil
@@ -123,6 +133,20 @@ def build_row_index(ws):
 
 
 def main():
+    """Load BAU's workbook, write the LAC capacity ceilings, verify, and save.
+
+    Raises:
+        FileNotFoundError: if the target workbook does not exist.
+        KeyError: if the "Secondary Techs" sheet is missing.
+        ValueError: if any year column or any of the 38 expected Max rows is missing.
+
+    Side effects:
+        Writes a timestamped backup of the workbook, then overwrites it in place with the
+        computed TotalAnnualMaxCapacityInvestment values and Projection.Mode = "User
+        defined"; prints a write summary, the Min*1.01 adjustments applied, and a
+        post-save verification that re-reads the saved file and checks Max >= Min and
+        Projection.Mode for every patched cell.
+    """
     if not PARAM_PATH.exists():
         raise FileNotFoundError(f'No existe: {PARAM_PATH}')
 

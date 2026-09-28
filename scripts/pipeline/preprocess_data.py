@@ -1,26 +1,28 @@
-"""Pre-process OSeMOSYS data file to reduce matrix generation time
+"""Pre-process an OSeMOSYS .txt datafile to reduce matrix-generation time.
 
-This script pre-processes an OSeMOSYS input data file by adding lines that list
-commodity-technology-mode combinations that data is provided for. Pre-processing
-a data file before starting a model run significantly reduces the time taken
-for matrix generation.
+Adds lines that list, per commodity/technology/storage(/emission), the mode-of-operation
+combinations that data is actually provided for. Pre-processing a datafile before starting
+a model run significantly reduces the time taken for matrix generation.
 
- Pre-processing consists of the following steps:
+Pre-processing consists of the following steps:
 
-1. Reading the ``InputActivityRatio`` and ``OutputActivityRatio`` sections of the
-data file to identify commodity-technology-mode combinations that data has been
-explicitly provided for.
-2. Adding a set entry for each commodity that lists all technology-mode combinations
-that are associated with it.
-3. Values from the ``InputActivityRatios`` and ``OutputActivityRatios`` sections are
-added to the sets ``MODExTECHNOLOGYperFUELin`` and ``MODExTECHNOLOGYperFUELout`` respectively.
-4. Values from the ``TechnologyToStorage`` and ``TechnologyFromStorage`` sections
-are added to the sets ``MODExTECHNOLOGYperSTORAGEto`` and ``MODExTECHNOLOGYperSTORAGEfrom`` respectively.
-5. All values for technology-mode combinations are added to the sets
-``MODEperTECHNOLOGY``.
+1. Reading the ``InputActivityRatio`` and ``OutputActivityRatio`` sections of the data file
+   to identify commodity-technology-mode combinations that data has been explicitly
+   provided for (and, likewise, ``TechnologyToStorage``/``TechnologyFromStorage`` for
+   storage, ``EmissionActivityRatio`` for emissions).
+2. Adding a set entry for each commodity (storage, technology, emission) that lists all
+   technology-mode combinations associated with it.
+3. Values from ``InputActivityRatio``/``OutputActivityRatio`` populate
+   ``MODExTECHNOLOGYperFUELin``/``MODExTECHNOLOGYperFUELout`` respectively.
+4. Values from ``TechnologyToStorage``/``TechnologyFromStorage`` populate
+   ``MODExTECHNOLOGYperSTORAGEto``/``MODExTECHNOLOGYperSTORAGEfrom`` respectively (only
+   written when the datafile declares a non-empty STORAGE set).
+5. Values from ``EmissionActivityRatio`` populate ``MODExTECHNOLOGYperEMISSION`` (only
+   written when the datafile declares a non-empty EMISSION set).
+6. All technology-mode combinations found above populate ``MODEperTECHNOLOGY``.
 
- In order to start a model run with a pre-processed data file, the following sets
-need to be introduced to its associated OSeMOSYS model file::
+In order to start a model run with a pre-processed data file, the following sets need to be
+declared in its associated OSeMOSYS model file::
 
     set MODEperTECHNOLOGY{TECHNOLOGY} within MODE_OF_OPERATION;
     set MODExTECHNOLOGYperFUELout{COMMODITY} within MODE_OF_OPERATION cross TECHNOLOGY;
@@ -28,6 +30,15 @@ need to be introduced to its associated OSeMOSYS model file::
     set MODExTECHNOLOGYperSTORAGEto{STORAGE} within MODE_OF_OPERATION cross TECHNOLOGY;
     set MODExTECHNOLOGYperSTORAGEfrom{STORAGE} within MODE_OF_OPERATION cross TECHNOLOGY;
 
+Inputs:
+    <data_infile> (positional arg): OSeMOSYS .txt datafile to read.
+Outputs:
+    <data_outfile> (positional arg): OSeMOSYS .txt datafile written with the derived sets
+        appended (any pre-existing `set MODEper`/`set MODEx`/`end;` lines are dropped first).
+Usage:
+    python scripts/pipeline/preprocess_data.py <data_infile> <data_outfile>
+Notes:
+    - Called by B2_Executing_OG_Model.py as the first step of the patcher chain, always.
 """
 
 import sys
@@ -35,6 +46,19 @@ from collections import defaultdict
 
 
 def main(data_infile, data_outfile):
+    """Parse `data_infile` and write `data_outfile` with the derived mode sets appended.
+
+    Args:
+        data_infile: path to the source OSeMOSYS .txt datafile.
+        data_outfile: path to write the pre-processed .txt datafile to.
+
+    Side effects:
+        Writes `data_outfile` twice: first with any pre-existing `set MODEper`/`set MODEx`/
+        `end;` lines dropped, then reopened and rewritten with the newly derived
+        MODEperTECHNOLOGY, MODExTECHNOLOGYperFUELin/out, MODExTECHNOLOGYperSTORAGEto/from
+        (if storage is present) and MODExTECHNOLOGYperEMISSION (if emissions are present)
+        sets appended, followed by `end;`.
+    """
 
     lines = []
 

@@ -1,11 +1,23 @@
-"""
-Generate Secondary Techs Editor Template
+"""Generate the Secondary_Techs_Editor.xlsx template for manual review.
 
-This script reads all A-O_Parametrization.xlsx files and generates
-a user-friendly Excel template for editing Secondary Techs data.
+Reads every scenario's "Secondary Techs" sheet plus OLADE country/tech mappings (via
+common.Z_AUX_config_loader) and builds one consolidated, user-friendly Editor workbook
+(with data validation dropdowns) so a reviewer can propose changes without touching the
+per-scenario A-O_Parametrization.xlsx files directly. The base scenario used for reference
+values is read from Config_MOMF_T1_AB.yaml (`base_scenario`, default 'BAU').
 
+Inputs:
+    inputs/A1_Outputs/A1_Outputs_*/A-O_Parametrization.xlsx (sheet "Secondary Techs", all
+        auto-discovered scenarios)
+    inputs/config/Config_MOMF_T1_AB.yaml (`base_scenario`)
+    OLADE country/tech mappings (via common.Z_AUX_config_loader)
+Outputs:
+    inputs/data/Secondary_Techs_Editor.xlsx
 Usage:
     python scripts/pipeline/D1_generate_editor_template.py
+Notes:
+    - Edits made to the generated workbook are applied back by
+      D2_update_secondary_techs.py.
 """
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Protection, Border, Side
@@ -1809,6 +1821,15 @@ def create_editor_template(data, output_path):
 
 
 def main():
+    """Collect data from all scenarios and write the Secondary_Techs_Editor.xlsx template.
+
+    Returns:
+        0 on success; 1 if not enough data could be collected, or on any exception (also
+        printed with a traceback to stderr).
+
+    Side effects:
+        Writes inputs/data/Secondary_Techs_Editor.xlsx.
+    """
     try:
         print("=" * 80)
         print("SECONDARY TECHS EDITOR - TEMPLATE GENERATOR")

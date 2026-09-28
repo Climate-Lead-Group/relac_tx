@@ -1,13 +1,9 @@
 #! python3
-"""
-patch_storage_delay.py
-======================
+"""Non-destructive storage-delay patcher for OSTRAM preprocessed datafiles.
 
-Non-destructive storage-delay patcher for OSTRAM preprocessed datafiles.
-
-This keeps storage in the model, but blocks storage builds for the first N
-model years. After those early years, linked storage technologies are opened
-again so the optimizer can add storage.
+Keeps storage in the model, but blocks storage builds for the first N model years. After
+those early years, linked storage technologies are opened again so the optimizer can add
+storage.
 
 What it writes:
   1. A sibling datafile with:
@@ -25,6 +21,23 @@ What it writes:
      NewStorageCapacity[r,s,y] = 0 where StorageBuildAllowed[r,s,y] = 0.
 
 The source datafile and source model are never modified.
+
+Inputs:
+    <input> (positional arg): preprocessed OSeMOSYS .txt datafile to read.
+    --model-input: OSeMOSYS model .txt to read.
+Outputs:
+    -o/--output: sibling .txt datafile with the storage-delay patch applied.
+    --model-output: sibling model .txt with the StorageBuildAllowed parameter and the
+        SD1_StorageBuildDelay constraint added.
+Usage:
+    python scripts/pipeline/patch_storage_delay.py <input> -o <output>
+        --model-input <path> --model-output <path> [--first-n-years N]
+        [--storage-prefixes ... | --storages ...] [--allowed-value V] [--dry-run]
+Notes:
+    - Called by B2_Executing_OG_Model.py when `storage_delay_active` is set in
+      Config_MOMF_T1_AB.yaml (output suffix `StorageDelayN5`, per `storage_delay_suffix`;
+      model output path from `storage_delay_model_output`; mutually exclusive with
+      `strip_storage_active`).
 """
 
 from __future__ import annotations
@@ -217,6 +230,26 @@ def rewrite_tech_cap_block(
     allowed_value: str,
     eol: str,
 ) -> tuple[list[str], int, int]:
+    """Rewrite a tech-side capacity-investment block for `techs`, all regions x years.
+
+    Args:
+        lines: full text of the .txt datafile, split into lines.
+        param_name: parameter block to rewrite (a TECH_CAP_PARAMS entry).
+        regions: REGION set members.
+        techs: storage-linked PWR technologies to (re)write rows for.
+        years: full YEAR set, sorted.
+        blocked_years: subset of `years` where the value is forced to 0.
+        allowed_value: value written for years not in `blocked_years`.
+        eol: line-ending string to append to injected rows.
+
+    Returns:
+        (patched_lines, n_removed, n_injected): `n_removed` counts pre-existing rows for
+        `techs` dropped from the block; `n_injected` counts the freshly written
+        region x tech x year rows.
+
+    Raises:
+        RuntimeError: if the `param_name` block is not found in `lines`.
+    """
     start, end = find_param_block(lines, param_name)
     if start is None or end is None:
         raise RuntimeError(f"param block {param_name!r} not found")
@@ -269,6 +302,19 @@ def drop_blocked_min_rows(
 
 
 def patch_model_lines(lines: list[str]) -> list[str]:
+    """Add the StorageBuildAllowed parameter and SD1_StorageBuildDelay constraint if absent.
+
+    Args:
+        lines: full text of the OSeMOSYS model .txt, split into lines.
+
+    Returns:
+        New list of lines with the parameter declaration inserted right after
+        `ResidualStorageCapacity` and the constraint inserted right after
+        `SI3_TotalNewStorage` (each only if not already present).
+
+    Raises:
+        RuntimeError: if the anchor line for either insertion point is not found.
+    """
     eol = detect_eol(lines)
     text = "".join(lines)
     out = list(lines)
@@ -309,6 +355,23 @@ def patch_data_lines(
     storage_prefixes: list[str],
     allowed_value: str,
 ) -> tuple[list[str], dict[str, object]]:
+    """Apply the full storage-delay patch to a preprocessed .txt datafile's lines.
+
+    Args:
+        lines: full text of the input .txt datafile, split into lines.
+        first_n_years: number of earliest model years (sorted) where storage builds are
+            blocked.
+        exact_storages: exact storage facility names to target (overrides
+            `storage_prefixes` when non-empty).
+        storage_prefixes: storage facility name prefixes to target (e.g. SDS, LDS); all
+            storage is targeted when both this and `exact_storages` are empty.
+        allowed_value: cap value written for the storage-linked PWR techs' capacity
+            investment blocks in years after the blocked window.
+
+    Returns:
+        (patched_lines, summary): `summary` reports regions, years, blocked_years, the
+        resolved target storages/techs, and per-parameter row counts.
+    """
     eol = detect_eol(lines)
     regions = find_set_members(lines, "REGION")
     years = sorted(find_set_members(lines, "YEAR"), key=year_key)
@@ -361,6 +424,16 @@ def patch_data_lines(
 
 
 def main() -> int:
+    """Parse CLI args, apply the storage-delay patch to data and model, and write outputs.
+
+    Returns:
+        0 on success (including `--dry-run`, where no files are written). Exits via
+        `sys.exit` if the input datafile or model file does not exist.
+
+    Side effects:
+        Unless `--dry-run`, writes `--output` (patched datafile) and `--model-output`
+        (patched model); always prints a summary of the patch applied.
+    """
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,

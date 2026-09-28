@@ -1,8 +1,26 @@
 """Careful reserve-margin repair using an XLSX fallback workbook.
 
-This script is the XLSX sibling of patch_reserve_margin_repair_careful.py.
-It keeps stock and flow capacity limits separate and only replaces sentinel
-values, by default 0 and 9999.
+This script is the XLSX sibling of patch_reserve_margin_repair_careful.py: it delegates the
+tag-patching, sentinel-replacement and stock/flow logic to that library, adding only the
+XLSX fallback loader (`load_fallback_xlsx`) and the CLI. It keeps stock
+(TotalAnnualMaxCapacity) and flow (TotalAnnualMaxCapacityInvestment) limits separate and
+only replaces sentinel values, by default 0 and 9999.
+
+Inputs:
+    <input_file> (positional arg): OSeMOSYS .txt datafile to read.
+    --fallback-xlsx: workbook of per-country-region firm-capacity fallbacks (first sheet,
+        or --xlsx-sheet), read via load_fallback_xlsx.
+Outputs:
+    -o/--output: sibling .txt datafile with reserve tags and capacity caps patched.
+    --warnings-file (optional): text file with the run's warnings.
+Usage:
+    python scripts/pipeline/patch_reserve_margin_repair_careful_xlsx.py <input> -o <output>
+        --fallback-xlsx <path> [--xlsx-sheet NAME] [--reserve-margin-value V]
+        [--target-prefixes ...] [--sentinel-values ...] [--modify-from-year Y] [flags]
+Notes:
+    - Called by B2_Executing_OG_Model.py when `reserve_margin_xlsx_active` is set in
+      Config_MOMF_T1_AB.yaml (output suffix `RMCarefulXLSX`, per
+      `reserve_margin_xlsx_suffix`).
 """
 
 from __future__ import annotations
@@ -84,6 +102,22 @@ def pick_value(row: dict[str, object], *candidates: str) -> str | None:
 
 
 def load_fallback_xlsx(path: Path, sheet_name: str | None = None) -> list[CapFallback]:
+    """Read per-country-region firm-capacity fallbacks from an xlsx workbook.
+
+    Args:
+        path: workbook to read.
+        sheet_name: worksheet to read; defaults to the workbook's first sheet.
+
+    Returns:
+        List of `CapFallback` entries, one per (parameter, prefix, cr, year) found: a
+        STOCK_PARAM entry when the row has a stock-like column (STOCK/MAX_CAPACITY/
+        TOTAL_CAPACITY), a FLOW_PARAM entry when it has a flow-like column (FLOW/
+        MAX_INVESTMENT/MAX_NEW_CAPACITY/ANNUAL_INVESTMENT); a row may yield both.
+
+    Raises:
+        ValueError: if `sheet_name` is not in the workbook, the sheet is empty or has an
+            empty header row, or a row is missing its CR value.
+    """
     workbook = load_workbook(path, data_only=True, read_only=True)
     if sheet_name:
         if sheet_name not in workbook.sheetnames:
@@ -148,6 +182,7 @@ def load_fallback_xlsx(path: Path, sheet_name: str | None = None) -> list[CapFal
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and return this script's CLI arguments (see module docstring for `Usage`)."""
     parser = argparse.ArgumentParser(
         description=(
             "Patch reserve tags and carefully replace sentinel firm-capacity caps "
@@ -215,6 +250,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Parse CLI args, apply the reserve-margin/capacity patch, and write the output.
+
+    Side effects:
+        Writes `--output` (patched datafile) and, if `--warnings-file` is given, a text
+        file of the run's warnings; prints a summary of tags/rows/warnings to stdout and
+        warnings to stderr.
+    """
     args = parse_args()
     input_path = Path(args.input_file)
     output_path = Path(args.output)

@@ -1,51 +1,28 @@
-"""
-inject_DaysInDayType.py
-=======================
+"""Patch the DaysInDayType block of a preprocessed OSeMOSYS .txt datafile in place.
 
-Patches the DaysInDayType block of an OSeMOSYS .txt datafile in place.
+The B1 -> otoole -> preprocess chain never generates DaysInDayType, so the .txt ships with
+an empty block and OSeMOSYS falls back to default=7. With 4 seasons x 1 daytype this makes
+storage equations see 4 * 7 = 28 days/year, while energy-balance equations correctly see
+365 days (via YearSplit), an unbounded-LP mismatch that surfaces downstream as
+infeasibility on storage intraday balance rows. Using the OSeMOSYS identity
+YearSplit[ts, y] = DaysInDayType[ls, ld, y] * DaySplit[lh, y] / 365, this script sums
+YearSplit per (season, year), computes DaysInDayType[season, 1, year] = round(weight * 365)
+and replaces the (probably empty) block. Idempotent; safe to re-run on an already-patched
+file.
 
-WHY THIS EXISTS
----------------
-The B1 -> otoole -> preprocess pipeline never generates DaysInDayType.
-The .txt therefore ships with an empty block:
-
-    param default 7 : DaysInDayType :=
-    ;
-
-OSeMOSYS falls back to default=7. With 4 seasons x 1 daytype this means
-storage equations think the year has 4 * 7 = 28 days, while energy balance
-equations correctly see 365 days (via YearSplit). The factor-of-13 mismatch
-on the same physical quantity creates an unbounded LP direction, which
-CPLEX hits during dual perturbation - and which surfaces downstream as
-"infeasibility" on storage intraday balance rows (e.g. S39_StorageIntraday).
-
-The OSeMOSYS identity:
-    YearSplit[ts, y] = DaysInDayType[ls, ld, y] * DaySplit[lh, y] / 365
-With one daytype this collapses to:
-    DaysInDayType[ls, 1, y] = sum_{ts in ls} YearSplit[ts, y] * 365
-
-WHAT THIS SCRIPT DOES
----------------------
-1. Reads the YearSplit block from the input file.
-2. Sums YearSplit per (season, year).
-3. Computes DaysInDayType[season, 1, year] = round(weight * 365).
-4. Replaces the (probably empty) DaysInDayType block in place.
-
-Idempotent. Safe to re-run on an already-patched file.
-
-USAGE
------
-Standalone (Windows):
-    python inject_DaysInDayType.py path\\to\\Pre_processed_BAU_0.txt
-
-From B2:
-    subprocess.run([sys.executable, '<path>/inject_DaysInDayType.py', target])
-
-ASSUMPTIONS
------------
-- Single daytype (DAYTYPE = {1}). Verified at runtime; warns otherwise.
-- Timeslice tags follow S{season}D{dailytimebracket} - the 'D' encodes the
-  dailytimebracket, not the daytype.
+Inputs:
+    <path/to/Pre_processed_X_0.txt> (positional arg): target OSeMOSYS .txt, read for its
+        YearSplit and DAYTYPE blocks.
+Outputs:
+    Same .txt file, DaysInDayType block replaced in place.
+Usage:
+    python scripts/pipeline/inject_DaysInDayType.py <path/to/Pre_processed_X_0.txt>
+Notes:
+    - Assumes a single DAYTYPE (DAYTYPE = {1}); warns at runtime if more are found (the
+      patcher hard-codes daytype=1 regardless).
+    - Timeslice tags follow S{season}D{dailytimebracket}; the 'D' suffix encodes the daily
+      time bracket, not the daytype.
+    - Called by B2_Executing_OG_Model.py always, right after preprocess_data.py.
 """
 import sys
 import re
@@ -54,6 +31,19 @@ from collections import defaultdict
 
 
 def inject(path: Path) -> None:
+    """Compute and write the DaysInDayType block for `path`, in place.
+
+    Args:
+        path: path to the OSeMOSYS .txt datafile to patch.
+
+    Raises:
+        SystemExit: if the YearSplit or DaysInDayType block is missing from the file, or
+            if no timeslices could be parsed from the YearSplit block.
+
+    Side effects:
+        Overwrites `path` with the DaysInDayType block replaced; prints a summary,
+        including a sanity check that per-season days sum to 365 for the first year found.
+    """
     text = path.read_text(encoding='utf-8')
 
     # 1. Locate YearSplit block

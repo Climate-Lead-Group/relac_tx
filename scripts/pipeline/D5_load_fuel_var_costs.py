@@ -1,12 +1,11 @@
-"""
-Load Fuel VariableCosts into A-O_Parametrization.xlsx for every scenario.
+"""Load fuel VariableCost values into A-O_Parametrization.xlsx for every scenario.
 
-Author: Climate Lead Group, Andrey Salazar-Vargas
-
-Source: inputs/A1_Outputs/<scenario>/LAC_Fuel_Price_Projections_2026_v2_audit.xlsx
-        - sheets matching pattern "Country_<ISO3>" (USD/L per fuel/year/scenario).
-Target: inputs/A1_Outputs/<scenario>/A-O_Parametrization.xlsx, sheet "VariableCost".
-        Rows whose TECHNOLOGY equals "MIN" + <fuel_code> + <ISO3> are updated.
+Reads USD/L fuel prices per country/year/price-scenario from
+LAC_Fuel_Price_Projections_2026_v2_audit.xlsx and writes them, converted to M$/PJ, into the
+"VariableCost" sheet of each scenario's A-O_Parametrization.xlsx. Rows whose TECHNOLOGY
+equals "MIN" + <fuel_code> + <ISO3> are updated; FUEL_MAPPING controls which source fuels
+map to which model fuel codes, and COUNTRY_OVERRIDE lets a source country's prices proxy
+for a model country absent from the source file.
 
 Unit conversion (USD/L -> M$/PJ):
     1 USD/L / (GJ/L) = 1 USD/GJ = 1 M$/PJ
@@ -14,10 +13,23 @@ Unit conversion (USD/L -> M$/PJ):
 
 Idempotent: rerunning with the same price_scenario yields the same workbook state.
 
+Inputs:
+    inputs/A1_Outputs/<scenario>/LAC_Fuel_Price_Projections_2026_v2_audit.xlsx (sheets
+        matching "Country_<ISO3>"; USD/L per fuel/year/price-scenario)
+    inputs/A1_Outputs/<scenario>/A-O_Parametrization.xlsx (sheet "VariableCost")
+Outputs:
+    Same workbook, sheet "VariableCost", in place (a timestamped .backup-fuelvc-*.xlsx copy
+        is written first, unless --no-backup).
 Usage:
     python scripts/pipeline/D5_load_fuel_var_costs.py
     python scripts/pipeline/D5_load_fuel_var_costs.py --price-scenario HIGH
-    python scripts/pipeline/D5_load_fuel_var_costs.py --base inputs/A1_Outputs --price-scenario LOW
+    python scripts/pipeline/D5_load_fuel_var_costs.py --base inputs/A1_Outputs
+        --price-scenario LOW
+Notes:
+    - Only scenario folders containing the source Excel are processed; others are skipped
+      (reported at the end of the run).
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 import argparse
 import re

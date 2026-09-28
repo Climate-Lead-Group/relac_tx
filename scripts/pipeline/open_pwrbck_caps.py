@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-open_pwrbck_caps.py
-===================
-Diagnostic patcher for OSTRAM. Opens TotalAnnualMaxCapacity and
-TotalAnnualMaxCapacityInvestment caps for backstop technologies (PWRBCK*)
-that are currently hardcapped at 0.
+"""Open TotalAnnualMaxCapacity(Investment) caps for PWRBCK* backstop technologies.
 
-Background:
-  PWRBCK* are high-cost backstop generators (VariableCost ~278, vs ~1.4 for
-  real fossil techs) whose purpose is to absorb feasibility edge cases. The
-  upstream A-O parametrization currently sets both TotalAnnualMaxCapacity and
-  TotalAnnualMaxCapacityInvestment to 0 for every PWRBCK*-region-year cell,
-  which strips out the safety net the model was designed with. When the
-  optimizer needs a backstop in any (region, year, timeslice) where the
-  legitimate generation chain can't satisfy demand, the LP becomes infeasible.
-  Opening these caps does NOT cause phantom PWRBCK investment because the
-  cost penalty (~200x real fossil) keeps them out of cost-optimal solutions
-  except where the LP is forced to use them.
+Diagnostic, non-destructive patcher for OSTRAM. PWRBCK* are high-cost backstop generators
+(VariableCost ~278, vs ~1.4 for real fossil techs) meant to absorb feasibility edge cases, but
+the upstream A-O parametrization hardcaps both TotalAnnualMaxCapacity and
+TotalAnnualMaxCapacityInvestment at 0 for every PWRBCK*-region-year cell, stripping out that
+safety net: when the optimizer needs a backstop in a (region, year, timeslice) the legitimate
+generation chain can't satisfy, the LP becomes infeasible. Opening these caps does NOT cause
+phantom PWRBCK investment, because the cost penalty (~200x real fossil) keeps them out of
+cost-optimal solutions except where the LP is forced to use them. Reads the source file and
+writes a sibling output; never mutates the source.
 
-Non-destructive: reads source file, writes sibling output, never mutates source.
-
+Inputs:
+    <input_file> (positional arg): preprocessed OSeMOSYS .txt datafile to read.
+Outputs:
+    -o/--output: sibling .txt datafile with matching zero-valued cap rows opened.
 Usage:
-  python open_pwrbck_caps.py <input_file> -o <output_file>
-  python open_pwrbck_caps.py <input_file> -o <output_file> --value 9999
-  python open_pwrbck_caps.py <input_file> -o <output_file> --pattern PWRBCK --value 9999
+    python scripts/pipeline/open_pwrbck_caps.py <input_file> -o <output_file>
+    python scripts/pipeline/open_pwrbck_caps.py <input_file> -o <output_file> --value 9999
+    python scripts/pipeline/open_pwrbck_caps.py <input_file> -o <output_file>
+        --pattern PWRBCK --value 9999
+Notes:
+    - Called by B2_Executing_OG_Model.py when `open_pwrbck_active` is set in
+      Config_MOMF_T1_AB.yaml (output suffix `OpenBCK`, per `open_pwrbck_suffix`).
 """
 
 import argparse
@@ -99,6 +98,13 @@ def patch_block(lines, start, end, pattern, new_value):
 
 
 def main():
+    """Parse CLI args, open matching zero-valued cap rows, and write the sibling output.
+
+    Side effects:
+        Reads `input_file`, creates the output directory if needed, and writes `--output`
+        as a new sibling .txt file (source untouched); prints per-block change counts and
+        any rows skipped because they were already non-zero.
+    """
     parser = argparse.ArgumentParser(
         description='Open PWRBCK* (or other matching) cap rows in '
                     'TotalAnnualMaxCapacity and TotalAnnualMaxCapacityInvestment '
