@@ -1,18 +1,34 @@
 # -*- coding: utf-8 -*-
-"""FB cost-sensitivity transform: cheap fossil fuel ONLY (hostile case for the Tx thesis).
-Consolidates v7 (BAC->BFB) and v9 (INV->IFB) into a single script restricted to the
+"""FB cost-sensitivity transform: scale fossil-fuel VariableCost down (cheap fossil, the
+hostile case for the Tx thesis).
+
+Consolidates v7 (BAC -> BFB) and v9 (INV -> IFB) into a single script restricted to the
 B* and I* scenarios. Reads a base VEGCON .txt, scales VariableCost of fossil MIN* supply
-by x0.52 and writes a new datafile. NO changes to VRE/wind/storage CapitalCost (unlike
-the former CR transform). Only VALUES change; structure/bounds untouched -> feasibility
-preserved. Backstop left AS-IS in the solve.
+by FUEL_MULT and writes a new datafile. No changes to VRE/wind/storage CapitalCost
+(unlike the former CR transform). Only VALUES change; structure/bounds untouched, so
+feasibility is preserved. The backstop is left AS-IS in the solve.
 
-Source: EIA AEO2025 Low Oil Price case, Brent 47 vs 91 USD/b in 2050 -> ratio 0.517 ~ 0.52
-[derived]. Flat scalar 2023-2050 (declared simplification; see
-sensitivity_multipliers_calibration.md). Pairs: BAC->BFB, INV->IFB.
+Source: EIA AEO2025 Low Oil Price case, Brent 47 vs 91 USD/b in 2050 -> ratio 0.517 ~
+FUEL_MULT=0.52 (line 59) [derived]. Flat scalar 2023-2050 (declared simplification; see
+sensitivity_multipliers_calibration.md). Pairs (PAIRS, line 56): BAC -> BFB, INV -> IFB.
 
-Datafile location (same convention as cost_sensitivity_v_SR_WF.py):
-  default            -> flat in outputs/tx_chain/
-  --executables-dir  -> <dir>/<S>_0/<datafile>  (B2 Executables layout; BFB_0/, IFB_0/ created)"""
+Inputs:
+    <S>_0/Pre_processed_<S>_0_..._FLOORED_VEGCON.txt for S in {BAC, INV}: flat in
+    outputs/tx_chain/ by default, or under outputs/Executables/<S>_0/ with --executables-dir.
+Outputs:
+    Same-format datafile for the paired scenario (BFB, IFB), written next to its source
+    (outputs/tx_chain/ or <Executables>/<NEW>_0/, created if missing).
+Usage:
+    python scripts/tx_chain/cost_sensitivity_v_FB.py --executables-dir <Executables>
+    Invoked by B2_Executing_OG_Model.py as the "cost_sensitivity_FB" entry of
+    scenario_transforms in inputs/config/Config_MOMF_T1_AB.yaml.
+Notes:
+    - The transform and self-check run as module-level code (no __main__ guard), so
+      importing this module has side effects (parses sys.argv, reads/writes datafiles).
+    - Exits with sys.exit(1) if the self-check fails: fossil VariableCost ratio off by
+      more than 1e-3, a CapitalCost family changed, backstop VariableCost changed, or
+      line counts differ between base and new datafile.
+"""
 import re, os, sys
 from pathlib import Path
 

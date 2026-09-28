@@ -1,26 +1,49 @@
 # -*- coding: utf-8 -*-
-"""nli_sr_recompute.py -- paso NUEVO de la cadena v10 (correr DESPUES de
-cost_sensitivity y ANTES de resolver). Solo escenarios SR: ISR, VSR, ISRWF, VSRWF.
+"""nli_sr_recompute.py -- v10 chain step: return the RPO reserve pinning leaves dead to
+the NLI budget of the SR scenarios.
 
-QUE CORRIGE (usuario 2026-09-01): los SR heredan los topes NLI de INV/VGB(/WF),
-calculados con la reserva RPO al TECHO (1% del stock congelado). Luego v10 pinnea
-la RPO al piso: la reserva (~750 MUSD/ano) queda muerta -- ningun canal puede
-gastarla. Este paso RE-CALCULA los topes NLI con la reserva RPO = PISO PINNEADO
-(el techo verdadero del escenario SR), devolviendo esa plata al presupuesto NLI.
+Run AFTER cost_sensitivity_v_SR_WF.py and BEFORE the solve. Only the SR scenarios: ISR,
+VSR, ISRWF, VSRWF.
 
-COMO (agnostico a los pesos: respeta historicos o water-fill por igual):
-  presup_nuevo(ano) = max(0, i_region(ano) - costo_planificadas - costo_RPO_pinneada)
-  ratio(ano) = max(1, presup_nuevo / presup_viejo)    [presup_viejo = suma topes NLI x costo]
-  tope_NLI_nuevo(tech, ano) = tope_viejo x ratio(ano)
-  TotalAnnualMaxCapacity NLI = suma acumulada de los topes anuales nuevos.
-El max(1, .) protege los anos dominados por el floor BRB (2030: presupuesto 0,
-solo el floor de 3 MUSD; no se reduce nada, nunca). El escalado uniforme desvia
-la rebanada BRB del floor exacto en <1 MUSD/ano (declarado; tolerancia +-5).
-IDEMPOTENTE: el presupuesto nuevo no depende de los topes, correrlo 2 veces da ratio=1.
+WHAT IT FIXES (user 2026-09-01): the SR scenarios inherit their NLI ceilings from
+INV/VGB(/WF), computed with the RPO reserve at its CEILING (1% of the frozen stock).
+cost_sensitivity_v_SR_WF.py then pins RPO to its floor: the reserve (~750 MUSD/year)
+sits dead, unspendable by any channel. This step RE-COMPUTES the NLI ceilings using the
+RPO reserve = PINNED FLOOR (the SR scenario's true ceiling), returning that money to the
+NLI budget.
 
-NO TOCA: envelope (3300 x 1.0%), pesos, costos, pisos, RPO, planificadas, ICON,
-ni ningun escenario no-SR. Solo filas TRNNLI/RNWNLI de MaxCapacityInvestment y
-TotalAnnualMaxCapacity, anos 2030+.
+HOW (agnostic to the weighting scheme: respects historical or water-fill shares alike):
+    new_budget(year) = max(0, i_region(year) - planned_cost - pinned_RPO_cost)
+    ratio(year) = max(1, new_budget / old_budget)   [old_budget = sum of NLI ceilings x cost]
+    new_NLI_ceiling(tech, year) = old_ceiling x ratio(year)
+    TotalAnnualMaxCapacity (NLI) = cumulative sum of the new annual ceilings.
+The max(1, .) protects years dominated by the BRB floor (2030: budget 0, only the 3 MUSD
+floor; never reduced). The uniform scaling deviates the BRB slice from its exact floor by
+<1 MUSD/year (declared; tolerance +-5). IDEMPOTENT: the new budget does not depend on the
+existing ceilings, so running it twice yields ratio=1.
+
+DOES NOT TOUCH: the envelope (ANCHOR_MUSD x ENV_GROWTH), the country shares, costs,
+floors, RPO, planned techs, ICON, or any non-SR scenario. Only TRNNLI/RNWNLI rows of
+TotalAnnualMaxCapacityInvestment and TotalAnnualMaxCapacity, years 2030+ (NLI_FIRST_YEAR).
+
+Inputs:
+    Pre_processed_<S>_0_..._FLOORED_VEGCON.txt for S in {ISR, VSR, ISRWF, VSRWF}, already
+    processed by cost_sensitivity_v_SR_WF.py: flat in outputs/tx_chain/ by default, or
+    under outputs/Executables/<S>_0/ with --executables-dir.
+Outputs:
+    Same datafiles, modified in place (TRNNLI/RNWNLI rows only).
+Usage:
+    python scripts/tx_chain/nli_sr_recompute.py --executables-dir <Executables>
+    Invoked by B2_Executing_OG_Model.py as the "nli_sr_recompute" entry of
+    scenario_transforms in inputs/config/Config_MOMF_T1_AB.yaml, right after
+    "cost_sensitivity".
+Notes:
+    - Must run after cost_sensitivity_v_SR_WF.py: recompute() aborts (sys.exit) if RPO is
+      not already pinned (Max != Min on an RPO row).
+    - Runs as module-level code (no __main__ guard); importing this module has side
+      effects (parses sys.argv, reads/writes datafiles).
+    - Exits with sys.exit(1) if any scenario's self-check fails (planned + pinned-RPO +
+      NLI cost deviates from max(i_region, planned + RPO) by more than +-5 MUSD).
 """
 import re
 import sys
@@ -67,6 +90,32 @@ def read_block(txt, name):
 
 
 def recompute(path):
+    """Rescale TRNNLI/RNWNLI ceilings of one SR datafile using the pinned RPO cost.
+
+    Reads TotalAnnualMaxCapacityInvestment, TotalAnnualMinCapacityInvestment and
+    CapitalCost from path, verifies RPO is pinned (Max == Min), computes the new
+    per-year NLI budget and ratio described in the module docstring, and — unless the
+    file is already recomputed (ratio ~= 1 everywhere) — rewrites the TRNNLI/RNWNLI rows
+    of TotalAnnualMaxCapacityInvestment (annual) and TotalAnnualMaxCapacity (cumulative)
+    in place.
+
+    Args:
+        path: pathlib.Path to the scenario's VEGCON datafile (already processed by
+            cost_sensitivity_v_SR_WF.py).
+
+    Returns:
+        Tuple (pln_cost, rpo_pin, old_b, new_b, ratio, n_inv, n_cum):
+        pln_cost, rpo_pin, old_b, new_b, ratio are dicts keyed by year (2030-2050) with
+        the planned-tech cost, pinned-RPO cost, old NLI budget, new NLI budget and
+        rescale ratio; n_inv/n_cum are the counts of rewritten annual/cumulative rows
+        (both 0 when no rewrite was needed).
+
+    Raises:
+        SystemExit: if any RPO row is not pinned (Max != Min beyond 1e-9).
+
+    Side effects:
+        Rewrites path in place when rescaling is needed; leaves it untouched otherwise.
+    """
     txt = path.read_text(encoding="utf-8", errors="replace")
     mx = read_block(txt, "TotalAnnualMaxCapacityInvestment")
     mn = read_block(txt, "TotalAnnualMinCapacityInvestment")

@@ -1,25 +1,45 @@
 # -*- coding: utf-8 -*-
-"""RA (Renovables Altos) cost-sensitivity transform: renewable CapitalCost ONLY.
-PENDIENTE (2026-09-16): CALIBRAR los multiplicadores de Renovables Altos. Hoy son los de RB
-(renovables baratas), es decir, el escenario aun NO representa renovables caras.
-Copia estructural de cost_sensitivity_v_RB.py (2026-09-16): misma logica, mismas familias,
-mismo self-check. Los MULTIPLICADORES se ajustan manualmente en la seccion "tunable knobs";
-el self-check se deriva de esos knobs, asi que no hay que tocar nada mas al cambiarlos.
-Restricted to the B* and I* scenarios. Reads a base VEGCON .txt, scales CapitalCost of
-solar, wind and battery storage, writes a new datafile. Only VALUES change; structure/bounds
-untouched -> feasibility preserved. Backstop is left AS-IS in the solve.
+"""RA (Renovables Altos) cost-sensitivity transform: renewable CapitalCost only.
 
-Multipliers (PLACEHOLDER = RB; PENDIENTE CALIBRAR Renovables Altos):
-  - PWRSPV/PWRCSP x1.33 (NREL ATB 2024 PV Moderate; EIA AEO2025 Low Zero-Carbon Tech Cost)
-  - PWRWON/PWRWOF x1.17 (NREL ATB 2024 land-based wind Moderate [EST]; shallower than PV)
-  - PWRSDS x1.49 (NREL ATB 2024 utility battery Moderate)
-  - PWRLDS EXCLUDED (no literature basis; base trajectory already declines 56%)
-  - fossil MIN* VariableCost UNCHANGED (that is the FA/FB scripts)
-Pairs: BAC->BRA, INV->IRA.
+PENDING (2026-09-16): the Renovables Altos multipliers still need calibration. Today
+they are copied from RB (Renovables Baratas, cheap renewables), so this scenario does
+NOT yet represent expensive renewables. Structural copy of cost_sensitivity_v_RB.py
+(2026-09-16): same logic, same families, same self-check; only the multipliers in the
+"tunable knobs" section differ, and the self-check derives its expectations from those
+same knobs, so nothing else needs to change when they are recalibrated. Restricted to
+the B* and I* scenarios. Reads a base VEGCON .txt, scales CapitalCost of solar, wind and
+battery storage, writes a new datafile. Only VALUES change; structure/bounds untouched,
+so feasibility is preserved. The backstop is left AS-IS in the solve.
 
-Datafile location (same convention as cost_sensitivity_v_SR_WF.py):
-  default            -> flat in outputs/tx_chain/
-  --executables-dir  -> <dir>/<S>_0/<datafile>  (B2 Executables layout; BRA_0/, IRA_0/ created)"""
+Multipliers (PLACEHOLDER = RB values; Renovables Altos calibration still pending):
+    - PWRSPV/PWRCSP x1.33 (VRE_MULT, line 70; NREL ATB 2024 PV Moderate; EIA AEO2025 Low
+      Zero-Carbon Tech Cost)
+    - PWRWON/PWRWOF x1.17 (WIND_MULT, line 71; NREL ATB 2024 land-based wind Moderate
+      [EST]; shallower than PV)
+    - PWRSDS x1.49 (STO_MULT, line 72; NREL ATB 2024 utility battery Moderate)
+    - PWRLDS EXCLUDED (no literature basis; base trajectory already declines 56%)
+    - fossil MIN* VariableCost UNCHANGED (that is the FA/FB scripts)
+Pairs (PAIRS, line 67): BAC -> BRA, INV -> IRA.
+
+Inputs:
+    <S>_0/Pre_processed_<S>_0_..._FLOORED_VEGCON.txt for S in {BAC, INV}: flat in
+    outputs/tx_chain/ by default, or under outputs/Executables/<S>_0/ with --executables-dir.
+Outputs:
+    Same-format datafile for the paired scenario (BRA, IRA), written next to its source
+    (outputs/tx_chain/ or <Executables>/<NEW>_0/, created if missing).
+Usage:
+    python scripts/tx_chain/cost_sensitivity_v_RA.py --executables-dir <Executables>
+    Invoked by B2_Executing_OG_Model.py as the "cost_sensitivity_RA" entry of
+    scenario_transforms in inputs/config/Config_MOMF_T1_AB.yaml.
+Notes:
+    - Do not read RA output as a calibrated "Renovables Altos" scenario yet: the
+      multipliers are an explicit placeholder equal to RB's.
+    - The transform and self-check run as module-level code (no __main__ guard), so
+      importing this module has side effects (parses sys.argv, reads/writes datafiles).
+    - Exits with sys.exit(1) if the self-check fails: a CapitalCost ratio off by more
+      than 1e-3, fossil VariableCost changed, backstop VariableCost changed, or line
+      counts differ between base and new datafile.
+"""
 import re, os, sys
 from pathlib import Path
 

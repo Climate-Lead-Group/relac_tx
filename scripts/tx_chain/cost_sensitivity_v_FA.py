@@ -1,21 +1,37 @@
 # -*- coding: utf-8 -*-
-"""FA (Fosiles Altos) cost-sensitivity transform: pricier fossil fuel ONLY.
-Split of the former CR (combined) sensitivity, script retired: this script keeps only the
-fossil-fuel leg (renewable CapitalCost is left untouched; see cost_sensitivity_v_RB.py
-for the other half). Restricted to the B* and I* scenarios. Reads a base VEGCON .txt,
-scales VariableCost of the fossil MIN* supply technologies, writes a new datafile.
-Only VALUES change; structure/bounds untouched -> feasibility preserved. Backstop is
-left AS-IS in the solve (deterrent); its reframe is done in post-processing.
+"""FA (Fosiles Altos) cost-sensitivity transform: scale fossil-fuel VariableCost only.
+
+Split of the former CR (combined) sensitivity (that script is retired): keeps only the
+fossil-fuel leg; renewable CapitalCost is left untouched (see cost_sensitivity_v_RB.py
+for that half). Restricted to the B* and I* scenarios. Reads a base VEGCON .txt, scales
+VariableCost of the fossil MIN* supply technologies, writes a new datafile. Only VALUES
+change; structure/bounds untouched, so feasibility is preserved. The backstop is left
+AS-IS in the solve (deterrent); its reframe happens in post-processing.
 
 Multiplier per sensitivity_multipliers_calibration.md:
-  - fossil MIN* VariableCost x1.70 (EIA AEO2025 High Oil Price, 155/91 [derived])
-  - MINURN excluded (not fossil)
-  - CapitalCost of PWRSPV/PWRCSP/PWRWON/PWRWOF/PWRSDS UNCHANGED (that is the RB script)
-Pairs: BAC->BFA, INV->IFA.
+    - fossil MIN* VariableCost x1.70 (FUEL_MULT, line 62; EIA AEO2025 High Oil Price,
+      155/91 [derived])
+    - MINURN excluded (not fossil)
+    - CapitalCost of PWRSPV/PWRCSP/PWRWON/PWRWOF/PWRSDS UNCHANGED (that is the RB script)
+Pairs (PAIRS, line 59): BAC -> BFA, INV -> IFA.
 
-Datafile location (same convention as cost_sensitivity_v_SR_WF.py):
-  default            -> flat in outputs/tx_chain/
-  --executables-dir  -> <dir>/<S>_0/<datafile>  (B2 Executables layout; BFA_0/, IFA_0/ created)"""
+Inputs:
+    <S>_0/Pre_processed_<S>_0_..._FLOORED_VEGCON.txt for S in {BAC, INV}: flat in
+    outputs/tx_chain/ by default, or under outputs/Executables/<S>_0/ with --executables-dir.
+Outputs:
+    Same-format datafile for the paired scenario (BFA, IFA), written next to its source
+    (outputs/tx_chain/ or <Executables>/<NEW>_0/, created if missing).
+Usage:
+    python scripts/tx_chain/cost_sensitivity_v_FA.py --executables-dir <Executables>
+    Invoked by B2_Executing_OG_Model.py as the "cost_sensitivity_FA" entry of
+    scenario_transforms in inputs/config/Config_MOMF_T1_AB.yaml.
+Notes:
+    - The transform and self-check run as module-level code (no __main__ guard), so
+      importing this module has side effects (parses sys.argv, reads/writes datafiles).
+    - Exits with sys.exit(1) if the self-check fails: fossil VariableCost ratio off by
+      more than 1e-3, a CapitalCost family changed, backstop VariableCost changed, or
+      line counts differ between base and new datafile.
+"""
 import re, os, sys
 from pathlib import Path
 

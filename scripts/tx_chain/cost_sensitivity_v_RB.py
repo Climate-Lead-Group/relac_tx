@@ -1,23 +1,41 @@
 # -*- coding: utf-8 -*-
-"""RB (Renovables Baratas) cost-sensitivity transform: cheaper VRE + storage ONLY.
-Split of the former CR (combined) sensitivity, script retired: this script keeps only the
-renewable leg (fossil-fuel VariableCost is left untouched; see cost_sensitivity_v_FA.py
-for the other half). Restricted to the B* and I* scenarios. Reads a base VEGCON .txt,
-scales CapitalCost of solar, wind and battery storage, writes a new datafile.
-Only VALUES change; structure/bounds untouched -> feasibility preserved. Backstop is
-left AS-IS in the solve (deterrent); its reframe is done in post-processing.
+"""RB (Renovables Baratas) cost-sensitivity transform: scale down VRE + storage
+CapitalCost only.
+
+Split of the former CR (combined) sensitivity (that script is retired): keeps only the
+renewable leg; fossil-fuel VariableCost is left untouched (see cost_sensitivity_v_FA.py
+for that half). Restricted to the B* and I* scenarios. Reads a base VEGCON .txt, scales
+CapitalCost of solar, wind and battery storage, writes a new datafile. Only VALUES
+change; structure/bounds untouched, so feasibility is preserved. The backstop is left
+AS-IS in the solve (deterrent); its reframe happens in post-processing.
 
 Multipliers per sensitivity_multipliers_calibration.md:
-  - PWRSPV/PWRCSP x0.60 (NREL ATB 2024 PV Moderate; EIA AEO2025 Low Zero-Carbon Tech Cost)
-  - PWRWON/PWRWOF x0.75 (NREL ATB 2024 land-based wind Moderate [EST]; shallower than PV)
-  - PWRSDS x0.50 (NREL ATB 2024 utility battery Moderate)
-  - PWRLDS EXCLUDED (no literature basis; base trajectory already declines 56%)
-  - fossil MIN* VariableCost UNCHANGED (that is the FA script)
-Pairs: BAC->BRB, INV->IRB.
+    - PWRSPV/PWRCSP x0.60 (VRE_MULT, line 66; NREL ATB 2024 PV Moderate; EIA AEO2025 Low
+      Zero-Carbon Tech Cost)
+    - PWRWON/PWRWOF x0.75 (WIND_MULT, line 67; NREL ATB 2024 land-based wind Moderate
+      [EST]; shallower than PV)
+    - PWRSDS x0.50 (STO_MULT, line 68; NREL ATB 2024 utility battery Moderate)
+    - PWRLDS EXCLUDED (no literature basis; base trajectory already declines 56%)
+    - fossil MIN* VariableCost UNCHANGED (that is the FA script)
+Pairs (PAIRS, line 63): BAC -> BRB, INV -> IRB.
 
-Datafile location (same convention as cost_sensitivity_v_SR_WF.py):
-  default            -> flat in outputs/tx_chain/
-  --executables-dir  -> <dir>/<S>_0/<datafile>  (B2 Executables layout; BRB_0/, IRB_0/ created)"""
+Inputs:
+    <S>_0/Pre_processed_<S>_0_..._FLOORED_VEGCON.txt for S in {BAC, INV}: flat in
+    outputs/tx_chain/ by default, or under outputs/Executables/<S>_0/ with --executables-dir.
+Outputs:
+    Same-format datafile for the paired scenario (BRB, IRB), written next to its source
+    (outputs/tx_chain/ or <Executables>/<NEW>_0/, created if missing).
+Usage:
+    python scripts/tx_chain/cost_sensitivity_v_RB.py --executables-dir <Executables>
+    Invoked by B2_Executing_OG_Model.py as the "cost_sensitivity_RB" entry of
+    scenario_transforms in inputs/config/Config_MOMF_T1_AB.yaml.
+Notes:
+    - The transform and self-check run as module-level code (no __main__ guard), so
+      importing this module has side effects (parses sys.argv, reads/writes datafiles).
+    - Exits with sys.exit(1) if the self-check fails: a CapitalCost ratio off by more
+      than 1e-3, fossil VariableCost changed, backstop VariableCost changed, or line
+      counts differ between base and new datafile.
+"""
 import re, os, sys
 from pathlib import Path
 

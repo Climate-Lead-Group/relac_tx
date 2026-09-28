@@ -1,61 +1,85 @@
 # -*- coding: utf-8 -*-
-"""
-veg_tx_constraints.py
-=====================
-Implementacion de referencia (reproducible) de las reglas de transmision del
-modelo RELAC / OSeMOSYS, workstream FIG 3. Escribe SOBRE COPIAS del datafile
-MathProg de cada escenario; nunca toca los originales. F5-ejecutable. Espanol.
+"""Reference (reproducible) implementation of the RELAC/OSeMOSYS transmission rules,
+FIG 3 workstream.
 
-PIPELINE (en orden; cada paso se prueba en el preflight al final):
+Runs once, as a cross-scenario barrier, over the _FLOORED.txt of every base scenario
+(BAU/OPT/INV/VGB, plus the ramp comparators BAC/OPC and the water-fill variants
+INVWF/VGBWF when WATERFILL_ENABLE). Writes over COPIES of each scenario's MathProg
+datafile; never touches the originals. Every step below is checked in the preflight
+that main() runs at the end.
 
-  0. PISO (SWAP)  -- corrige el piso comprometido (TotalAnnualMinCapacityInvestment)
-     El OPTIMO debe tener AL MENOS tanto grid comprometido como la REFERENCIA.
-     En los datos base, Brasil esta al reves: la REFERENCIA fuerza ~22 GW de Tx
-     en 2027-2029 y el OPTIMO fuerza 0 alli. Se INTERCAMBIA (swap) el piso entre
-     REF y OPT en cada (tech, ano) donde REF>OPT: el OPT recibe el valor mayor,
-     la REF (y por identidad INV/VGB) el menor. Solo anos >=2027 (no toca lo
-     historico 2023-2026, que es identico entre escenarios). REF/INV/VGB quedan
-     con piso Tx identico entre si; el OPT queda >= REF en todos los anos.
+Inputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._FLOORED.txt for every
+    scenario in SCENARIOS (line 116), or flat outputs/tx_chain/ input files when
+    --base-dir is not given.
+    --needs-csv (inputs/tx_chain/outputs_BSR/NewCapacity.csv, via load_needs()): revealed
+    NLI need per country/year, pinned to a no-NLI-ceiling BSR run; required for the
+    BAC/OPC comparator's Argentina floor and for the water-fill scenarios.
+Outputs:
+    outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._FLOORED_VEGCON.txt (or flat
+    in outputs/tx_chain/ in legacy mode) for every scenario written; veg_pipeline_proof.png
+    and veg_preflight.png diagnostic plots in the same output directory.
+Usage:
+    python scripts/tx_chain/veg_tx_constraints.py --base-dir <Executables> \\
+        --needs-csv <NewCapacity.csv>
+    Invoked by B2_Executing_OG_Model.py once, after the per-scenario _FLOORED.txt loop,
+    when veg_tx_active (veg_tx_script) is set in inputs/config/Config_MOMF_T1_AB.yaml.
+Notes:
+    Pipeline, in order (0-4; step 3b renumbered from the source comments):
 
-  1. COSTO (nivel real) + CALIBRACION
-     La base de Executables YA esta en costo real (el x2 vive AGUAS ABAJO, en los
-     archivos de solve; ver nota abajo). Se aplica UN factor de escala m (calibracion)
-     que hace que la inversion COMPROMETIDA (piso planificado de la REF) PROMEDIE el
-     ancla IEA (~3080 MUSD/ano @2022) en la ventana 2025-2029. El supuesto: el modelo
-     no debe invertir mas de lo planificado, asi que el piso es la base de calibracion.
+    0. FLOOR SWAP -- fixes the committed floor (TotalAnnualMinCapacityInvestment).
+       The OPTIMAL scenario must have AT LEAST as much committed grid as the
+       REFERENCE. In the base data Brazil is inverted: REFERENCE forces ~22 GW of Tx
+       in 2027-2029 while OPTIMAL forces 0 there. The floor is swapped between REF
+       and OPT wherever REF>OPT (RAISE_NOT_SWAP=True, line 140: OPT is raised to
+       max(REF, OPT); REF/INV/VGB keep their own floor). Only years >=2027
+       (SWAP_FIRST_YEAR, line 135); 2023-2026 is identical across scenarios already.
+       REF/INV/VGB end up with an identical Tx floor; OPT ends up >= REF every year.
 
-  2. ENVELOPE NLI -- lineas nuevas no planificadas (familias TRNNLI, RNWNLI)
-     La inversion Tx TOTAL del vegetativo (planificadas + RPO + NLI) se capa en la
-     trayectoria regional I_region(ano) = 3300 @2022 x1.0%/ano (~3.6k @2030 -> 4.4k @2050 MUSD).
-     Las PLANIFICADAS (= plan OPT) y la RPO consumen el envelope PRIMERO; la NLI recibe
-     SOLO el remanente: presup_NLI = max(0, I_region - costo_planif - costo_RPO). Ese
-     remanente se reparte por pais con shares s(c) y ren/no-ren, y se pasa a GW via el
-     costo corregido. Anos 2030+. Solo en los vegetativos (INV, VGB). NO aditiva
-     (v1 usaba el I_region completo para NLI y se apilaba sobre el plan: ese era el bug).
+    1. COST (real level) + CALIBRATION. The Executables base is already at real cost
+       (the legacy x2 multiplier lives downstream, in the solve files). A single scale
+       factor m is applied so the REFERENCE's committed floor investment averages the
+       IEA/SEGIB anchor CALIB_ANCHOR_MUSD=3080.0 (line 160) over CALIB_WINDOW=(2024,
+       2029) (line 167); calibrated on CALIB_FLOOR_SCENARIO="BAU" (line 166).
 
-  3. REPOTENCIACION (familias TRNRPO, RNWRPO)
-     Tope fisico del stock EXISTENTE (PWRTRN/RNWTRN). Solo flujo anual, PLANO 1%/ano
-     desde 2028 (v13; antes rampa 2%->3%). SIN techo acumulado. Los 4.
+    2. NLI ENVELOPE -- unplanned new lines (families TRNNLI, RNWNLI). Total vegetativo
+       (planned + RPO + NLI) Tx investment is capped at the regional trajectory
+       I_region(year) = ANCHOR_MUSD=3300.0 (line 171) x (1+ENV_GROWTH=0.01, line 315)
+       ** (year-2022), i.e. ~3.6k @2030 -> 4.4k @2050 MUSD. Planned lines (= OPT plan)
+       and RPO consume the envelope FIRST; NLI receives only the remainder:
+       nli_budget = max(0, I_region - planned_cost - rpo_cost). The remainder is split
+       by country share and renewable/non-renewable mix, years 2030+
+       (NLI_FIRST_YEAR, line 173), only for the vegetativo scenarios (INV, VGB, and
+       INVWF/VGBWF via the water-fill weights).
 
-  3b. TECHO PLANIFICADAS (familias PWRTRN, RNWTRN)
-     MaxCapacityInvestment = piso del OPTIMO (post-swap), en LOS 4 escenarios, 2027+.
-     OPT fijado (min=max); REF/veg eligen entre su piso y el plan OPT; nadie invierte
-     en planificadas mas que el plan optimo.
+    3. REPOWERING (families TRNRPO, RNWRPO). Physical ceiling on the EXISTING stock
+       (PWRTRN/RNWTRN residual capacity). Annual flow only, flat RPO_PCT_START=
+       RPO_PCT_END=0.01 (lines 178-179) from RPO_FIRST_YEAR=2028 (line 177), no
+       cumulative cap. Applies to all 4 base scenarios (and their ramp/WF variants).
 
-  4. ESCALADA DE COSTO
-     +0.3% real/ano al CapitalCost corregido de las 6 familias Tx (2025+). Los 4.
+    3b. PLANNED CEILING (families PWRTRN, RNWTRN). MaxCapacityInvestment = the
+        post-swap OPTIMAL floor, in all 4 scenarios, from SWAP_FIRST_YEAR=2027. OPT is
+        pinned (min=max); REF/vegetativo choose between their own floor and the OPT
+        plan; nobody invests more in planned lines than the optimal plan.
 
-DERIVACION (trazable; referencias completas al final del archivo)
------------------------------------------------------------------
-  Nivel 3000 MUSD @2022: IEA Latin America Energy Outlook 2023 via SEGIB
-    (20000/6.5 = ~3077 @2022 ~ 3300 en USD 2023). Crece 1.0%/ano (LAEO 2023 fig 1.9: 45->50 GUSD/ano, ~1.06%/ano; redes declinaron => 1% es techo),
-    muy por debajo del x6.5 (~7%/ano) de la necesidad APS.
-  Repotenciacion 1%/ano plano (v13; la rampa 2%->3% original citaba): reemplazo de red en EMDE sube sostenido hasta
-    2040 en el APS (IEA "Building the Future Transmission Grid", feb 2025). 2%
-    = reemplazo de lineas EMDE; 3% = reemplazo de transformadores EMDE.
-  Costo +0.3%/ano: metales ~25-30% del CAPEX (Thunder Said/PJM), crecimiento
-    real neto ~+0.3%/ano (Goldman 2025); resto sin tendencia (Gorman/Mills/
-    Wiser, LBNL 2019). El choque 2019-24 (IEA 2025) es de NIVEL, no de pendiente.
+    4. COST ESCALATION. +COST_ESC_RATE=0.003/year real (line 184) on the corrected
+       CapitalCost of the 6 Tx families, from COST_ESC_FROM=2025 (line 184). All 4
+       scenarios.
+
+    Derivation (full references at the end of the module):
+    - 3000 MUSD @2022 anchor: IEA Latin America Energy Outlook 2023 via SEGIB
+      (20000/6.5 ~= 3077 @2022, ~3300 in USD 2023 terms). ENV_GROWTH=1.0%/year (LAEO
+      2023 fig 1.9: 45->50 GUSD/year, ~1.06%/year; grids declined over that period, so
+      1% is a conservative ceiling), well below the ~7%/year APS need trajectory.
+    - Flat 1%/year repowering (v13; supersedes an earlier 2%->3% ramp): EMDE grid
+      replacement rises steadily through 2040 in the APS (IEA "Building the Future
+      Transmission Grid", Feb 2025). 2% = EMDE line replacement; 3% = EMDE transformer
+      replacement.
+    - +0.3%/year cost escalation: metals are ~25-30% of CAPEX (Thunder Said/PJM), real
+      net growth ~+0.3%/year (Goldman 2025); the rest has no trend (Gorman/Mills/Wiser,
+      LBNL 2019). The 2019-24 shock (IEA 2025) is a LEVEL shift, not a slope change.
+    - This is the single largest file in scripts/tx_chain (~1400 lines); read the
+      numeric derivations above before changing a constant.
 """
 import csv as _csvmod
 import shutil
@@ -574,6 +598,51 @@ def cost_final(true_base, tech, year, calib):
 # --------------------------------------------------------------------------
 def build_mods(lines, mode, gshares, ren_c, calib, min_override, planned_ceiling, is_opt,
                need_rows=None, use_waterfill=False):
+    """Compute every parameter change (steps 1-4 of the pipeline) for one scenario.
+
+    Reads CapitalCost, ResidualCapacity and the existing floor from the source datafile
+    lines, then builds, in order: the corrected/escalated CapitalCost of the 6 Tx
+    families (step 1+4); the RPO (repowering) annual ceiling (step 3); the planned-lines
+    ceiling for PWRTRN/RNWTRN, fixed to the OPT plan, the scenario's own floor, or an
+    envelope-scaled value depending on `mode`/`is_opt` (step 3b); the NLI ceiling via
+    `_write_nli`, using the "envelope" (INV/VGB) or "ramp"/comparator (BAC/OPC) budget
+    identity, or left uncapped for BAU/OPT (step 2); interconnector pinning (PIN_ICON);
+    and a feasibility guard that raises any investment ceiling below its floor.
+
+    Args:
+        lines: source datafile lines (list of str, keepends=True), as read from the
+            scenario's _FLOORED.txt.
+        mode: one of "uncapped" (BAU/OPT: no NLI ceiling), "envelope" (INV/VGB/WF:
+            NLI = residual of the regional envelope I_region), "ramp" (BAC/OPC
+            comparator: NLI = residual of i_comp, plus an Argentina floor).
+        gshares: dict country -> NLI budget share (post growth_factor scaling);
+            replaced internally by the water-fill vector when `use_waterfill`.
+        ren_c: dict country -> renewable share of generation, used to split each NLI
+            slice between RNWNLI and TRNNLI.
+        calib: calibration scale factor m applied to CapitalCost (see calibrate()).
+        min_override: dict (tech, year) -> floor value from the step-0 swap/raise;
+            merged into MININV of the returned mod and into the feasibility floor.
+        planned_ceiling: dict (tech, year) -> post-swap OPT floor for PWRTRN/RNWTRN,
+            used as the planned-lines ceiling for OPT and as the upper bound for the
+            vegetativo scenarios.
+        is_opt: True for the OPT-like scenarios (OPT, OPC): planned lines are pinned to
+            `planned_ceiling` exactly.
+        need_rows: revealed-need rows from load_needs(), keyed (tech, year) -> GW;
+            required when `mode == "ramp"` or `use_waterfill` is True.
+        use_waterfill: if True, replace `gshares` with the water-fill vector from
+            waterfill() before writing NLI (only for INVWF/VGBWF).
+
+    Returns:
+        Tuple (mod, cc_txt, true_base, resid, raised):
+        mod is a dict of the parameters to overwrite ("CapitalCost",
+        "TotalAnnualMaxCapacityInvestment", "TotalAnnualMaxCapacity", MININV), each a
+        dict (tech, year) -> value; cc_txt/true_base are the source/true-base CapitalCost
+        maps; resid(tech) looks up 2023-2027 ResidualCapacity; raised lists the
+        (tech, year, old_ceiling, floor) cells the feasibility guard corrected.
+
+    Side effects:
+        None on `lines` (read-only); does not write to disk.
+    """
     # v4: mode in {uncapped, envelope, ramp}; gshares = shares x growth_factor;
     #     ren_c = mezcla renovable por pais (split ren/no-ren de NLI).
     # v14: need_rows = necesidad revelada (load_needs); use_waterfill = reemplazar
@@ -953,6 +1022,24 @@ def allowed_musd(dst):
 
 
 def main():
+    """Run the full pipeline (steps 0-4) for every scenario, then the preflight checks.
+
+    Order: (0) load and swap/raise the committed Tx floor between the reference and
+    optimal scenarios (compute_swap/redate_floor/bipole_cells); (1) calibrate the cost
+    scale factor m from the reference floor (calibrate()); (2) call build_mods() and
+    apply_and_write() for every scenario in SCENARIOS (skipping water-fill scenarios
+    when WATERFILL_ENABLE is False or a source file is missing); (3) run the floor
+    preflight (OPT >= REF, REF/INV/VGB share an identical Tx floor), the OSeMOSYS
+    feasibility scan (feasibility_scan()), the planned-lines-ceiling preflight, and the
+    vegetativo preflight (preflight_veg()); (4) render veg_pipeline_proof.png and
+    veg_preflight.png, print the NLI-ceiling summary and the deliverable report
+    (print_deliverables()).
+
+    Side effects:
+        Writes one *_VEGCON.txt datafile per scenario (via apply_and_write()), writes
+        the two diagnostic PNGs, prints the full run log, and terminates the process
+        via sys.exit(1) if any preflight check failed, sys.exit(0) otherwise.
+    """
     passed = failed = 0
 
     def chk(label, ok):
@@ -1317,6 +1404,19 @@ def preflight_veg(name, dst):
 
 
 def plot_pipeline(committed_all, png):
+    """Render the two-panel "swap fixes the committed floor" proof-of-pipeline figure.
+
+    Panel A plots the REF/OPT annual committed-floor series (2027-2050); panel B plots
+    the accumulated committed floor per scenario (OPT, BAU, INV, VGB) as a bar chart.
+
+    Args:
+        committed_all: dict scenario name -> {year: MUSD}, as returned by
+            committed_musd() for each written scenario.
+        png: output path for the rendered PNG.
+
+    Side effects:
+        Writes `png` to disk (matplotlib Agg backend, dpi=130). Does not return a value.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -1363,6 +1463,20 @@ def plot_pipeline(committed_all, png):
 
 
 def plot_preflight(ser, png):
+    """Render the two-panel vegetativo preflight figure (NLI/RPO investment and stock).
+
+    Panel A stacks annual NLI and RPO investment (MUSD/year) against the I_region(year)
+    envelope target. Panel B stacks existing, NLI and RPO capacity (GW) against the
+    existing residual stock.
+
+    Args:
+        ser: preflight series dict as returned by preflight_veg(), with keys "years",
+            "nli", "rpo", "nli_cap", "rpo_cap" and "resid".
+        png: output path for the rendered PNG.
+
+    Side effects:
+        Writes `png` to disk (matplotlib Agg backend, dpi=130). Does not return a value.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -1405,6 +1519,15 @@ def plot_preflight(ser, png):
 
 
 def print_deliverables(calib):
+    """Print the human-readable summary report and the numbered step-by-step recap.
+
+    Args:
+        calib: calibration scale factor m (from calibrate()), interpolated into the
+            report text.
+
+    Side effects:
+        Writes to stdout only; does not return a value or touch disk.
+    """
     print("\n" + "=" * 80)
     print("ENTREGABLE REPORTE (texto) -- v2")
     print("=" * 80)
