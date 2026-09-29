@@ -448,7 +448,9 @@ def _lab(ws, r, c, text, bold=False, band=False):
 
 def rows_with_totals(data_sc: dict, labels: list[str], cols: list[str],
                      totals: str | None) -> list[tuple[str, list[float], bool]]:
-    """Build [(label, values, is_total)] rows for one scenario's band, with an optional total row."""
+    """Build [(label, values, is_total)] rows for one scenario's band, with an optional
+    total row.
+    """
     band = [(lab, [data_sc.get(lab, {}).get(c, 0.0) for c in cols], False)
             for lab in labels]
     if totals in ("sum", "sum_first"):

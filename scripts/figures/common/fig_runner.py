@@ -42,7 +42,9 @@ class Entry:
 
 @dataclass
 class Result:
-    """Outcome of running one figure: its status, elapsed seconds and captured 'OK -> ...' output."""
+    """Outcome of running one figure: its status, elapsed seconds and captured 'OK -> ...'
+    output.
+    """
 
     name: str
     status: str

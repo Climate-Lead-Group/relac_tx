@@ -273,7 +273,9 @@ def classify_min_fossil(tech: str) -> str | None:
 
 
 def classify_min_fossil_group(tech: str) -> str | None:
-    """Return the grouped fossil family ("Carbón" / "Gas natural" / "Petróleo/derivados") or None."""
+    """Return the grouped fossil family ("Carbón" / "Gas natural" / "Petróleo/derivados") or
+    None.
+    """
     fuel = classify_min_fossil(tech)
     return FOSSIL_FUEL_GROUP[fuel] if fuel else None
 
@@ -570,7 +572,9 @@ _CHUNK_ROWS = 500_000
 
 
 def subset_paths(scenarios) -> tuple[str, str]:
-    """Return (parquet, sidecar json) paths for `scenarios`: _subset_<S1>-<S2>-... (alphabetical)."""
+    """Return (parquet, sidecar json) paths for `scenarios`: _subset_<S1>-<S2>-...
+    (alphabetical).
+    """
     key = "-".join(sorted(set(scenarios)))
     base = os.path.join(SUBSET_DIR, f"_subset_{key}")
     return base + ".parquet", base + ".json"
@@ -582,7 +586,9 @@ def _csv_signature() -> dict:
 
 
 def subset_is_current(scenarios) -> bool:
-    """Return True if the Parquet+sidecar exist and the sidecar's mtime/size signature matches CSV_PATH."""
+    """Return True if the Parquet+sidecar exist and the sidecar's mtime/size signature
+    matches CSV_PATH.
+    """
     import json
     pq, side = subset_paths(scenarios)
     if not (os.path.exists(pq) and os.path.exists(side) and os.path.exists(CSV_PATH)):
