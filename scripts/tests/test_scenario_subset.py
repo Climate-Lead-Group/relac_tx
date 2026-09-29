@@ -131,7 +131,9 @@ def test_mixed_column_becomes_str_and_dims_keep_nulls():
         pq = cfg.ensure_scenario_subset(SCEN, verbose=False)
         assert Path(pq).name == "_subset_BAC-ISR-OPC.parquet"
         df = pd.read_parquet(pq)
-        assert df["Mixta"].dtype == object and "texto" in set(df["Mixta"].dropna())
+        # object en pandas 2; dtype "str" en pandas 3 (future.infer_string activo por defecto)
+        assert df["Mixta"].dtype == object or pd.api.types.is_string_dtype(df["Mixta"])
+        assert "texto" in set(df["Mixta"].dropna())
         assert df["TIMESLICE"].isna().all()                  # dimensión toda nula sobrevive
         assert df["FUEL"].isna().sum() == 6 and set(df["FUEL"].dropna()) == {"ELC001"}
         assert df["TotalCapacityAnnual"].dtype == np.dtype("float64")
