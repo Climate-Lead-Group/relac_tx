@@ -52,7 +52,7 @@ VOLL_MUSD_PER_PJ = VOLL_USD_PER_MWH / 3.6  # ≈ 486,1 MUSD/PJ
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{period: {scenario: {'CAPEX','O&M','Combustible','total'}}} (MUSD);
+    """{period: {scenario: {'CAPEX','O&M','Combustible','ENS','total'}}} (MUSD);
     Combustible includes ENS valued at VOLL=1750 USD/MWh.
     """
     cols = ["CapitalInvestment", "OperatingCost"]

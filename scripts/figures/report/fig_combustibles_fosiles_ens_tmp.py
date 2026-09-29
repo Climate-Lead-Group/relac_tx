@@ -1,6 +1,6 @@
 """Experimental variant of fig_combustibles_fosiles_2050.py that adds unserved energy.
 
-Adds Energia no Suministrada (ENS = backstop, tech names containing "BCK", production via
+Adds Energía no Suministrada (ENS = backstop, tech names containing "BCK", production via
 ProductionByTechnology in PJ) directly to the fossil-fuel figure: one bar per
 scenario/period, no new breakdown or legend entry. ENS here is energy (PJ), no VOLL/price
 is involved. Everything else (MIN* activity, per-period accumulation, PJ -> MBOE

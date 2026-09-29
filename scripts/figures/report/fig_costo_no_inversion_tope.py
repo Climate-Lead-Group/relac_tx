@@ -57,7 +57,7 @@ DEFAULT_REF = "BAC"
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
     """{period: {scenario: {'CAPEX','O&M','Combustible',
-    'Energia no Suministrada','total'}}} (MUSD), ENS valued at VOLL=1500 USD/MWh.
+    'Energía no Suministrada','total'}}} (MUSD), ENS valued at VOLL=1500 USD/MWh.
     """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = rs.load(cols, scenarios=scenarios)

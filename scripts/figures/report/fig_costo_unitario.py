@@ -1,6 +1,6 @@
 """Plot unit system cost by scenario for 2030/2040/2050 [USD/MWh].
 
-Static, report-style equivalent of the dashboard's "chart11 - Costo Anualizado por Energia
+Static, report-style equivalent of the dashboard's "chart11 - Costo Anualizado por Energía
 [MUSD/TWh]": Unit cost = (annualized CAPEX + O&M + Combustible) / total production.
 Annualized CAPEX is computed on the fly from CapitalInvestment with the same CRF math as
 Z_AUX_capital_annualization_script.py (discount rate 6.39%, asset life 15 years) rather

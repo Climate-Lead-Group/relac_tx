@@ -1,6 +1,6 @@
 """Plot installed transmission capacity by scenario for 2030/2040/2050 [GW].
 
-Static equivalent of dashboard chart_04 ("Capacidad Instalada de Transmision [GW]"),
+Static equivalent of dashboard chart_04 ("Capacidad Instalada de Transmisión [GW]"),
 stacked by line group (Repotenciadas Planificadas/No Planificadas, Existentes, Nuevas
 Planificadas/No Planificadas) from TotalCapacityAnnual (TCA), AccumulatedNewCapacity (ANC)
 and AccumulatedTotalAnnualMinCapacityInvestment (AMCI), values taken as max over

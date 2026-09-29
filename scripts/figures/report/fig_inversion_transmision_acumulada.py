@@ -1,8 +1,8 @@
 """Plot accumulated transmission investment by scenario per period [MUSD].
 
-Replicates the "Transmision" component of dashboard chart_05, aggregated cumulatively (not
+Replicates the "Transmisión" component of dashboard chart_05, aggregated cumulatively (not
 annually) per period: CapitalInvestment by tech-year (max over timeslices), technologies
-with classify_tech_type == "Transmision" (PWRTRN/RNWTRN/RNWNLI/RNWRPO/TRNNLI/TRNRPO; pure
+with classify_tech_type == "Transmisión" (PWRTRN/RNWTRN/RNWNLI/RNWRPO/TRNNLI/TRNRPO; pure
 interconnectors and BCK are outside the classifier); planned-line (PWRTRN/RNWTRN) CAPEX is
 divided by 1.2, same as the dashboard. Grouped bars by scenario, one sub-bar per period.
 

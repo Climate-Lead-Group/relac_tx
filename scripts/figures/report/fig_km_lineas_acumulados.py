@@ -1,10 +1,10 @@
 """Plot accumulated transmission line km from --y0 to 2030/2040/2050, by line group.
 
-Static equivalent of dashboard chart_10 ("Kilometros de Lineas [km]"), accumulated (not
+Static equivalent of dashboard chart_10 ("Kilómetros de Líneas [km]"), accumulated (not
 annual) over the window [y0, year]. Same formula as the Tableau "Lineas_km" sheet:
 km = (NewCapacity / Capacity) * Distance (RNW distance for RNW* techs, NRNW for PWR/TRN),
 times 1.25 for repowered (RPO) lines. Capacity/Distance come from CapacityAndDistances.xlsx
-(by Scenario+country). Only line technologies (classify_tech_type == "Transmision"); pure
+(by Scenario+country). Only line technologies (classify_tech_type == "Transmisión"); pure
 interconnectors are excluded. Groups from classify_line_group_raw. Sub-bars are nested
 windows [y0,2030] subset [y0,2040] subset [y0,2050] ("km built to date"), not discrete
 periods.

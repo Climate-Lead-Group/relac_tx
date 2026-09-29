@@ -1,7 +1,7 @@
 """Experimental: fig_km_lineas_acumulados.py plus an "Existentes" (existing lines) series.
 
 Adds km_exist(year) = sum((ResidualCapacity(year) / Capacity) * Distance) over
-PWRTRN*/RNWTRN* (the same techs as "Lineas Planificadas"); ResidualCapacity is a stock that
+PWRTRN*/RNWTRN* (the same techs as "Líneas Planificadas"); ResidualCapacity is a stock that
 decays over time, so it is taken AT the bar's year, not accumulated over [y0, year]. Also
 labels each component's value inside its bar segment (in addition to the total on top), and
 prints/exports a long table (year, scenario, component, km) to console and CSV. The other 3

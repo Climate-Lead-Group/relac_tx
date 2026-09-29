@@ -3,8 +3,8 @@
 Same data and computation as the report figure (stacked by line group); slide styling
 changes: larger fonts, scenario groups spaced closer together, less X-axis margin. Legend
 reflowed to 2 rows instead of 1 (5 series in one row grew the figure too wide); the legend
-order (not the stacking order, which is unchanged) is rearranged so "Lineas Existentes"
-(shortest label) and "Lineas Repotenciadas No Planificadas" (longest) share the 2-entry row,
+order (not the stacking order, which is unchanged) is rearranged so "Líneas Existentes"
+(shortest label) and "Líneas Repotenciadas No Planificadas" (longest) share the 2-entry row,
 minimizing total legend width. Each category's value is now annotated inside its bar
 segment (the report figure only showed the bar total).
 

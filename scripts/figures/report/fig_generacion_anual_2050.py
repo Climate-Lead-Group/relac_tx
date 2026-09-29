@@ -1,7 +1,7 @@
 """Plot annual generation by scenario for 2030/2040/2050 [TWh], plus renewable share.
 
 Reproduces Entregable 2 Figure 55 as a static, reproducible figure: static, report-style
-equivalent of the dashboard's "chart02 - Generacion Anual [TWh]", filtered to a set of
+equivalent of the dashboard's "chart02 - Generación Anual [TWh]", filtered to a set of
 years and the core scenarios. Source: ProductionByTechnology (PJ) / 3.6 -> TWh, classified
 Renewable/Non-renewable with classify_tech_generation (same as the dashboard). Grouped bars
 by scenario, one stacked sub-bar (Renewable/Non-renewable) per year within each group.

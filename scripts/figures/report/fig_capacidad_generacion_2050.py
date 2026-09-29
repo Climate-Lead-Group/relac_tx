@@ -1,6 +1,6 @@
 """Plot installed generation capacity by scenario for 2030/2040/2050 [GW].
 
-Static equivalent of dashboard chart_01 ("Capacidad Instalada de Generacion [GW]"), split
+Static equivalent of dashboard chart_01 ("Capacidad Instalada de Generación [GW]"), split
 Renewable / Non-renewable with the same classifier as the dashboard
 (classify_tech_generation; backstop BCK excluded). Grouped bars by scenario, one stacked
 sub-bar (Renewable / Non-renewable) per year within each group.
