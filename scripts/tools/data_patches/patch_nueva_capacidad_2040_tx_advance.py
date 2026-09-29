@@ -262,7 +262,7 @@ def main():
     when not --dry-run, then (unless --dry-run) calls verify() and returns 1 if it reports
     any error.
     """
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dry-run", action="store_true", help="No guarda nada; solo reporta")
     ap.add_argument("--xlsx", type=Path, default=DEFAULT_XLSX, help="Excel Nueva_Capacidad_2040+")
     ap.add_argument("--only-floors", action="store_true", help="Solo pisos OPT")
