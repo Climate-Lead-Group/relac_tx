@@ -67,5 +67,6 @@ A0 → A1 → A2 in both worktrees and compare `A1_Outputs/**/*.xlsx` sheet by s
 - If any difference appears, the only acceptable classes are comments with absolute paths or
   timestamps embedded in a generated file; any difference in values is a path bug that must be
   traced to the responsible script. Record the result in section 13 of the spec
-  (`docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`) and remove the
+  (`docs/superpowers/specs/2026-09-07-restructure-inputs-scripts-outputs-design.md`, spec kept on
+  the author's disk only; not in git) and remove the
   worktrees (`git worktree remove --force ../relac_tx_baseline ../relac_tx_new; git worktree prune`).

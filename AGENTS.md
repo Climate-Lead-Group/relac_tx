@@ -208,7 +208,12 @@ python -u scripts/pipeline/B1_Run_Compiler.py           # B1 compiler + B1b vali
 python -u scripts/pipeline/B2_Executing_OG_Model.py     # pre-solver chain + SOLVER (hours)  <- approval required
 python scripts/figures/run_all.py [--only report]       # figures, dashboard, tables
 python scripts/tests/check_docs.py                      # documentation checker
-for t in scripts/tests/test_*.py; do python "$t"; done  # repo tests
+# repo tests that are safe to run with no other setup:
+python scripts/tests/test_relac_paths.py
+python scripts/tests/test_docs_consistency.py
+python scripts/tests/test_b2_chain_helper.py
+python scripts/tests/test_scenario_subset.py
+python scripts/tests/test_D2_fixes.py
 ```
 
 ## Actions that require explicit approval
@@ -220,6 +225,8 @@ for t in scripts/tests/test_*.py; do python "$t"; done  # repo tests
   already applied to `inputs/`).
 - Any write to `inputs/A1_Outputs/**/*.xlsx` outside A3.
 - Deleting or regenerating anything under `outputs/`.
+- Running `scripts/tests/test_outputs.py` without `--gate` (writes 4 tracked CSVs under
+  `outputs/fix_dispatch/`).
 
 ## Known gotchas
 

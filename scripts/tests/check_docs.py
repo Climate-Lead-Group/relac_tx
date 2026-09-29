@@ -299,7 +299,8 @@ def compare_ast(root: Path, ref: str, roots: list[str]) -> list[str]:
             continue
         try:
             a = ast.dump(strip_docstrings(ast.parse(show.stdout)))
-            b = ast.dump(strip_docstrings(ast.parse(work.read_text(encoding="utf-8-sig", errors="replace"))))
+            work_text = work.read_text(encoding="utf-8-sig", errors="replace")
+            b = ast.dump(strip_docstrings(ast.parse(work_text)))
         except SyntaxError as exc:
             findings.append(f"{rel}: SyntaxError ({exc})")
             continue
@@ -384,7 +385,9 @@ def selftest() -> int:
         _write(root / "scripts/pkg/ignored.py", "no docstring at all\n")
         # a.py's row mentions "b.py" in prose (a different column) on purpose: the first-column
         # match must still flag b.py as unlisted rather than matching that prose mention.
-        _write(root / "scripts/pkg/README.md", "# scripts/pkg\n\n## Scripts\n\n| Script | Notes |\n|---|---|\n| `a.py` | wraps b.py |\n| `sub/c.py` | - |\n\n## How to run\n\n## Gotchas\n")
+        _write(root / "scripts/pkg/README.md",
+               "# scripts/pkg\n\n## Scripts\n\n| Script | Notes |\n|---|---|\n"
+               "| `a.py` | wraps b.py |\n| `sub/c.py` | - |\n\n## How to run\n\n## Gotchas\n")
         _write(root / "scripts/pkg/sub/c.py", '"""C."""\nX = 1\n')   # covered by parent README (listed there)
         # lib: every public def needs a docstring; private and nested ignored
         _write(root / "scripts/lib/util.py", '"""Lib."""\n\ndef pub():\n    def inner():\n        pass\n    return 1\n\ndef _priv():\n    return 2\n\nclass K:\n    def m(self):\n        return 3\n    def _h(self):\n        return 4\n')
@@ -402,7 +405,8 @@ def selftest() -> int:
         by_dir = folders_needing_readme(files, root)
         r_errs = check_readmes(by_dir, root, [])
         case("readme_missing_script_row", any("does not list b.py" in e for e in r_errs), str(r_errs))
-        case("readme_first_column_match_ignores_prose_mention", any("does not list b.py" in e for e in r_errs), str(r_errs))
+        case("readme_first_column_match_ignores_prose_mention",
+             any("does not list b.py" in e for e in r_errs), str(r_errs))
         case("readme_covered_by_parent_listed_in_parent", not any("pkg/sub" in e or "c.py" in e for e in r_errs), str(r_errs))
         case("readme_root_missing", any(e.startswith("inputs/README.md") for e in r_errs), str(r_errs))
         errs_a, _, _ = check_module(root / "scripts/pkg/a.py", root, counts)

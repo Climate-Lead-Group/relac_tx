@@ -10,7 +10,7 @@ that main() runs at the end.
 
 Inputs:
     outputs/Executables/<SCEN>_0/Pre_processed_<SCEN>_0_..._FLOORED.txt for every
-    scenario in SCENARIOS (line 116), or flat outputs/tx_chain/ input files when
+    scenario in SCENARIOS, or flat outputs/tx_chain/ input files when
     --base-dir is not given.
     --needs-csv (inputs/tx_chain/outputs_BSR/NewCapacity.csv, via load_needs()): revealed
     NLI need per country/year, pinned to a no-NLI-ceiling BSR run; required for the
@@ -39,22 +39,22 @@ Notes:
     1. COST (real level) + CALIBRATION. The Executables base is already at real cost
        (the legacy x2 multiplier lives downstream, in the solve files). A single scale
        factor m is applied so the REFERENCE's committed floor investment averages the
-       IEA/SEGIB anchor CALIB_ANCHOR_MUSD=3080.0 (line 160) over CALIB_WINDOW=(2024,
-       2029) (line 167); calibrated on CALIB_FLOOR_SCENARIO="BAU" (line 166).
+       IEA/SEGIB anchor CALIB_ANCHOR_MUSD=3080.0 over CALIB_WINDOW=(2024,
+       2029); calibrated on CALIB_FLOOR_SCENARIO="BAU".
 
     2. NLI ENVELOPE -- unplanned new lines (families TRNNLI, RNWNLI). Total vegetativo
        (planned + RPO + NLI) Tx investment is capped at the regional trajectory
        i_region(year) = ANCHOR_MUSD=3300.0 x (1+ENV_GROWTH=0.01)
        ** (year-2022), i.e. ~3.6k @2030 -> 4.4k @2050 MUSD. Planned lines (= OPT plan)
        and RPO consume the envelope FIRST; NLI receives only the remainder:
-       nli_budget = max(0, I_region - planned_cost - rpo_cost). The remainder is split
+       nli_budget = max(0, i_region - planned_cost - rpo_cost). The remainder is split
        by country share and renewable/non-renewable mix, years 2030+
        (NLI_FIRST_YEAR, line 173), only for the vegetativo scenarios (INV, VGB, and
        INVWF/VGBWF via the water-fill weights).
 
     3. REPOWERING (families TRNRPO, RNWRPO). Physical ceiling on the EXISTING stock
        (PWRTRN/RNWTRN residual capacity). Annual flow only, flat RPO_PCT_START=
-       RPO_PCT_END=0.01 (lines 178-179) from RPO_FIRST_YEAR=2028 (line 177), no
+       RPO_PCT_END=0.01 from RPO_FIRST_YEAR=2028, no
        cumulative cap. Applies to all 4 base scenarios (and their ramp/WF variants).
 
     3b. PLANNED CEILING (families PWRTRN, RNWTRN). MaxCapacityInvestment = the
@@ -62,8 +62,8 @@ Notes:
         pinned (min=max); REF/vegetativo choose between their own floor and the OPT
         plan; nobody invests more in planned lines than the optimal plan.
 
-    4. COST ESCALATION. +COST_ESC_RATE=0.003/year real (line 184) on the corrected
-       CapitalCost of the 6 Tx families, from COST_ESC_FROM=2025 (line 184). All 4
+    4. COST ESCALATION. +COST_ESC_RATE=0.003/year real on the corrected
+       CapitalCost of the 6 Tx families, from COST_ESC_FROM=2025. All 4
        scenarios.
 
     Derivation (full references at the end of the module):

@@ -1,5 +1,5 @@
 """
-test_outputs.py  --  post-run test script (read-only).
+test_outputs.py  --  post-run test script.
 
 Validates a combined inputs+outputs CSV (baseline OR a new solve) against the
 floors in candidate_floors.csv. Four checks, run in this order:
