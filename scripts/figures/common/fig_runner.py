@@ -1,13 +1,17 @@
-"""
-fig_runner.py — lógica compartida de los maestros de carpeta
-(scripts/figures/report/run_figures.py y scripts/figures/presentation/run_figures.py).
+"""Shared logic of the per-folder masters (report/run_figures.py, presentation/run_figures.py).
 
-Lee un YAML de encendido/apagado (clave = módulo fig_* sin .py; valor = true|false
-o {enabled: bool, args: [str, ...]}; el orden del YAML es el orden de ejecución),
-construye/reutiliza el subconjunto Parquet BAC+ISR (paso 0) y ejecuta cada figura
-encendida EN EL MISMO PROCESO (comparte la caché en memoria de
-dashboard_config.load_column: el Parquet no se relee entre figuras con las mismas
-columnas). Un fallo NO detiene al resto. Spec 2026-09-16 §8.1.
+Reads an on/off YAML (key = fig_* module name without .py; value = true|false or
+{enabled: bool, args: [str, ...]}; the YAML's key order is the execution order), builds or
+reuses the BAC+ISR Parquet subset (step 0), and runs each enabled figure IN THE SAME PROCESS
+(sharing dashboard_config.load_column's in-memory cache, so the Parquet is not re-read between
+figures that use the same columns). A failing figure does NOT stop the rest. Spec 2026-09-16 §8.1.
+
+Inputs:
+    report/run_figures.yaml or presentation/run_figures.yaml  # read by read_yaml
+Outputs:
+    (none directly; delegates to the fig_*.py modules it runs)
+Usage:
+    Library only; imported by report/run_figures.py, presentation/run_figures.py and run_all.py.
 """
 from __future__ import annotations
 
@@ -29,6 +33,8 @@ STATUS_OK, STATUS_WARN, STATUS_ERROR, STATUS_SKIP = "OK", "AVISO", "ERROR", "OMI
 
 @dataclass
 class Entry:
+    """One run_figures.yaml entry: a fig_* module name, whether it is enabled, and its CLI args."""
+
     name: str
     enabled: bool
     args: list[str] = field(default_factory=list)
@@ -36,6 +42,8 @@ class Entry:
 
 @dataclass
 class Result:
+    """Outcome of running one figure: its status, elapsed seconds and captured 'OK -> ...' output."""
+
     name: str
     status: str
     seconds: float = 0.0
@@ -43,8 +51,20 @@ class Result:
 
 
 def read_yaml(yaml_path: Path) -> list[Entry]:
-    """Mapa YAML -> lista ordenada de Entry. Acepta `nombre: true|false` o
-    `nombre: {enabled: bool, args: [..]}` (enabled por defecto true en la forma larga)."""
+    """Parse a run_figures.yaml map into an ordered list of Entry.
+
+    Accepts `name: true|false` or `name: {enabled: bool, args: [..]}` (enabled defaults to
+    True in the long form).
+
+    Args:
+        yaml_path: path to the YAML file.
+
+    Returns:
+        Entries in the YAML's key order.
+
+    Raises:
+        ValueError: if the YAML is not a name -> value map, or a value has an invalid shape.
+    """
     raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
     if not isinstance(raw, dict):
         raise ValueError(f"{yaml_path}: se esperaba un mapa nombre -> true|false|{{enabled, args}}")
@@ -62,11 +82,14 @@ def read_yaml(yaml_path: Path) -> list[Entry]:
 
 
 def scripts_on_disk(folder: Path) -> list[str]:
+    """Return the sorted stems of every fig_*.py file found directly under `folder`."""
     return sorted(p.stem for p in folder.glob("fig_*.py"))
 
 
 def validate(entries: list[Entry], folder: Path) -> list[str]:
-    """Avisos: claves del YAML sin .py, fig_*.py en disco sin clave (no se ejecutarán), claves repetidas."""
+    """Return warnings: YAML keys with no matching .py, fig_*.py on disk missing from the
+    YAML (so it will not run), and duplicate YAML keys.
+    """
     disk = set(scripts_on_disk(folder))
     names = [e.name for e in entries]
     out = []
@@ -81,7 +104,7 @@ def validate(entries: list[Entry], folder: Path) -> list[str]:
 
 
 class _Tee(io.TextIOBase):
-    """Reenvía a la consola y guarda copia para extraer las líneas 'OK -> <ruta>'."""
+    """Forward writes to the console and keep a copy to extract 'OK -> <path>' lines."""
 
     def __init__(self, real):
         self.real, self.buf = real, io.StringIO()
@@ -96,6 +119,22 @@ class _Tee(io.TextIOBase):
 
 
 def run_one(package: str, entry: Entry) -> Result:
+    """Import figures.<package>.<entry.name> and call its main(entry.args) in-process.
+
+    Captures stdout via _Tee to recover any 'OK -> <path>' lines for the summary output,
+    treats a SystemExit with a "Sin datos" message as a warning (not an error), and always
+    closes all matplotlib figures afterward so one script's plots do not leak into the next.
+
+    Args:
+        package: subpackage name ("report" or "presentation").
+        entry: the Entry to run.
+
+    Returns:
+        A Result with status STATUS_OK/STATUS_WARN/STATUS_ERROR, elapsed seconds and output.
+
+    Side effects:
+        Restores sys.stdout and closes all matplotlib figures in a finally block.
+    """
     import matplotlib.pyplot as plt
     t0 = time.perf_counter()
     tee = _Tee(sys.stdout)
@@ -122,6 +161,15 @@ def run_one(package: str, entry: Entry) -> Result:
 
 
 def print_table(results: list[Result], total_s: float) -> None:
+    """Print the summary table (script | estado | segundos | salida) and the status totals.
+
+    Args:
+        results: one Result per figure (or STATUS_SKIP for disabled ones).
+        total_s: total elapsed seconds for the whole folder run.
+
+    Side effects:
+        Prints to stdout only.
+    """
     w = max([len(r.name) for r in results] + [6])
     print(f"\n{'script':<{w}} | estado  | segundos | salida")
     print("-" * (w + 1) + "+---------+----------+" + "-" * 30)
@@ -134,7 +182,7 @@ def print_table(results: list[Result], total_s: float) -> None:
 
 
 def step0_subset(scenarios: list[str] | None = None) -> None:
-    """Paso 0: construir o reutilizar el Parquet BAC+ISR e informar cuánto tardó."""
+    """Step 0: build or reuse the BAC+ISR Parquet subset and print how long it took."""
     scenarios = list(scenarios or rs.CORE_SCENARIOS)
     t0 = time.perf_counter()
     reused = cfg.subset_is_current(scenarios)
@@ -144,7 +192,7 @@ def step0_subset(scenarios: list[str] | None = None) -> None:
 
 
 def resolve(entries: list[Entry], only: list[str] | None) -> list[Entry]:
-    """Con --only: solo esos nombres, encendidos, conservando los args del YAML si los hay."""
+    """With `only` given: keep just those names, all enabled, reusing their YAML args if any."""
     if not only:
         return entries
     by_name = {e.name: e for e in entries}
@@ -153,7 +201,21 @@ def resolve(entries: list[Entry], only: list[str] | None) -> list[Entry]:
 
 def run_folder(package: str, yaml_path: Path, only: list[str] | None = None,
                list_only: bool = False) -> int:
-    """Ejecuta las figuras de scripts/figures/<package>/ según yaml_path. Devuelve 1 si hubo ERROR."""
+    """Run the figures under scripts/figures/<package>/ per yaml_path and print the summary.
+
+    Args:
+        package: subpackage name ("report" or "presentation").
+        yaml_path: path to that package's run_figures.yaml.
+        only: if given, run only these figure names (ignoring their YAML enabled flag).
+        list_only: if True, print the resolved plan and return without running anything.
+
+    Returns:
+        0 if no figure errored (or list_only); 1 if any figure's status is STATUS_ERROR.
+
+    Side effects:
+        Runs step0_subset() and prints validation warnings, the run plan/progress and the
+        final summary table to stdout.
+    """
     folder = yaml_path.parent
     entries = read_yaml(yaml_path)
     for w in validate(entries, folder):

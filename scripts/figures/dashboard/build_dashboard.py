@@ -1,19 +1,33 @@
-"""
-build_dashboard.py — Generador único de todos los gráficos del dashboard
-RELAC_TX.
+"""Single generator for every RELAC_TX dashboard chart.
 
-Cada gráfico es una función `chart_NN()` que se integra en UN solo HTML
-combinado (outputs/Figures/Dashboard/dashboard.html) y, con --png, escribe además un
-PNG estático en outputs/Figures/Dashboard/ (DASHBOARD_DIR de dashboard_config).
-Replica la apariencia de los dashboards de Tableau (títulos, ejes, colores,
-leyendas).
+Each chart is a `chart_NN()` function registered in the CHARTS dict (keys "01"-"08", "08A"/
+"08B" as sub-charts of "08", "09"-"15"), combined into ONE HTML file
+(outputs/Figures/Dashboard/dashboard.html) plus, with --png, a static PNG per chart written to
+DASHBOARD_DIR (dashboard_config). Three extra tabs ("16" Transmission Maps, "17" Dispatch, "18"
+RES Diagram) are built by `_extra_tab_htmls()` from the two Z_AUX_generate_* modules and
+embedded as `<iframe srcdoc=...>`. Replicates the look of the project's Tableau dashboards
+(titles, axes, colours, legends).
 
-Uso:
-    python scripts/figures/dashboard/build_dashboard.py            # genera TODOS los gráficos
-    python scripts/figures/dashboard/build_dashboard.py 01         # solo el gráfico 01
-    python scripts/figures/dashboard/build_dashboard.py 01 03 04   # un subconjunto
+CLI args are parsed manually from sys.argv (no argparse): any bare chart key ("01", "08A", ...)
+selects a subset; "--png" also writes static PNGs; with no chart keys, every chart in CHARTS
+runs.
 
-Para añadir un gráfico: escribe una función chart_NN() y regístrala en CHARTS.
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv   # via figures.common.dashboard_config.load_column
+    inputs/**/centerpoints.csv                     # tabs 16/17, via the Z_AUX_generate_* module
+    A1_Outputs_BAU/A-O_AR_Model_Base_Year.xlsx     # tab 18, via Z_AUX_generate_RES_diagram
+Outputs:
+    outputs/Figures/Dashboard/dashboard.html       # build_combined_dashboard
+    outputs/Figures/Dashboard/chart*.png           # only with --png, via save_png
+Usage:
+    python scripts/figures/dashboard/build_dashboard.py            # every chart + tabs 16-18
+    python scripts/figures/dashboard/build_dashboard.py 01         # chart 01 only (debugging)
+    python scripts/figures/dashboard/build_dashboard.py 01 03 04   # a subset (debugging)
+    python scripts/figures/dashboard/build_dashboard.py --png      # also write static chart*.png
+Notes:
+    - To add a chart: write a chart_NN() function and register it in CHARTS.
+    - Tabs 16/17/18 are always rebuilt as part of a full run; a failure building one of them
+      only prints a warning and skips that tab (see _extra_tab_htmls).
 """
 
 import math
@@ -88,13 +102,13 @@ _MARGIN_B = 50   # margen inferior (deja sitio a las etiquetas del eje X abajo)
 
 
 def _stack_height(m: int) -> int:
-    """Alto en px del lienzo apilado para ``m`` filas-escenario visibles."""
+    """Return the stacked canvas height in px for ``m`` visible scenario-rows."""
     m = max(int(m), 1)
     return _MARGIN_T + _MARGIN_B + m * _PANE_PX + (m - 1) * _GAP_PX
 
 
 def _stack_vspacing(m: int) -> float:
-    """vertical_spacing (fracción de papel) equivalente al modelo de píxeles."""
+    """Return the vertical_spacing (paper fraction) equivalent to the pixel-based model."""
     m = max(int(m), 1)
     paper = m * _PANE_PX + (m - 1) * _GAP_PX
     return (_GAP_PX / paper) if paper > 0 else 0.0
@@ -121,10 +135,10 @@ _STACK_SIZING = {
 
 
 def _set_row_xticks(fig, n_rows: int) -> None:
-    """Oculta las etiquetas del eje X en todas las filas salvo la última.
+    """Hide the X-axis tick labels on every row except the last.
 
-    Con shared_xaxes sólo la fila inferior lleva años/periodos; el JS del
-    dashboard recoloca esto dinámicamente según los escenarios visibles.
+    With shared_xaxes only the bottom row carries years/periods; the dashboard's JS
+    repositions this dynamically depending on which scenarios are visible.
     """
     for r in range(1, n_rows):
         fig.update_xaxes(showticklabels=False, row=r, col=1)
@@ -153,11 +167,10 @@ def _find_chrome() -> str | None:
 
 
 def _html_to_png(html_path: str, png_path: str, width: int, height: int) -> bool:
-    """Renderiza un HTML de plotly a PNG (2x) con Chrome headless.
+    """Render a plotly HTML file to PNG (2x) using headless Chrome.
 
-    Captura primero a un temporal y luego copia al destino (Chrome puede dar
-    'Acceso denegado' al escribir directo en el repo). Devuelve True si tuvo
-    éxito.
+    Captures to a temp file first, then copies to the destination (Chrome can raise
+    'Access denied' when writing directly into the repo). Returns True on success.
     """
     chrome = _find_chrome()
     if not chrome:
@@ -203,12 +216,12 @@ _PLOTLY_CONFIG = {
 # ================================================================
 def save_png(fig: go.Figure, name: str, width: int, height: int,
              default_x: list | None = None) -> None:
-    """Guarda un PNG estático del gráfico en outputs/Figures/Dashboard/ (DASHBOARD_DIR),
-    sin panel de controles.
+    """Save a static PNG of the chart under outputs/Figures/Dashboard/ (DASHBOARD_DIR),
+    with no controls panel.
 
-    Si ``default_x`` se pasa, la figura se construye con TODOS los años/periodos
-    candidatos pero el PNG se filtra al subconjunto por defecto (mismo JS que el
-    dashboard), para que el snapshot coincida con la vista inicial.
+    If ``default_x`` is given, the figure is built with ALL candidate years/periods but the
+    PNG is filtered to the default subset (same JS as the dashboard), so the snapshot matches
+    the initial view.
     """
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
     base = f"{name}{OUTPUT_SUFFIX}"
@@ -1587,11 +1600,11 @@ CHART_DESC = {
 # internet, igual que antes). CONVENCIÓN: van SIEMPRE al final; al agregar un
 # gráfico nativo nuevo, estas tres suben de número para quedar últimas.
 def _extra_tab_htmls() -> list:
-    """Genera el HTML (string) de las pestañas 16/17/18.
+    """Generate the HTML (string) for tabs 16/17/18.
 
-    Reutiliza ``load_column`` (con caché en memoria) para NO releer el CSV de
-    308 MB por subprocess. Devuelve [(key, title, html), ...]; omite con aviso
-    cualquier pestaña cuya generación falle (p.ej. falta el XLSX del RES).
+    Reuses ``load_column`` (with its in-memory cache) to avoid re-reading the ~308 MB CSV per
+    subprocess. Returns [(key, title, html), ...]; skips with a warning any tab whose
+    generation fails (e.g. the RES base-year xlsx is missing).
     """
     out = []
     centerpoints_path = CENTERPOINTS_PATH
@@ -1649,10 +1662,16 @@ CHART_PERIOD_AGG = {"10": ["sum", "avg"]}
 
 
 def build_combined_dashboard(items: list) -> None:
-    """Escribe UN solo HTML (outputs/Figures/Dashboard/dashboard.html, DASHBOARD_DIR)
-    con todos los gráficos.
+    """Write ONE HTML file (outputs/Figures/Dashboard/dashboard.html, DASHBOARD_DIR)
+    with every chart.
 
-    items: lista de tuplas (key, title, fig, name, width, height, default_x).
+    Args:
+        items: list of (key, title, fig, name, width, height, default_x, country_model)
+            tuples; the last two elements are optional (see callers).
+
+    Side effects:
+        Writes dashboard.html under DASHBOARD_DIR; also calls _extra_tab_htmls() to embed
+        tabs 16-18 as iframes.
     """
     import json
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
@@ -1761,17 +1780,17 @@ def build_combined_dashboard(items: list) -> None:
 
 
 def _fmt(v: float) -> str:
-    """Formatea un número con separador de miles en punto (estilo español): 1.784."""
+    """Format a number with a dot thousands separator (Spanish style): 1.784."""
     return f"{v:,.0f}".replace(",", ".")
 
 
 def _fmt_dec(v: float, decimals: int = 1) -> str:
-    """Formatea con coma decimal (estilo español): 2.2 -> '2,2'."""
+    """Format with a decimal comma (Spanish style): 2.2 -> '2,2'."""
     return f"{v:.{decimals}f}".replace(".", ",")
 
 
 def _nice_dtick(maxv: float, target: int = 6) -> float:
-    """Devuelve una separación de marcas 'redonda' para ~target marcas."""
+    """Return a 'round' tick spacing that yields about ``target`` ticks."""
     if maxv <= 0:
         return 1
     raw = maxv / target
@@ -1812,12 +1831,12 @@ def _country_model(
     dtick: float = 0.0,
     decimals: int = 1,
 ):
-    """Construye el dict del modelo de país a partir de un frame largo.
+    """Build the country-model dict from a long-format frame.
 
-    ``long`` debe traer columnas Scenario, catlabel (str), pais (str), series, val.
-    ``ann_labels_by_si`` mapea índice de escenario -> lista de catlabels en el
-    orden en que Python creó las anotaciones. ``ann_kinds`` son los tipos de
-    anotación por cada catlabel (p.ej. ["total", "pct"] en share2).
+    ``long`` must carry Scenario, catlabel (str), pais (str), series and val columns.
+    ``ann_labels_by_si`` maps scenario index -> list of catlabels in the order Python created
+    the annotations. ``ann_kinds`` are the annotation types per catlabel (e.g. ["total", "pct"]
+    for share2).
     """
     comp, countries, country_names = _comp_from_long(long, series_order)
 
@@ -1848,12 +1867,12 @@ def _country_model(
 
 
 def _comp_from_long(long: pd.DataFrame, series_order: list):
-    """Construye comp[series][si] = {catlabel: {pais: valor}} desde un frame largo.
+    """Build comp[series][si] = {catlabel: {country: value}} from a long-format frame.
 
-    ``long`` trae columnas Scenario, catlabel (str), pais (str), series, val.
-    Devuelve (comp, countries_ordenados, {pais: nombre}). Lo usan tanto el modelo
-    aditivo (_country_model) como los modelos DERIVADOS (kinds no aditivos) que
-    embeben cantidades base por país y recomputan la métrica en JS.
+    ``long`` carries Scenario, catlabel (str), pais (str), series and val columns. Returns
+    (comp, sorted_countries, {country: name}). Used by both the additive model
+    (_country_model) and the DERIVED models (non-additive kinds) that embed base per-country
+    quantities and recompute the metric in JS.
     """
     countries = sorted(str(c) for c in long["pais"].dropna().unique())
     comp: dict = {s: [dict() for _ in SCENARIOS] for s in series_order}
@@ -1878,12 +1897,12 @@ def _derived_model(
     decimals: int = 1,
     extra: dict | None = None,
 ):
-    """Modelo de país para gráficos DERIVADOS (no aditivos: 04/11/12/13).
+    """Build the country model for DERIVED charts (non-additive: 04/11/12/13).
 
-    Embebe en ``comp`` las cantidades BASE aditivas por país (``base_series``) y
-    el JS recomputa la métrica final con la fórmula del gráfico (``labelKind``).
-    ``traceMap`` usa ``role`` (no ``series``): el rol indica qué salida derivada
-    dibuja cada traza, en el MISMO orden en que se crean (por escenario).
+    Embeds in ``comp`` the additive BASE quantities per country (``base_series``), and JS
+    recomputes the final metric with the chart's formula (``labelKind``). ``traceMap`` uses
+    ``role`` (not ``series``): the role says which derived output each trace draws, in the
+    SAME order they are created (per scenario).
     """
     comp, countries, country_names = _comp_from_long(long, base_series)
     trace_map = []
@@ -1937,7 +1956,10 @@ def _stacked_share_chart(
     scale: float = 1.0,
     dtick: float = 200,
 ):
-    """Construye la figura y devuelve (fig, output_name, width, height)."""
+    """Build the shared Renewable/Non-renewable stacked-by-scenario chart (charts 01/02).
+
+    Returns (fig, output_name, width, height, country_model).
+    """
     df = load_column([value_col])
     df = df.dropna(subset=[value_col])
     df = df[df[value_col] != 0]
@@ -2204,7 +2226,10 @@ def _single_series_bars(
     scale: float = 1.0,
     decimals: int = 1,
 ):
-    """Construye la figura y devuelve (fig, output_name, width, height)."""
+    """Build a single-series bars-by-scenario chart with a value label per bar.
+
+    Returns (fig, output_name, width, height, country_model).
+    """
     df = load_column([value_col])
     df = df.dropna(subset=[value_col])
     df = df[df[value_col] != 0]
@@ -2355,6 +2380,13 @@ _STORAGE_TYPES = [
 
 
 def chart_03():
+    """Build chart 03: Installed Storage Capacity [GW], stacked by storage type per scenario.
+
+    Reads TotalCapacityAnnual (GW) for PWRSDS*/PWRLDS*/PWRBDS* technologies (short/long
+    duration batteries; BDS only appears once the CSV carries PWRBDS rows), dedups to one row
+    per (Scenario, YEAR, TECHNOLOGY) before summing (capacity repeats across timeslices), and
+    stacks the present types with a "Almacenamiento" total line, one row per scenario.
+    """
     df = load_column(["TotalCapacityAnnual"])
     df = df.dropna(subset=["TotalCapacityAnnual"])
     df = df[df["TotalCapacityAnnual"] != 0]
@@ -2429,6 +2461,14 @@ def _stacked_categories_chart(
     country_long: pd.DataFrame | None = None,
     decimals: int | None = None,
 ):
+    """Build an N-category stacked-by-scenario bar chart with an optional total line/label.
+
+    Shared by charts 03/04/05/06/08B/14: ``pivot`` already carries one column per category
+    name (Scenario, YEAR/period + one numeric column per ``categories`` entry); this only
+    stacks, adds the total line/label and lays out one row per scenario. Returns
+    (fig, output_name, width, height, country_model); country_model is None for non-additive
+    charts (e.g. 04) that pass no ``country_long``.
+    """
     cat_names = [c[0] for c in categories]
     if total_label_color is None:
         total_label_color = COLOR_GW_LINE if show_total_line else "#333"
@@ -2578,9 +2618,10 @@ def _stacked_categories_chart(
 
 
 def _warn_chart04_data(per_tech: pd.DataFrame) -> None:
-    """Validaciones de los insumos del gráfico 04. Avisan por consola sin
-    interrumpir el build. Contexto: hallazgos B-D de
-    context_trn_params_review.md (relac_tx)."""
+    """Validate chart 04's inputs; warn on the console without interrupting the build.
+
+    Context: findings B-D of context_trn_params_review.md (relac_tx).
+    """
     amci = "AccumulatedTotalAnnualMinCapacityInvestment"
     pt = per_tech.fillna(0.0)
 
@@ -2664,6 +2705,16 @@ def _warn_chart04_data(per_tech: pd.DataFrame) -> None:
 # corrección (cummax por escenario+país) es build_dashboard_tmp.py.
 # ================================================================
 def chart_04():
+    """Build chart 04: Installed Transmission Capacity [GW], stacked by line-group category.
+
+    Reads AccumulatedNewCapacity, TotalCapacityAnnual and
+    AccumulatedTotalAnnualMinCapacityInvestment (all GW) for line technologies classified by
+    classify_line_group (PLAN/NLI/RPO). Derives the 5 TRANSMISSION_CATEGORIES via:
+    Existing = TCA(PLAN) - ANC(PLAN); New planned = ANC(PLAN); Repowered planned =
+    AMCI(RPO); New unplanned = TCA(NLI); Repowered unplanned = TCA(RPO) - AMCI(RPO). Country
+    model is DERIVED ("trans04"): the 5 base quantities are additive per country, and the
+    formula above is re-applied in JS on the selected countries.
+    """
     cols = [
         "AccumulatedNewCapacity",
         "TotalCapacityAnnual",
@@ -2776,6 +2827,15 @@ def chart_04():
 # periodo (igual que el cálculo "Capital Investment Promedio Adaptado").
 # ================================================================
 def chart_05():
+    """Build chart 05: Total Investment [MUSD], stacked by tech type per scenario.
+
+    Categories are INVESTMENT_CATEGORIES (Generación/Transmisión/Almacenamiento), one bar per
+    year/period. Reads CapitalInvestment (MUSD), excludes backstop (BCK, an artificial big-M
+    penalty valued separately as unserved energy in charts 14/15), dedups to one row per
+    tech-year (max, since the value repeats across timeslices) and divides PWRTRN*/RNWTRN* by
+    1.2 (Tableau's transmission adjustment). Built per YEAR; the period view averages years
+    client-side.
+    """
     df = load_column(["CapitalInvestment"])
     # EXCLUIR BACKSTOP (BCK): su CapitalInvestment/OperatingCost son penalizaciones
     # big-M artificiales (no inversión/costo real); infla los escenarios con Tx
@@ -2916,6 +2976,14 @@ def _stacked_by_scenario_chart(*, pivot, categories, y_title, output_name):
 # de referencia; candidatos: todos los años del CSV. Solo líneas.
 # ================================================================
 def chart_06():
+    """Build chart 06: Line Investment [MUSD], stacked by raw line group per scenario.
+
+    Reads CapitalInvestment (MUSD) for line technologies classified by
+    classify_line_group_raw into LINE_RAW_CATEGORIES (Interconectores, Líneas Planificadas,
+    Líneas Nuevas/Repotenciadas No Planificadas), dedups to one row per tech-year (max) and
+    divides PWRTRN*/RNWTRN* by 1.2. Pure interconnectors (no per-country code in tech[6:9])
+    are attributed to their origin country (tech[3:6]) for the country model.
+    """
     df = load_column(["CapitalInvestment"])
     df = df[df["YEAR"].isin(ALL_YEARS)]
     df["LG"] = df["TECHNOLOGY"].apply(classify_line_group_raw)
@@ -2972,6 +3040,14 @@ def chart_06():
 # 2023-2024). Mismo gotcha de max() por tech-año.
 # ================================================================
 def chart_07():
+    """Build chart 07: Average Annual Cost CAPEX+OPEX [MUSD/year], stacked by tech type.
+
+    Reads CapitalInvestment and OperatingCost (MUSD), excludes backstop (BCK, whose
+    OperatingCost is a big-M penalty, not real infrastructure cost; see charts 14/15),
+    dedups to one row per tech-year (max), divides PWRTRN*/RNWTRN* CAPEX by 1.2, and sums
+    CAPEX (adjusted) + OperatingCost per TechType (INVESTMENT_CATEGORIES). Built per YEAR; the
+    period view averages years client-side.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = load_column(cols)
     df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]  # candidatos = todos los periodos
@@ -3031,6 +3107,12 @@ def chart_07():
 # escenario, excluye 2023-2024). Auto-rango en Y para distinguir trayectorias.
 # ================================================================
 def chart_08():
+    """Build chart 08: CO2 Emissions [Mt], one line per scenario.
+
+    Reads AnnualTechnologyEmission (Mt) with the EMISSION dimension, dedups to one row per
+    (TECHNOLOGY, EMISSION, YEAR) (max) before summing across all technologies/emissions per
+    (Scenario, YEAR). Y axis auto-ranges (no fixed 0 floor) to distinguish close trajectories.
+    """
     df = load_column(["AnnualTechnologyEmission"], extra_dims=["EMISSION"])
     df = df.dropna(subset=["AnnualTechnologyEmission"])
     df = df[df["YEAR"].isin(ALL_YEARS)]  # candidatos = todos los años; default 2025-2050
@@ -3118,6 +3200,13 @@ def chart_08():
 # las emisiones del 08 (el que más emite debería consumir más fósil).
 # ================================================================
 def chart_08a():
+    """Build chart 08A: Fossil Fuel Consumption [PJ], one line per scenario.
+
+    Reads TotalTechnologyAnnualActivity (PJ) for fossil MIN* extraction/import technologies
+    (classify_min_fossil; excludes MINURN and non-MIN), dedups to one row per (TECHNOLOGY,
+    YEAR) (max) before summing per (Scenario, YEAR). Parallels chart 08 (comparable 1:1 with
+    emissions); Y axis auto-ranges.
+    """
     df = load_column(["TotalTechnologyAnnualActivity"])
     df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
     df = df[df["YEAR"].isin(ALL_YEARS)]  # candidatos = todos los años; default 2025-2050
@@ -3205,6 +3294,13 @@ def chart_08a():
 # apilado por (escenario, año) coincide con la línea del 08A.
 # ================================================================
 def chart_08b():
+    """Build chart 08B: Fossil Fuel Consumption by type [PJ], stacked by fuel family.
+
+    Same source as chart 08A (fossil MIN* activity, TotalTechnologyAnnualActivity in PJ), now
+    grouped by classify_min_fossil_group into FOSSIL_FUEL_CATEGORIES (Carbón = COA+COG, Gas
+    natural = GAS, Petróleo/derivados = OIL+PET+OTH), one panel per scenario. The stacked
+    total per (scenario, year) matches chart 08A's line.
+    """
     df = load_column(["TotalTechnologyAnnualActivity"])
     df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
     df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]  # candidatos = todos los periodos
@@ -3266,9 +3362,9 @@ _COUNTRY_NAMES = {
 
 
 def _load_centerpoints() -> dict:
-    """Lee Miscellaneous/centerpoints.csv -> {codigo3: (lat, lon)}.
+    """Read Miscellaneous/centerpoints.csv -> {3-letter code: (lat, lon)}.
 
-    Las regiones son del tipo 'ARGXX' (código país de 3 letras + 'XX').
+    Regions are of the form 'ARGXX' (3-letter country code + 'XX').
     """
     cp = pd.read_csv(CENTERPOINTS_PATH)
     out = {}
@@ -3300,6 +3396,16 @@ _MAP_WEST = {"MEX", "GTM", "SLV", "HND", "NIC", "CRI", "PAN", "COL", "ECU", "PER
 # OJO: el coroplético baja la geometría (topojson) de un CDN → requiere internet.
 # ================================================================
 def chart_09():
+    """Build chart 09: Average Annual Capital Investment by country [MUSD/year], one choropleth
+    map per scenario.
+
+    Reads CapitalInvestment (MUSD) for 2025-2050, excludes "Other" tech types, dedups to one
+    row per tech-year (max), divides PWRTRN*/RNWTRN* by 1.2 and averages over the number of
+    years (26). Country = TECHNOLOGY[6:9] (ISO-3); coordinates from
+    Miscellaneous/centerpoints.csv. The choropleth colours by country identity (not by value);
+    the investment value is labelled offshore with a guide line. No time selector. Requires
+    internet (choropleth geometry loads from a CDN).
+    """
     df = load_column(["CapitalInvestment"])
     df = df[(df["YEAR"] >= 2025) & (df["YEAR"] <= 2050)]
     df = df[df["TECHNOLOGY"].apply(classify_tech_type).notna()]  # excluye "Other"
@@ -3447,6 +3553,14 @@ def chart_09():
 # fuera (no son tipo "Transmisión" ni casan país). Mismo gotcha de max() por tech-año.
 # ================================================================
 def chart_10():
+    """Build chart 10: Line Kilometres [km], stacked by raw line group per period.
+
+    Reads NewCapacity (dedup to one row per tech-year, max) for "Transmisión"-type
+    technologies, merges with load_capacity_and_distances() (Scenario+Country) and computes
+    km = (NewCapacity / Capacity) * Distance, using Distance RNW for RNW* techs and Distance
+    NRNW for PWR*/TRN*, times 1.25 for repowered (RPO) lines. Grouped by classify_line_group_raw
+    into LINE_RAW_CATEGORIES; pure interconnectors are excluded (no per-country match).
+    """
     df = load_column(["NewCapacity"])
     df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]  # candidatos = todos los periodos
     df = df[df["TECHNOLOGY"].apply(classify_tech_type) == "Transmisión"]
@@ -3517,6 +3631,15 @@ def chart_10():
 # sin filtro). Excluye 2023-2024. Mismo gotcha de max() por tech-año en los costos.
 # ================================================================
 def chart_11():
+    """Build chart 11: Annualized Cost per Energy [MUSD/TWh], grouped bars by scenario/period.
+
+    Reads ProductionByTechnology (summed across timeslices, ×0.277778 to TWh) as the
+    denominator and CapitalInvestmentAnnualized + OperatingCost (dedup to one row per
+    tech-year, max, then summed) as the numerator, both excluding backstop (BCK: its
+    production is unserved energy and its OperatingCost a big-M penalty that would distort the
+    ratio). Metric = (CAPEX_annualized + OPEX) / production, computed per YEAR; the period view
+    averages the annual ratios client-side.
+    """
     # EXCLUIR BACKSTOP (BCK) del costo por energía. Su producción es energía NO
     # suministrada (no entregada) y su OperatingCost es el penalty big-M
     # artificial; incluirlo distorsiona el ratio (numerador Y denominador) en los
@@ -3657,6 +3780,21 @@ def chart_11():
 # la renovable y el intercambio, a nivel electricidad; convención aceptada.
 # ================================================================
 def chart_12():
+    """Build chart 12: Energy Security - Imported vs Autóctono [%], stacked shares per scenario.
+
+    Reads UseByTechnology (fossil/nuclear fuel consumed, NON_RENEWABLE_CODES),
+    ProductionByTechnology (renewable electricity generated, RENEWABLE_CODES) and the same two
+    columns with the FUEL dimension for international interconnections (TRN<A>XX<B>XX,
+    excluding domestic TRNNLI/TRNRPO). Fossil use is split imported/local using OLADE/sieLAC's
+    real import shares (load_fossil_import_shares) by country and fuel (fallback 1.0 =
+    imported); renewable generation is 100% autóctono; interconnection exchange reads its
+    direction from FUEL suffix 03 (export, Use) / 04 (import net of losses, Production).
+    Imported = fossil_use*import_share + elec_imported; Autóctono = renewable +
+    fossil_use*(1-import_share) - elec_exported (floored at 0). Aggregated by summing the
+    per-country components, then normalized to 100%; only the bottom (Autóctono) segment is
+    labelled. Units note: fossil enters at the fuel level (with thermal losses); renewables
+    and exchange at the electricity level (accepted convention).
+    """
     df = load_column(["UseByTechnology", "ProductionByTechnology"],
                      extra_dims=["FUEL"])
     df = df[df["YEAR"].isin(ALL_YEARS)].copy()
@@ -3879,6 +4017,15 @@ def chart_12():
 # documento: colapsa fuentes correlacionadas para no inflar la resiliencia.
 # ================================================================
 def chart_13():
+    """Build chart 13: Resilience (HHI) - effective number of sources [1/HHI], line per scenario.
+
+    Reads ProductionByTechnology (PJ, summed across timeslices/countries), groups generation
+    into source families via classify_source_family (e.g. all hydro = one source, to avoid
+    inflating resilience with correlated sources), computes each family's share s_i, the
+    Herfindahl-Hirschman Index HHI = sum(s_i^2), and plots the effective number of sources =
+    1/HHI. Higher = more diversified/resilient (a threat to one source reaches a smaller share
+    of supply).
+    """
     df = load_column(["ProductionByTechnology"])
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]
@@ -4019,6 +4166,18 @@ def chart_13():
 #   Combustible  : OperatingCost del resto (energía primaria, dominado por MIN*)
 # ================================================================
 def chart_14():
+    """Build chart 14: Total System Cost with Fuel [MUSD/year], stacked by cost category.
+
+    Like chart_07 (CAPEX+O&M per period) but ADDS the primary-energy/fuel cost that lives in
+    the OperatingCost of MIN* extraction (and other non-infrastructure) technologies, which
+    chart_05/07 exclude by filtering to Generación/Transmisión/Almacenamiento only. Reads
+    CapitalInvestment and OperatingCost (dedup to one row per tech-year, max), backstop (BCK)
+    is excluded from CAPEX/O&M/Combustible and instead added as its own "Energía no
+    Suministrada" category (BCK production in PJ valued at VOLL $1500/MWh = 1500/3.6 MUSD/PJ).
+    Categories, base to top: CAPEX (CapitalInvestment, PWRTRN/RNWTRN /1.2), O&M
+    (OperatingCost of infrastructure), Combustible (OperatingCost of the rest), Energía no
+    Suministrada.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = load_column(cols)
     df = df[(df["YEAR"] >= 2023) & (df["YEAR"] <= 2050)]
@@ -4092,6 +4251,14 @@ def chart_14():
 # el filtro de países liste los 19 países) aunque no haya producción BCK.
 # ================================================================
 def chart_15():
+    """Build chart 15: Unserved Energy Cost [MUSD], one line per scenario.
+
+    Reads ProductionByTechnology (PJ) for backstop (PWRBCK*) technologies, sums across
+    timeslices/fuels per (Scenario, YEAR, TECHNOLOGY), fills the full Scenario x Year x Tech
+    grid with 0 so every scenario's line (and the 19-country filter) exists even with no
+    backstop dispatch, and values it at VOLL $1500/MWh (= 1500/3.6 MUSD/PJ) - NOT at the
+    model's big-M VariableCost penalty. Ideally 0 everywhere; a value > 0 flags unmet demand.
+    """
     df = load_column(["ProductionByTechnology"])
     df = df[df["YEAR"].isin(ALL_YEARS)]
     df = df[df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]

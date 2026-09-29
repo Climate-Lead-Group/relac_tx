@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-Reference Energy System (RES) Diagram Generator for OSTRAM
+"""Generate the standalone Reference Energy System (RES) Sankey diagram (dashboard tab 18).
 
-Generates a standalone interactive HTML file with a Sankey-style RES diagram
-showing the energy flow from primary resources through power generation,
-transmission, and dispatch for each country/region.
+Builds an interactive, standalone HTML file with a Sankey-style RES diagram showing the
+energy flow from primary resources through power generation, transmission and dispatch for
+each country/region: multi-region selector (checkboxes) to observe interconnections,
+technology/fuel codes as labels with full names on hover, mouse-wheel zoom and click-drag pan,
+colour-coded flows (green renewable, brown fossil, blue nuclear), interactive Plotly Sankey
+with hover info, no server required. No countries, technologies or regions are hardcoded:
+everything is discovered dynamically from the input data.
 
-Features:
-  - Multi-region selector (checkboxes) to observe interconnections
-  - Show technology/fuel codes as labels, full names on hover
-  - Zoom & pan: mouse wheel to zoom, click-drag to pan
-  - Color-coded flows: green for renewable, brown for fossil, blue for nuclear
-  - Interactive Plotly Sankey with hover info
-  - Fully standalone (no server required)
-
-No countries, technologies, or regions are hardcoded.
-Everything is discovered dynamically from the input data.
-
-Author: Climate Lead Group
+Inputs:
+    A1_Outputs_BAU/A-O_AR_Model_Base_Year.xlsx (sheets "Primary", "Secondary", "Demand Techs",
+        "Transport Groups")                                # RES_BASE_YEAR_XLSX
+    country-codes YAML (country_data / special_entries)     # COUNTRY_CODES_YAML
+Outputs:
+    outputs/Figures/Dashboard/RES_Diagram.html              # DASHBOARD_DIR / 'RES_Diagram.html'
+Usage:
+    python scripts/figures/dashboard/Z_AUX_generate_RES_diagram.py
+Notes:
+    - Consumed by build_dashboard.py as tab 18 via generate_html() (embedded as an iframe).
+Authors:
+    Climate Lead Group
 """
 
 import pandas as pd

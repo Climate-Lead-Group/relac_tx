@@ -1,7 +1,26 @@
-"""
-dashboard_config.py — Configuración compartida para el dashboard RELAC_TX:
-paths, años de referencia, escenarios, paletas de color, clasificadores de
-tecnología y helpers de carga del CSV combinado.
+"""Shared configuration for the RELAC_TX dashboard and static figures.
+
+Data oracle for scripts/figures: canonical paths, reference years/scenarios, scenario aliases
+and colour palettes, technology classifiers (family/type/generation group/fuel origin/line
+group), and the combined-CSV loader (`load_column`) with its BAC+ISR Parquet subset helpers
+(`ensure_scenario_subset`, `subset_is_current`, `subset_paths`). Imported by every `fig_*.py`
+in `report/` and `presentation/` (via `report_style`) and by `dashboard/build_dashboard.py`.
+
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv          # CSV_PATH
+    inputs/**/CapacityAndDistances.xlsx                   # CAPACITY_DISTANCES_PATH
+    inputs/**/centerpoints.csv                             # CENTERPOINTS_PATH
+    A1_Outputs_BAU/A-O_AR_Model_Base_Year.xlsx             # RES_BASE_YEAR_XLSX
+    OLADE - Matriz de balance energético - Anual.xlsx      # OLADE_BALANCE_PATH
+Outputs:
+    outputs/Figures/_subset_BAC-ISR.parquet + .json        # ensure_scenario_subset
+    outputs/Figures/.scenarios_cache.json                  # _detect_scenarios cache
+Usage:
+    Library only; not runnable on its own.
+Notes:
+    - SCENARIOS is auto-detected from the CSV's Scenario column (cached by CSV mtime);
+      falls back to the hardcoded 14-scenario list _SCEN_14 if the CSV is missing/unreadable.
+    - SUBSET_SCENARIOS (["BAC", "ISR"]) must match report_style.CORE_SCENARIOS.
 """
 
 import os
@@ -170,6 +189,11 @@ NON_RENEWABLE_CODES = [
 
 
 def classify_tech_generation(tech: str) -> str | None:
+    """Classify a TECHNOLOGY code as "Renovable", "No Renovable", "Backstop" or None.
+
+    Matches RENEWABLE_CODES / NON_RENEWABLE_CODES as substrings of `tech`; a code containing
+    "BCK" is "Backstop". Returns None for anything else (storage, transmission, MIN*, etc.).
+    """
     t = str(tech)
     for code in RENEWABLE_CODES:
         if code in t:
@@ -197,6 +221,12 @@ COLORS_ENERGY_ORIGIN = {
 
 
 def classify_fuel_origin(tech: str) -> str | None:
+    """Classify a TECHNOLOGY code as "Importado", "Autóctono" or None (chart_15, energy security).
+
+    "Importado": MIN*INT* (internationally sourced mining/extraction). "Autóctono": MIN* without
+    INT (local extraction), or RNW* that is not a transmission line (excludes NLI/RPO/TRN).
+    Returns None for anything else (generation, storage, transmission proper).
+    """
     t = str(tech)
     if t.startswith("MIN"):
         return "Importado" if "INT" in t else "Autóctono"
@@ -231,8 +261,10 @@ COLORS_FOSSIL_FUEL = {
 
 
 def classify_min_fossil(tech: str) -> str | None:
-    """Código de combustible fósil (COA/COG/GAS/OIL/PET/OTH) si la tecnología es
-    una MIN* fósil; None en otro caso (incluye MINURN y todo lo no-MIN)."""
+    """Return the fossil-fuel code (COA/COG/GAS/OIL/PET/OTH) if `tech` is a fossil MIN*.
+
+    None otherwise (includes MINURN and anything not starting with "MIN").
+    """
     t = str(tech)
     if not t.startswith("MIN"):
         return None
@@ -241,7 +273,7 @@ def classify_min_fossil(tech: str) -> str | None:
 
 
 def classify_min_fossil_group(tech: str) -> str | None:
-    """Familia agrupada (Carbón / Gas natural / Petróleo/derivados) o None."""
+    """Return the grouped fossil family ("Carbón" / "Gas natural" / "Petróleo/derivados") or None."""
     fuel = classify_min_fossil(tech)
     return FOSSIL_FUEL_GROUP[fuel] if fuel else None
 
@@ -326,6 +358,11 @@ LINE_GROUP_PREFIXES = {
 
 
 def classify_line_group(tech: str) -> str | None:
+    """Classify a transmission TECHNOLOGY code into "PLAN", "NLI", "RPO" or None (chart_04).
+
+    Matches the 6-char prefix against LINE_GROUP_PREFIXES; pure interconnectors
+    (TRN<countryA>XX<countryB>XX) and non-line technologies return None.
+    """
     t = str(tech)
     for group, prefixes in LINE_GROUP_PREFIXES.items():
         if t.startswith(prefixes):
@@ -357,6 +394,12 @@ TRANSMISSION_CATEGORIES = [
 #   Interconectores                       -> TRN<paisA>XX<paisB>XX (resto de TRN*)
 # ================================================================
 def classify_line_group_raw(tech: str) -> str | None:
+    """Classify a line TECHNOLOGY into one of 4 raw buckets (chart_06 investment), or None.
+
+    Unlike `classify_line_group`, this has no residual-capacity math: it returns
+    "Líneas Nuevas No Planificadas", "Líneas Planificadas", "Líneas Repotenciadas No
+    Planificadas" or "Interconectores" (remaining TRN* codes) directly by prefix.
+    """
     t = str(tech)
     if t.startswith(("RNWNLI", "TRNNLI")):
         return "Líneas Nuevas No Planificadas"
@@ -395,6 +438,11 @@ _TRANSMISSION_PREFIXES = (
 
 
 def classify_tech_type(tech: str) -> str | None:
+    """Classify a TECHNOLOGY code as "Almacenamiento", "Transmisión", "Generación" or None.
+
+    Storage: PWRLDS*/PWRSDS*. Transmission: line prefixes in _TRANSMISSION_PREFIXES.
+    Generation: any other PWR* code. Used across the dashboard (chart_05 investment, etc.).
+    """
     t = str(tech)
     if t.startswith(_STORAGE_PREFIXES):
         return "Almacenamiento"
@@ -439,13 +487,12 @@ SOURCE_FAMILY_NAMES = {
 
 
 def classify_source_family(tech: str) -> str | None:
-    """Familia de fuente (código PWR de 6 letras) para el HHI del gráfico 13.
+    """Return the source family (6-letter PWR code) used for chart_13's HHI diversity index.
 
-    Sólo tecnologías de GENERACIÓN (PWR* que no sean almacenamiento ni líneas);
-    el backstop (BCK) se excluye por ser una holgura del modelo, no una fuente
-    real. Colapsa todas las plantas de la misma familia/combustible y de todos
-    los países en UNA sola fuente. Devuelve None si la tecnología no es una
-    fuente de generación.
+    Only GENERATION technologies (PWR* that are neither storage nor lines); backstop (BCK)
+    is excluded as a model slack variable, not a real source. Collapses every plant of the
+    same family/fuel across all countries into ONE source. Returns None if `tech` is not a
+    generation source.
     """
     t = str(tech)
     if "BCK" in t:
@@ -471,6 +518,7 @@ _YEAR_TO_PERIOD = {y: name for name, yrs in YEAR_PERIODS for y in yrs}
 
 
 def year_to_period(year: int) -> str | None:
+    """Map a calendar year to its YEAR_PERIODS bucket name (e.g. 2033 -> "2031-2035"), or None."""
     return _YEAR_TO_PERIOD.get(int(year))
 
 
@@ -522,7 +570,7 @@ _CHUNK_ROWS = 500_000
 
 
 def subset_paths(scenarios) -> tuple[str, str]:
-    """(parquet, sidecar json) para esos escenarios: _subset_<S1>-<S2>-...  (orden alfabético)."""
+    """Return (parquet, sidecar json) paths for `scenarios`: _subset_<S1>-<S2>-... (alphabetical)."""
     key = "-".join(sorted(set(scenarios)))
     base = os.path.join(SUBSET_DIR, f"_subset_{key}")
     return base + ".parquet", base + ".json"
@@ -534,7 +582,7 @@ def _csv_signature() -> dict:
 
 
 def subset_is_current(scenarios) -> bool:
-    """True si existen Parquet+sidecar y la firma (mtime/size) del sidecar es la del CSV actual."""
+    """Return True if the Parquet+sidecar exist and the sidecar's mtime/size signature matches CSV_PATH."""
     import json
     pq, side = subset_paths(scenarios)
     if not (os.path.exists(pq) and os.path.exists(side) and os.path.exists(CSV_PATH)):
@@ -553,7 +601,7 @@ def _to_text(s: pd.Series) -> pd.Series:
 
 
 def _harmonize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
-    """Un tipo por columna para pyarrow (ver DIM_COLS). YEAR ya viene como int."""
+    """Force one dtype per column for pyarrow (see DIM_COLS); YEAR is assumed already int."""
     for col in df.columns:
         if col == "YEAR" or df[col].dtype != object:
             continue
@@ -568,8 +616,24 @@ def _harmonize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def ensure_scenario_subset(scenarios, verbose: bool = True) -> str:
-    """Devuelve la ruta del Parquet con TODAS las columnas del CSV y solo las filas de
-    `scenarios`; lo construye si falta o si el CSV cambió. Lee el CSV por chunks."""
+    """Return the path to the Parquet holding ALL CSV columns and only `scenarios`' rows.
+
+    Builds (or rebuilds) it if missing or if the CSV changed (mtime/size), reading the CSV
+    in chunks.
+
+    Args:
+        scenarios: iterable of scenario codes to keep.
+        verbose: print whether the subset was reused or rebuilt.
+
+    Returns:
+        Path to the Parquet file (see `subset_paths`).
+
+    Raises:
+        ValueError: if the CSV has no rows for `scenarios`.
+
+    Side effects:
+        Writes/replaces the Parquet and its .json sidecar under SUBSET_DIR on a rebuild.
+    """
     import json
     import time
     scen = sorted(set(scenarios))
@@ -609,21 +673,29 @@ def ensure_scenario_subset(scenarios, verbose: bool = True) -> str:
 
 def load_column(columns: list[str], extra_dims: list[str] | None = None,
                 scenarios: list[str] | None = None) -> pd.DataFrame:
-    """Lee columnas de valor del CSV combinado (o del subconjunto Parquet).
+    """Read value columns from the combined CSV (or the Parquet subset).
 
-    Siempre devuelve las dimensiones Scenario/YEAR/TECHNOLOGY (+ ``extra_dims``,
-    p.ej. ["FUEL", "TIMESLICE", "MODE_OF_OPERATION"]). YEAR es int sin NaN. El
-    resultado se cachea en memoria por (fuente, conjunto de columnas).
+    Always returns the Scenario/YEAR/TECHNOLOGY dimensions (+ ``extra_dims``, e.g.
+    ["FUEL", "TIMESLICE", "MODE_OF_OPERATION"]). YEAR is int with no NaN. The result is
+    cached in memory by (source, column set).
 
-    ``scenarios=None`` -> CSV completo (todos los escenarios; lo usa el dashboard).
-    ``scenarios=[...]`` -> si todos están en SUBSET_SCENARIOS, lee el Parquet
-    canónico _subset_BAC-ISR (construyéndolo si hace falta) y devuelve las filas de
-    ESOS escenarios del subconjunto (la figura filtra los suyos, como con el CSV).
-    Si alguno queda fuera del subconjunto, avisa y cae al CSV completo.
+    ``scenarios=None`` -> full CSV (every scenario; used by the dashboard).
+    ``scenarios=[...]`` -> if every one is in SUBSET_SCENARIOS, reads the canonical
+    _subset_BAC-ISR Parquet (building it if needed) and returns THOSE scenarios' rows from
+    the subset (the caller filters its own, same as with the CSV). If any scenario falls
+    outside the subset, warns and falls back to the full CSV.
 
-    NOTA CSV: low_memory=False agota memoria con el CSV de 14 escenarios (~1,4 GB;
-    límite del parser C, no del sistema); el default por chunks funciona y solo
-    emite un DtypeWarning inofensivo en columnas con NaN mezclado con números.
+    CSV NOTE: low_memory=False runs out of memory with the 14-scenario CSV (~1.4 GB; a C
+    parser limit, not a system one); the chunked default works and only emits a harmless
+    DtypeWarning on columns with NaN mixed with numbers.
+
+    Args:
+        columns: value columns to read.
+        extra_dims: extra dimension columns to keep besides Scenario/YEAR/TECHNOLOGY.
+        scenarios: scenario codes to restrict to, or None for all.
+
+    Returns:
+        DataFrame with the requested dimensions and columns.
     """
     always = ["Scenario", "YEAR", "TECHNOLOGY"] + (extra_dims or [])
     usecols = list(dict.fromkeys(always + columns))
@@ -690,11 +762,11 @@ CD_SCENARIO_FALLBACK = {
 
 
 def load_capacity_and_distances() -> pd.DataFrame:
-    """Lee CapacityAndDistances.xlsx con fallback de escenario BAC/OPC -> BAU/OPT.
+    """Read CapacityAndDistances.xlsx with a BAC/OPC -> BAU/OPT scenario fallback.
 
-    Devuelve columnas Scenario/Country/Capacity/Distance RNW/Distance NRNW,
-    duplicando las filas de BAU/OPT bajo BAC/OPC cuando el xlsx no trae esos
-    códigos directamente (ver CD_SCENARIO_FALLBACK).
+    Returns Scenario/Country/Capacity/Distance RNW/Distance NRNW columns, duplicating the
+    BAU/OPT rows under BAC/OPC (and the other CD_SCENARIO_FALLBACK entries) when the xlsx
+    does not carry those codes directly.
     """
     cd = pd.read_excel(CAPACITY_DISTANCES_PATH)[
         ["Scenario", "Country", "Capacity", "Distance RNW", "Distance NRNW"]
@@ -749,11 +821,11 @@ _IMPORT_SHARE_CACHE: dict[str, dict[str, float]] = {}
 
 
 def load_fossil_import_shares() -> dict[str, dict[str, float]]:
-    """{iso3: {fuel_modelo: cuota_importación}} desde el balance OLADE.
+    """Return {iso3: {model_fuel: import_share}} from the OLADE energy balance.
 
-    ``fuel_modelo`` es uno de GAS/COA/URN/OIL/PET/OTH; el valor es la fracción
-    importada (0-1) promediada sobre los años disponibles del balance. Combina
-    columnas y promedia por país. Resultado cacheado en memoria.
+    ``model_fuel`` is one of GAS/COA/URN/OIL/PET/OTH; the value is the imported fraction
+    (0-1) averaged over the balance's available years. Combines columns and averages per
+    country. Result is cached in memory.
     """
     if _IMPORT_SHARE_CACHE:
         return _IMPORT_SHARE_CACHE

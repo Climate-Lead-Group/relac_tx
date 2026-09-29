@@ -1,27 +1,33 @@
 # -*- coding: utf-8 -*-
-"""
-Transmission Maps & Dispatch Chart Generator
+"""Generate the two standalone map/dispatch views (dashboard tabs 16/17).
 
 Generates two standalone interactive HTML files:
 
-  TransmissionMaps.html — three map views:
+  TransmissionMaps.html - three map views:
     - Transmission Capacity (GW/TW)
     - Transmission Flow (PJ/TWh/GWh)
     - Load-Capacity Ratio (ratio/%)
 
-  DispatchChart.html — stacked-area generation mix by region/year/scenario.
+  DispatchChart.html - stacked-area generation mix by region/year/scenario.
 
-Features:
-  - Year, scenario, region (dispatch only) selectors discovered from data
-  - Unit toggles (GW/TW, PJ/TWh/GWh, ratio/%, PJ/GWh/MWh)
-  - Interactive Plotly Scattergeo / stacked area
-  - PNG download button
-  - Fully standalone (no server required)
+Features: year/scenario/region (dispatch only) selectors discovered from the data; unit
+toggles (GW/TW, PJ/TWh/GWh, ratio/%, PJ/GWh/MWh); interactive Plotly Scattergeo / stacked
+area; PNG download button; fully standalone (no server required). No countries, technologies,
+years or scenarios are hardcoded: everything is discovered dynamically from the input data.
 
-No countries, technologies, years, or scenarios are hardcoded.
-Everything is discovered dynamically from the input data.
-
-Author: Climate Lead Group, Andrey Salazar-Vargas
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv   # CSV_PATH, via load_data/load_dispatch_data
+    inputs/**/centerpoints.csv                     # CENTERPOINTS_PATH, via load_centerpoints
+Outputs:
+    outputs/Figures/Dashboard/TransmissionMaps.html
+    outputs/Figures/Dashboard/DispatchChart.html
+Usage:
+    python scripts/figures/dashboard/Z_AUX_generate_transmission_maps.py
+Notes:
+    - Consumed by build_dashboard.py as tabs 16/17 via generate_html/generate_dispatch_html
+      (embedded as iframes), sharing the one CSV load between the two tabs.
+Authors:
+    Climate Lead Group, Andrey Salazar-Vargas
 """
 
 import pandas as pd
@@ -66,11 +72,11 @@ def find_combined_csv(script_dir):
 
 
 def prepare_interconnection_df(df):
-    """Filtra un DataFrame ya cargado a tecnologías de interconexión.
+    """Filter an already-loaded DataFrame down to interconnection technologies.
 
-    Extrae el lookup global YearSplit (TIMESLICE -> fracción) ANTES de filtrar,
-    porque YearSplit no es específico de la tecnología. Permite reutilizar un
-    DataFrame ya leído (build_dashboard) sin releer el CSV.
+    Extracts the global YearSplit lookup (TIMESLICE -> fraction) BEFORE filtering, because
+    YearSplit is not technology-specific. Lets a DataFrame already read by build_dashboard be
+    reused without re-reading the CSV.
 
     Returns (filtered_df, year_split_dict).
     """
@@ -792,9 +798,9 @@ TECH_LABELS = {
 
 
 def prepare_dispatch_df(df):
-    """Filtra un DataFrame ya cargado a las filas de despacho (PWR* por timeslice).
+    """Filter an already-loaded DataFrame down to dispatch rows (PWR* by timeslice).
 
-    Reutilizable desde build_dashboard sin releer el CSV.
+    Reusable from build_dashboard without re-reading the CSV.
     Returns (dispatch_df, year_split_dict).
     """
     # Extract YearSplit lookup
@@ -1229,6 +1235,18 @@ window.addEventListener('resize', () => {{
 # Main
 # ---------------------------------------------------------------------------
 def main():
+    """Build both TransmissionMaps.html and DispatchChart.html from the combined CSV.
+
+    Loads the combined CSV once for the transmission maps and once for dispatch (via
+    load_data/load_dispatch_data), then writes both standalone HTML files under
+    figures.common.dashboard_config.DASHBOARD_DIR.
+
+    Raises:
+        FileNotFoundError: if the combined CSV or the centerpoints CSV is missing.
+
+    Side effects:
+        Writes TransmissionMaps.html and DispatchChart.html; prints progress to stdout.
+    """
     script_dir = Path(__file__).resolve().parent
 
     # Datos desde las rutas canónicas del repo (outputs/, inputs/Miscellaneous).

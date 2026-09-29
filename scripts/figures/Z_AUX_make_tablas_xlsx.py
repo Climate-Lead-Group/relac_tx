@@ -1,50 +1,56 @@
 # -*- coding: utf-8 -*-
-"""Z_AUX_make_tablas_xlsx.py — Genera Tablas_Completas_Resultados.xlsx con los
-resultados AGREGADOS A NIVEL REGIONAL (sin división por país), desagregados por
-escenario y horizonte temporal, para los 9 indicadores del reporte:
+"""Build Tablas_Completas_Resultados.xlsx: REGIONAL-level results (no per-country split),
+broken down by scenario and time horizon, for the report's 9 indicators:
 
-  T1 Capacidad instalada de generación por fuente [GW]      (años 2030/2040/2050)
-  T2 Generación anual por fuente [TWh]                      (años 2030/2040/2050)
-  T3 Capacidad instalada de transmisión por tipo [GW]       (años 2030/2040/2050)
-  T4 Kilómetros de línea instalados por tipo [km]           (periodos 2026-2050)
-  T5 Capacidad instalada de almacenamiento [GW]             (años 2030/2040/2050)
-  T6 Inversión anual promedio por tipo [MUSD/año]           (periodos 2026-2050)
-  T7 Costo total del sistema, promedio anual [MUSD/año]     (periodos 2026-2050)
-  T8 Costo unitario del sistema [USD/MWh]                   (periodos 2026-2050)
-  T9 Consumo de combustibles fósiles [MBEP]                 (años 2030/2040/2050)
+  T1 Installed generation capacity by source [GW]       (years 2030/2040/2050)
+  T2 Annual generation by source [TWh]                  (years 2030/2040/2050)
+  T3 Installed transmission capacity by type [GW]       (years 2030/2040/2050)
+  T4 Line kilometres installed by type [km]             (periods 2026-2050)
+  T5 Installed storage capacity [GW]                    (years 2030/2040/2050)
+  T6 Average annual investment by type [MUSD/year]      (periods 2026-2050)
+  T7 Total system cost, annual average [MUSD/year]      (periods 2026-2050)
+  T8 System unit cost [USD/MWh]                         (periods 2026-2050)
+  T9 Fossil fuel consumption [MBEP]                     (years 2030/2040/2050)
 
-Es la versión REGIONAL y en Excel del antiguo Z_AUX_make_tablas_docx.py (tablas
-por país del Entregable 2), actualizada a las fórmulas VIGENTES del proyecto:
-  - Escenarios: los 14 de la corrida 2026-09-16 (solve_scenarios de
-    Config_MOMF_T1_AB.yaml), en el MISMO orden y con los MISMOS nombres que el
-    dashboard (SCENARIO_ALIAS de dashboard_config): familia OPT (BAC base, BSR
-    sin repotenciación, BFA/BFB/BRA/BRB sensibilidades de costo), familia ETT
-    (ISR base, INV con repotenciación, IFA/IFB/IRA/IRB), OPC (PLAN) y VSR
-    (ETT-GP). BAU/OPT/VGB crudos (sin tope) se ignoran aunque estén en el CSV.
-  - Transmisión (T3): fórmula nominal del chart_04 / fig_capacidad_transmision:
-    Existentes = TCA−ANC (PLAN); Repo No Planif. = TCA−AMCI (RPO);
-    Total = ΣTCA de los 3 grupos (SIN los factores /0.8 y /1.8 antiguos).
-  - km (T4): load_capacity_and_distances() con fallback BAC->BAU / OPC->OPT
-    (el xlsx de distancias no trae los códigos "con tope").
-  - Costo unitario (T8): CAPEX anualizado AL VUELO desde CapitalInvestment
-    (CRF con DISCOUNT_RATE/ASSET_LIFETIME de Z_AUX_capital_annualization_script);
-    NO se usa CapitalInvestmentAnnualized del CSV (vacía en el snapshot).
-  - Combustibles fósiles (T9): actividad MIN* fósil (chart_08a) convertida de
-    PJ a millones de bep (conversión IEA de fig_combustibles_fosiles_2050.py);
-    reemplaza a la tabla de emisiones del docx original.
+This is the REGIONAL, Excel version of the old Z_AUX_make_tablas_docx.py (Deliverable 2's
+per-country tables), updated to the project's CURRENT formulas:
+  - Scenarios: the 14 of the 2026-09-16 run (solve_scenarios in Config_MOMF_T1_AB.yaml), in
+    the SAME order and with the SAME names as the dashboard (dashboard_config.SCENARIO_ALIAS):
+    OPT family (BAC base, BSR without repowering, BFA/BFB/BRA/BRB cost sensitivities), ETT
+    family (ISR base, INV with repowering, IFA/IFB/IRA/IRB), OPC (PLAN) and VSR (ETT-GP). The
+    raw (uncapped) BAU/OPT/VGB scenarios are ignored even if present in the CSV.
+  - Transmission (T3): the same nominal formula as chart_04 / fig_capacidad_transmision:
+    Existing = TCA-ANC (PLAN); Unplanned repowered = TCA-AMCI (RPO);
+    Total = sum of TCA over the 3 groups (WITHOUT the old /0.8 and /1.8 factors).
+  - km (T4): load_capacity_and_distances() with a BAC->BAU / OPC->OPT fallback (the distances
+    xlsx does not carry the "capped" scenario codes).
+  - Unit cost (T8): CAPEX annualized ON THE FLY from CapitalInvestment (CRF with
+    DISCOUNT_RATE/ASSET_LIFETIME from Z_AUX_capital_annualization_script); the CSV's
+    CapitalInvestmentAnnualized column is NOT used (empty in the snapshot).
+  - Fossil fuels (T9): fossil MIN* activity (chart_08a) converted from PJ to million barrels
+    of oil equivalent (same IEA conversion as fig_combustibles_fosiles_2050.py); replaces the
+    original docx's emissions table.
 
-El CSV (~1,4 GB) se reduce en UNA pasada por chunks a valores por
-(Scenario, YEAR, TECHNOLOGY); la reducción se cachea en un pickle en
-outputs/Figures/ (junto al xlsx), invalidado por mtime del CSV. NO correr en
-paralelo con los fig_*.py (riesgo de OOM con el CSV grande).
+The CSV (~1.4 GB) is reduced in ONE chunked pass to values per (Scenario, YEAR, TECHNOLOGY);
+the reduction is cached in a pickle under outputs/Figures/ (next to the xlsx), invalidated by
+the CSV's mtime. Do NOT run in parallel with the fig_*.py scripts (OOM risk with the large CSV).
 
-Layout (spec 2026-09-16 §3): vive en scripts/figures/; solo scripts/ entra en
-sys.path y todo se importa como paquete (figures.common.dashboard_config,
-pipeline.Z_AUX_capital_annualization_script, common.relac_paths). Salida:
-outputs/Figures/Tablas_Completas_Resultados.xlsx.
+Layout (spec 2026-09-16 §3): lives under scripts/figures/; only scripts/ goes on sys.path and
+everything is imported as a package (figures.common.dashboard_config,
+pipeline.Z_AUX_capital_annualization_script, common.relac_paths).
 
-Uso (desde cualquier cwd):
+Inputs:
+    outputs/RELAC_TX_Combined_Inputs_Outputs.csv   # CSV_PATH, reduced by load_reduced()
+    inputs/**/CapacityAndDistances.xlsx            # via dashboard_config's loader
+Outputs:
+    outputs/Figures/Tablas_Completas_Resultados.xlsx   # OUT_XLSX
+    outputs/Figures/.tablas_xlsx_reduced.pkl           # CACHE_PKL, the chunked-reduction cache
+Usage (from any cwd):
     PYTHONUTF8=1 python scripts/figures/Z_AUX_make_tablas_xlsx.py
+Notes:
+    - This module has top-level executable code (no main()); it runs its full pipeline at
+      import time, which is why run_all.py isolates it in a subprocess.
+    - The reduction cache is invalidated by the CSV's mtime and by the SCENARIOS list.
 """
 
 from __future__ import annotations
@@ -143,6 +149,21 @@ SUM_COLS = ["ProductionByTechnology"]
 
 
 def load_reduced() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Reduce the combined CSV to per-(Scenario, YEAR, TECHNOLOGY) values, using a pickle cache.
+
+    Reads CSV_PATH in 2,000,000-row chunks, keeps only SCENARIOS and years 2023-2050, and
+    aggregates MAX_COLS with max() (capacity/cost columns repeat across timeslices) and
+    SUM_COLS with sum() (production is split across timeslices). The result is cached in
+    CACHE_PKL, keyed by the CSV's mtime and the sorted SCENARIOS list; a cache whose key
+    matches is returned without re-reading the CSV.
+
+    Returns:
+        (per_max, per_sum): two DataFrames, one per aggregation, both indexed by
+        (Scenario, YEAR, TECHNOLOGY).
+
+    Side effects:
+        Writes/overwrites CACHE_PKL on a cache miss. Prints progress per chunk.
+    """
     mt = os.path.getmtime(CSV_PATH)
     if os.path.exists(CACHE_PKL):
         blob = pd.read_pickle(CACHE_PKL)
@@ -427,7 +448,7 @@ def _lab(ws, r, c, text, bold=False, band=False):
 
 def rows_with_totals(data_sc: dict, labels: list[str], cols: list[str],
                      totals: str | None) -> list[tuple[str, list[float], bool]]:
-    """[(etiqueta, valores, es_total)] para una banda de escenario."""
+    """Build [(label, values, is_total)] rows for one scenario's band, with an optional total row."""
     band = [(lab, [data_sc.get(lab, {}).get(c, 0.0) for c in cols], False)
             for lab in labels]
     if totals in ("sum", "sum_first"):
@@ -439,7 +460,7 @@ def rows_with_totals(data_sc: dict, labels: list[str], cols: list[str],
 
 def write_banded(wb, sheet, title, label_hdr, cols, data, labels, dec,
                  totals="sum", subtotal_groups=None, note=None):
-    """Hoja con tabla de banda por escenario (col A vMerge = escenario)."""
+    """Add a sheet with a per-scenario banded table (column A vertically merged per scenario)."""
     ws = wb.create_sheet(sheet)
     ws.sheet_view.showGridLines = False
     ncols = 2 + len(cols)
@@ -488,7 +509,7 @@ def write_banded(wb, sheet, title, label_hdr, cols, data, labels, dec,
 
 
 def write_scenario_rows(wb, sheet, title, cols, data, rowkey, dec, note=None):
-    """Hoja con una fila por escenario (sin banda) — T8 costo unitario."""
+    """Add a sheet with one row per scenario, no banding (used for T8 unit cost)."""
     ws = wb.create_sheet(sheet)
     ws.sheet_view.showGridLines = False
     ncols = 1 + len(cols)
