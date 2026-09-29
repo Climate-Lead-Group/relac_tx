@@ -20,7 +20,6 @@ the shared IO library (never writes a live input).
 | `validate_constraints.py` | Read-only STEP 1 input validator: flags `FORCED_NO_FLOOR`, `FLOOR_ENDS_BEFORE_LIFE`, `FLOOR_CF_IMPLAUSIBLE`, `FLOOR_INFEASIBLE`, `FLOOR_NEAR_CAP`, `ORPHAN_FLOOR`, `SCENARIO_ASYMMETRY`, `PIPELINE_MISMATCH` per scenario | preprocessed `.txt`, A2 otoole CSVs, combined outputs CSV (via `relac_io`/`feasibility`) | `outputs/fix_dispatch/validation_report.txt`, `outputs/fix_dispatch/validation_flags.csv` | `python scripts/fix_dispatch/validate_constraints.py`; standalone QA, not called by B2 |
 | `floor_effect.py` | Read-only STEP 2 calculator: for each candidate floor, computes only what the floor mathematically guarantees (forced generation, implied capacity factor, feasibility, implied fuel input/CO2, demand share) — a partial energy balance, not a dispatch prediction | `--candidates` CSV (default: working-set demo), A2 otoole CSVs | `outputs/fix_dispatch/floor_effect_report.csv` (or `--out`) | `python scripts/fix_dispatch/floor_effect.py [--candidates FILE] [--out FILE]`; standalone QA, not called by B2 |
 | `fig_floor_effect.py` | Read-only: renders a 3-panel before/after figure of the floor fix, comparing the pre-floor baseline combined CSV against a manually-solved floored run (`solved_FLOORED/`, BAU+OPT only) | baseline and `solved_FLOORED` combined CSVs, `candidate_floors.csv`, preprocessed `.txt` | `outputs/fix_dispatch/fig_floor_effect.png` | `python scripts/fix_dispatch/fig_floor_effect.py`; standalone analysis, not called by B2 |
-| `build_summary.py` | STEP 6 summary: one row per country per tier plus a compact terminal table, from `candidate_floors.csv` | `inputs/tx_chain/fix_dispatch/candidate_floors.csv` | `outputs/fix_dispatch/candidate_floors_summary.csv` | `python scripts/fix_dispatch/build_summary.py`; standalone QA, not called by B2 |
 
 ## How to run
 
@@ -32,7 +31,6 @@ python scripts/fix_dispatch/preflight_separation.py    # gate: BAU/OPT and INV/V
 python scripts/fix_dispatch/write_floors.py --scenarios BAU OPT   # write floored .txt copies
 python scripts/fix_dispatch/validate_constraints.py    # STEP 1 input validation report
 python scripts/fix_dispatch/floor_effect.py            # STEP 2 read-only floor-effect report
-python scripts/fix_dispatch/build_summary.py           # per-country/tier summary
 python scripts/fix_dispatch/fig_floor_effect.py        # before/after figure
 ```
 
@@ -50,7 +48,7 @@ python scripts/fix_dispatch/fig_floor_effect.py        # before/after figure
    `patch_activity_upper_limit`, producing the `_FLOORED.txt` that later chain steps
    (`sync_patched_csvs_from_txt.py`, the `tx_chain` stage) consume. See
    `scripts/pipeline/README.md` "Order / dependencies" for where this sits in the full B2 chain.
-4. `validate_constraints.py`, `floor_effect.py`, `fig_floor_effect.py`, `build_summary.py` are
+4. `validate_constraints.py`, `floor_effect.py` and `fig_floor_effect.py` are
    post-hoc, read-only analysis over `candidate_floors.csv` and/or solved outputs; none of them
    are called by B2.
 
@@ -68,7 +66,6 @@ python scripts/fix_dispatch/fig_floor_effect.py        # before/after figure
   `outputs/Executables/` are from `write_floors.py`: the `_FLOORED.txt` siblings plus a one-time
   `.bak` backup of the original preprocessed `.txt` (skipped on `--dry-run`, and only written once
   per file).
-- `build_summary.py` reads columns `"tier"`, `"cf_basis"` and `"scenario_source"` from
-  `candidate_floors.csv`, but the current `make_candidates.py` writes `"profile"`, `"cf_source"`
-  and `"cf_quality"` instead — running `build_summary.py` against the current schema raises a
-  `KeyError` (documented in its own module docstring; the bug itself is out of scope here).
+- `build_summary.py` (per-country/tier summary) was removed on 2026-09-29: it grouped by the
+  `"tier"` column that `make_candidates.py` v3 replaced with `"profile"`, so it could no longer
+  run; `outputs/fix_dispatch/candidate_floors_summary.csv` went with it.
