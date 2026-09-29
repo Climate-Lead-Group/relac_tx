@@ -1,21 +1,19 @@
-"""
-fig_capacidad_generacion_2050.py — Capacidad instalada de generación por
-escenario en 2030/2040/2050 [GW], desglosada Renovable / No Renovable (figura
-de reporte, Entregable 2).
+"""Plot installed generation capacity by scenario for 2030/2040/2050 [GW].
 
-Equivalente estático del chart_01 del dashboard ("Capacidad Instalada de
-Generación [GW]"), filtrado a un set de años y a los escenarios core.
-Parámetro TotalCapacityAnnual (GW): una fila por tech-año repetida por
-timeslice -> dedup por Scenario/YEAR/TECHNOLOGY antes de sumar (agg="dedup"
-del dashboard). Clasificación Renovable/No Renovable idéntica al dashboard
-(classify_tech_generation; backstop BCK excluido por el clasificador).
+Static equivalent of dashboard chart_01 ("Capacidad Instalada de Generacion [GW]"), split
+Renewable / Non-renewable with the same classifier as the dashboard
+(classify_tech_generation; backstop BCK excluded). Grouped bars by scenario, one stacked
+sub-bar (Renewable / Non-renewable) per year within each group.
 
-Barras agrupadas por escenario, con una sub-barra apilada (Renovable / No
-Renovable) por año dentro de cada grupo (report_style.grouped_bar_layout).
-
-Uso:
+Inputs:
+    TotalCapacityAnnual (combined CSV; deduped by Scenario/YEAR/TECHNOLOGY before summing,
+    since it repeats per timeslice); scenarios default to report_style.CORE_SCENARIOS
+    (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_capacidad_generacion_2050.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_capacidad_generacion_2050.py
-    python scripts/figures/report/fig_capacidad_generacion_2050.py --years 2030 2040 2050 --scenarios BAC ISR
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -67,6 +65,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed generation capacity (Renewable/Non-renewable stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

@@ -1,31 +1,20 @@
-"""
-fig_combustibles_fosiles_2050.py — Consumo de combustibles fósiles por
-escenario, acumulado por tramo [millones de BEP] (figura de reporte,
-Entregable 2).
+"""Plot fossil fuel consumption by scenario, accumulated per period [million BOE].
 
-Equivalente estático del chart_08a del dashboard, acumulado (no anual) en cada
-tramo del horizonte (por defecto report_style.ACCUMULATED_PERIODS =
-2026-2030 / 2031-2040 / 2041-2050) y filtrado a los escenarios core. Mide la
-actividad (TotalTechnologyAnnualActivity, en PJ) de las tecnologías de
-extracción/importación fósiles MIN* (classify_min_fossil: COA/COG/GAS/OIL/PET/
-OTH; excluye URN), sumada año a año dentro de cada tramo, y convertida a
-barriles equivalentes de petróleo (BEP) para el reporte. Barras agrupadas por
-escenario, con una sub-barra por tramo dentro de cada grupo
-(report_style.grouped_bar_layout); color por escenario (paleta del reporte:
-rs.SCENARIO_COLORS, igual que fig_almacenamiento_2050.py), constante entre
-tramos. Más red adecuada -> menos respaldo fósil.
+Static equivalent of dashboard chart_08a: sums TotalTechnologyAnnualActivity (PJ) of the
+fossil extraction/import technologies MIN* (classify_min_fossil: COA/COG/GAS/OIL/PET/OTH;
+excludes URN) year by year within each period, then converts to barrels of oil equivalent
+(BOE, IEA convention: 1 bep = 5.7119 GJ) for the report. Grouped bars by scenario, one
+sub-bar per period; color by scenario, constant across periods.
 
-Conversión PJ -> BEP (convención IEA, no hay un factor propio de OLADE/del
-proyecto): 1 tep (tonelada equivalente de petróleo) = 41,868 GJ; 1 tep ≈ 7,33
-bep -> 1 bep ≈ 5,7119 GJ. Se reporta en MILLONES de bep (MBEP), igual que el
-resto del reporte usa millones de USD (MUSD) para cifras grandes: el factor
-1 PJ = 10^6 GJ hace que "PJ / GJ_PER_BEP" dé directamente millones de bep (el
-10^6 se cancela exactamente entre "P" de PJ y "M" de millones).
-
-Uso:
+Inputs:
+    TotalTechnologyAnnualActivity (combined CSV); periods default to
+    report_style.ACCUMULATED_PERIODS (2026-2030/2031-2040/2041-2050); scenarios default to
+    report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_combustibles_fosiles_<p0>_<p1>.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_combustibles_fosiles_2050.py
-    python scripts/figures/report/fig_combustibles_fosiles_2050.py --periods 2026 2030 2031 2040 2041 2050
-    python scripts/figures/report/fig_combustibles_fosiles_2050.py --scenarios BAC ISR
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -51,7 +40,7 @@ MBEP_PER_PJ = 1.0 / GJ_PER_BEP
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, float]]:
-    """{periodo: {scenario: PJ}} acumulado dentro de cada periodo."""
+    """{period: {scenario: PJ}}, accumulated within each period."""
     df = rs.load(["TotalTechnologyAnnualActivity"], scenarios=scenarios)
     df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
     df = df[df["Scenario"].isin(scenarios)]

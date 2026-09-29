@@ -1,25 +1,23 @@
-"""
-fig_combustibles_fosiles_ens_tmp.py — SCRIPT TEMPORAL. Variante de
-fig_combustibles_fosiles_2050.py que SÍ incluye la Energía no Suministrada
-(ENS) en el consumo, sumada directamente a la cifra ya existente (una sola
-barra por escenario/tramo, sin desglose ni leyenda nueva).
+"""Experimental variant of fig_combustibles_fosiles_2050.py that adds unserved energy.
 
-Diferencias de cómputo respecto a fig_combustibles_fosiles_2050.py:
-  - Nuevo sumando ENS = producción del backstop (techs con "BCK") vía
-    ProductionByTechnology, en PJ (suma de timeslices/fuels, como chart_15
-    del dashboard). Se suma a los PJ de actividad fósil MIN* y el total se
-    convierte a MBEP con el mismo factor IEA (1 bep ≈ 5,7119 GJ).
-  - La ENS aquí es energía (PJ), no dinero: NO interviene ningún VOLL.
+Adds Energia no Suministrada (ENS = backstop, tech names containing "BCK", production via
+ProductionByTechnology in PJ) directly to the fossil-fuel figure: one bar per
+scenario/period, no new breakdown or legend entry. ENS here is energy (PJ), no VOLL/price
+is involved. Everything else (MIN* activity, per-period accumulation, PJ -> MBOE
+conversion) is identical to fig_combustibles_fosiles_2050.py.
 
-Todo lo demás (actividad MIN* fósil vía classify_min_fossil, acumulación por
-tramo, conversión PJ -> MBEP, layout de barras agrupadas con color por
-escenario) es idéntico a fig_combustibles_fosiles_2050.py; ver ese script
-para la documentación completa.
-
-Uso:
+Inputs:
+    TotalTechnologyAnnualActivity, ProductionByTechnology (combined CSV); periods default
+    to report_style.ACCUMULATED_PERIODS; scenarios default to report_style.CORE_SCENARIOS
+    (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_combustibles_fosiles_ens_<p0>_<p1>_tmp.png (via
+    report_style.save)
+Usage:
     python scripts/figures/report/fig_combustibles_fosiles_ens_tmp.py
-    python scripts/figures/report/fig_combustibles_fosiles_ens_tmp.py --periods 2026 2030 2031 2040 2041 2050
-    python scripts/figures/report/fig_combustibles_fosiles_ens_tmp.py --scenarios BAC ISR
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -45,9 +43,7 @@ MBEP_PER_PJ = 1.0 / GJ_PER_BEP
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'total','ens'}}} en PJ acumulado dentro de cada
-    periodo; 'total' YA incluye la ENS y 'ens' se conserva solo para el print
-    de consola (NO volver a sumarla)."""
+    """{period: {scenario: {'total','ens'}}} in PJ, accumulated within each period."""
     df = rs.load(["TotalTechnologyAnnualActivity"], scenarios=scenarios)
     df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
     df = df[df["Scenario"].isin(scenarios)]

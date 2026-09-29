@@ -1,40 +1,22 @@
-"""
-fig_costo_unitario.py — Costo unitario del sistema por escenario en
-2030/2040/2050 [USD/MWh] (figura de reporte, Entregable 2).
+"""Plot unit system cost by scenario for 2030/2040/2050 [USD/MWh].
 
-Equivalente estático, en estilo de reporte, del "chart11 – Costo Anualizado por
-Energía [MUSD/TWh]" de build_dashboard_nonsupplied.py, filtrado a un set de años
-y a los 4 escenarios core. Lee del mismo oráculo que el dashboard
-(RELAC_TX_Combined_Inputs_Outputs.csv via dashboard_config) — NO es un recorte
-manual del dashboard.
+Static, report-style equivalent of the dashboard's "chart11 - Costo Anualizado por Energia
+[MUSD/TWh]": Unit cost = (annualized CAPEX + O&M + Combustible) / total production.
+Annualized CAPEX is computed on the fly from CapitalInvestment with the same CRF math as
+Z_AUX_capital_annualization_script.py (discount rate 6.39%, asset life 15 years) rather
+than reading CapitalInvestmentAnnualized, which was empty in the 2026-08-14 snapshot.
+Backstop (BCK) is excluded from both numerator and denominator. Units: USD/MWh (numerically
+identical to MUSD/TWh).
 
-Métrica por (escenario, año):
-  Costo unitario = (CAPEX anualizado + O&M + Combustible) / Producción total
-donde:
-  - CAPEX anualizado se calcula AL VUELO desde CapitalInvestment con la misma
-    matemática de Z_AUX_capital_annualization_script.py (CRF con DISCOUNT_RATE
-    6,39% y ASSET_LIFETIME 15 años, importados de ese script para evitar
-    drift): pago anual = inversión×CRF, acumulando en el año Y los pagos de
-    las inversiones de los años [Y-14, Y]. OJO: NO se usa la columna
-    CapitalInvestmentAnnualized del CSV porque en el snapshot regenerado el
-    2026-08-14 está vacía (toda en 0) — el chart_11 del dashboard, que sí la
-    lee, subestima el costo en ese snapshot.
-  - O&M / Combustible = OperatingCost, separado con classify_tech_type: techs de
-    infraestructura (Generación/Transmisión/Almacenamiento) -> O&M; el resto
-    (techs de suministro de combustible) -> Combustible. La suma de los tres
-    componentes reproduce el ratio del chart_11.
-  - Producción = SUM(ProductionByTechnology)·0,277778 [TWh], todas las techs.
-  - Se EXCLUYE el backstop (BCK) de numerador y denominador: su OperatingCost es
-    el penalty big-M artificial y su producción es energía NO suministrada;
-    incluirlo distorsiona el ratio (mismo criterio que chart_11).
-  - Mismo gotcha de max() por tech-año en los costos (valor repetido por fila).
-
-Unidades: USD/MWh (numéricamente idéntico a MUSD/TWh: 10^6 USD / 10^6 MWh).
-
-Uso:
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); years default
+    to report_style.MULTI_YEARS (2030/2040/2050); scenarios default to
+    report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_costo_unitario.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_costo_unitario.py
-    python scripts/figures/report/fig_costo_unitario.py --years 2030 2040 2050
-    python scripts/figures/report/fig_costo_unitario.py --scenarios BAC ISR --ref BAC
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--ref BAC] [--out base]
 """
 
 from __future__ import annotations
@@ -68,10 +50,7 @@ PJ_PER_TWH = 0.277778  # PJ -> TWh (misma constante que chart_11)
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}} (USD/MWh).
-    Misma métrica que el chart_11, con OperatingCost desglosado en O&M /
-    Combustible vía classify_tech_type (como fig_costo_no_inversion) y el CAPEX
-    anualizado recalculado al vuelo (ver docstring del módulo)."""
+    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}} (USD/MWh)."""
     def no_bck(df):
         return df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
 
@@ -126,6 +105,19 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots unit system cost (annualized CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

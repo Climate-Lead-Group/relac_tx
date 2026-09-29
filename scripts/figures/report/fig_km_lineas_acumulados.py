@@ -1,28 +1,22 @@
-"""
-fig_km_lineas_acumulados.py — Kilómetros de líneas de transmisión acumulados
-desde `y0` hasta 2030/2040/2050 [km] por escenario, apilados por grupo de
-línea (figura de reporte, Entregable 2).
+"""Plot accumulated transmission line km from --y0 to 2030/2040/2050, by line group.
 
-Equivalente estático del chart_10 del dashboard ("Kilómetros de Líneas [km]"),
-acumulado (no anual) en la ventana [y0, año]. Misma fórmula que la hoja Tableau
-"Lineas_km":
-  km = (NewCapacity / Capacity) * Distancia, con Distancia RNW para techs RNW*
-  y Distancia NRNW para PWR/TRN, y ×1,25 para repotenciadas (RPO).
-Capacity y Distancia vienen de CapacityAndDistances.xlsx (por Scenario+país).
-Solo líneas (classify_tech_type == "Transmisión"): los interconectores puros
-quedan fuera (no son tipo Transmisión ni casan país). NewCapacity por tech-año
-vía max sobre timeslices (mismo gotcha que el dashboard). Grupos =
-classify_line_group_raw (Planificadas / Nuevas No Planificadas /
-Repotenciadas No Planificadas).
+Static equivalent of dashboard chart_10 ("Kilometros de Lineas [km]"), accumulated (not
+annual) over the window [y0, year]. Same formula as the Tableau "Lineas_km" sheet:
+km = (NewCapacity / Capacity) * Distance (RNW distance for RNW* techs, NRNW for PWR/TRN),
+times 1.25 for repowered (RPO) lines. Capacity/Distance come from CapacityAndDistances.xlsx
+(by Scenario+country). Only line technologies (classify_tech_type == "Transmision"); pure
+interconnectors are excluded. Groups from classify_line_group_raw. Sub-bars are nested
+windows [y0,2030] subset [y0,2040] subset [y0,2050] ("km built to date"), not discrete
+periods.
 
-Barras agrupadas por escenario, con una sub-barra apilada por año dentro de
-cada grupo (report_style.grouped_bar_layout); cada sub-barra es el acumulado
-DESDE `y0` HASTA ese año (ventanas anidadas [y0,2030] ⊂ [y0,2040] ⊂ [y0,2050],
-no tramos discretos): lectura de "km construidos a la fecha".
-
-Uso:
+Inputs:
+    NewCapacity (combined CSV), CapacityAndDistances.xlsx; years default to
+    report_style.MULTI_YEARS; scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_km_lineas_<y0>_<ymax>.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_km_lineas_acumulados.py
-    python scripts/figures/report/fig_km_lineas_acumulados.py --y0 2026 --years 2030 2040 2050 --scenarios BAC ISR
+    [--y0 2026] [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -58,7 +52,7 @@ _COUNTRY_NAMES = {iso3: name for name, iso3 in COUNTRY_ISO3_BY_NAME.items()}
 
 
 def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {grupo: km, ..., 'total': km}}} acumulado en [y0, year]."""
+    """{year: {scenario: {grupo: km, ..., 'total': km}}}, accumulated in [y0, year]."""
     y1 = max(years)
     df = rs.load(["NewCapacity"], scenarios=scenarios)
     df = df[(df["YEAR"] >= y0) & (df["YEAR"] <= y1) & (df["Scenario"].isin(scenarios))]
@@ -100,6 +94,17 @@ def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[s
 
 
 def build_figure(data: dict, scenarios: list[str], y0: int, years: list[int]):
+    """Draw the grouped, stacked km-by-line-group bar chart and return the Figure.
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        y0: first year of the accumulation window (window is [y0, year] for each bar).
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

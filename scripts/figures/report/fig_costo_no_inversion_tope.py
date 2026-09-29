@@ -1,35 +1,21 @@
-"""
-fig_costo_no_inversion_tope.py — Costo total del sistema y "costo de la no
-inversión" por escenario, acumulado por tramo [billones de USD], incluyendo
-los escenarios "tope" (figura de reporte, Entregable 2).
+"""Plot total system cost per scenario/period [BUSD], for comparing capped vs uncapped runs.
 
-Idéntico a fig_costo_no_inversion.py (misma lógica de costo, réplica exacta
-del chart_14 del dashboard, agregada de forma acumulada por tramo). Nació para
-comparar los 4 escenarios originales sin tope (BAU/OPT/INV/VGB) contra sus
-versiones "con tope" en la rampa de Tx (BAC/OPC); desde 2026-09-16 las figuras
-de reporte solo muestran OPT (BAC) y ETT (ISR), así que el default pasa a
-rs.CORE_SCENARIOS y la comparación tope-vs-sin-tope solo se obtiene pasando
-explícitamente --scenarios (p.ej. --scenarios BAU BAC --ref BAU).
-  Costo total = CAPEX + O&M + Combustible + Energía no Suministrada (ENS)
-donde:
-  - CAPEX/O&M/Combustible salen de CapitalInvestment/OperatingCost por tech-año
-    (max sobre timeslices), clasificados con classify_tech_type; el CAPEX de
-    líneas planificadas (PWRTRN/RNWTRN) se divide entre 1,2 (mismo ajuste que
-    el dashboard); el backstop (BCK) se EXCLUYE de infraestructura y combustible.
-  - ENS = producción del backstop (BCK) valorada al VOLL 1.500 USD/MWh
-    (= 1.500/3,6 MUSD/PJ), igual que chart_14/chart_15. Se sigue calculando y
-    sumando al total por rigor, pero no lleva entrada propia en la leyenda.
+Same cost logic as fig_costo_no_inversion.py (CAPEX + O&M + Combustible + ENS this time,
+ENS valued at the dashboard's own VOLL of 1500 USD/MWh, matching chart_14/15) but built to
+compare the original uncapped scenarios (BAU/OPT/INV/VGB) against their Tx-ramp-"capped"
+versions (BAC/OPC). Since 2026-09-16 the default scenarios are report_style.CORE_SCENARIOS
+(BAC+ISR), so the capped-vs-uncapped comparison needs an explicit
+--scenarios BAU BAC --ref BAU.
 
-El "costo de la no inversión" de cada escenario se mide, EN CADA TRAMO, como el
-diferencial de costo total del sistema frente a la referencia (BAC/OPT por
-defecto): Costo total(X) − Costo total(ref), en ese mismo tramo.
-
-Unidades: billones de USD (escala larga/española, 1 billón = 10^12 = billón
-"long scale"; OJO, NO es el "billion" corto del inglés = 10^9) = MUSD / 1.000.000.
-
-Uso:
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); periods
+    default to report_style.ACCUMULATED_PERIODS; scenarios default to DEFAULT_SCENARIOS
+    (report_style.CORE_SCENARIOS).
+Outputs:
+    outputs/Figures/Report/fig_costo_no_inversion_tope_<p0>_<p1>.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_costo_no_inversion_tope.py
-    python scripts/figures/report/fig_costo_no_inversion_tope.py --periods 2026 2030 2031 2040 2041 2050 --scenarios BAC ISR --ref BAC
+    [--periods ...] [--scenarios BAU BAC] [--ref BAU] [--out base]
 """
 
 from __future__ import annotations
@@ -70,8 +56,9 @@ DEFAULT_REF = "BAC"
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'CAPEX','O&M','Combustible','Energía no Suministrada','total'}}}
-    (MUSD) acumulado dentro de cada periodo. Réplica de la lógica de costo del chart_14."""
+    """{period: {scenario: {'CAPEX','O&M','Combustible',
+    'Energia no Suministrada','total'}}} (MUSD), ENS valued at VOLL=1500 USD/MWh.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = rs.load(cols, scenarios=scenarios)
     df = df[df["Scenario"].isin(scenarios)]
@@ -114,6 +101,19 @@ def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[
 
 
 def build_figure(data: dict, scenarios: list[str], periods: list[tuple[int, int]], ref: str = DEFAULT_REF):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots total system cost including ENS (CAPEX/O&M/Combustible/ENS stack).
+
+    Args:
+        data: nested dict from compute(), keyed by period then scenario.
+        scenarios: scenario codes to draw, in display order.
+        periods: (start, end) tuples to show as sub-bars within each group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(p, {}) for p in periods)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(periods))
 

@@ -1,11 +1,13 @@
-"""
-run_figures.py — maestro de las figuras de REPORTE (scripts/figures/report/).
+"""Master runner for the report figures (scripts/figures/report/).
 
-Corre, en el mismo proceso, los fig_*.py encendidos en run_figures.yaml (orden =
-orden del YAML) tras construir/reutilizar el subconjunto Parquet BAC+ISR.
-Salidas: outputs/Figures/Report/ (dashboard_config.FIGURES_DIR).
+Runs, in the same process, the fig_*.py scripts enabled in run_figures.yaml (in file order),
+after building or reusing the BAC+ISR Parquet subset.
 
-Uso:
+Inputs:
+    run_figures.yaml (per-script on/off switches)
+Outputs:
+    outputs/Figures/Report/ (dashboard_config.FIGURES_DIR; delegated to each fig script)
+Usage:
     python scripts/figures/report/run_figures.py
     python scripts/figures/report/run_figures.py --list
     python scripts/figures/report/run_figures.py --only fig_almacenamiento_2050 fig_costo_unitario

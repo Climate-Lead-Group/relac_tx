@@ -1,18 +1,20 @@
-"""
-fig_combustibles_fosiles_2050_presentation.py — PACK PRESENTACIÓN de
-fig_combustibles_fosiles_2050.py. Mismo dato y misma lógica de cómputo;
-solo cambia la presentación visual para diapositivas: letra más grande,
-escenarios (grupos) más juntos y sin holgura excesiva en los extremos del
-eje X. Sin leyenda ni barras apiladas en esta figura (color = escenario,
-identificado en el eje X) -> los cambios 3 y 4 del pack no aplican aquí.
+"""Presentation variant of report/fig_combustibles_fosiles_2050.py (fossil fuel use).
 
-Ver fig_combustibles_fosiles_2050.py para la documentación completa del
-cómputo (idéntica aquí, sin cambios).
+Same data and computation as the report figure; slide styling changes only: larger fonts,
+scenario groups spaced closer together, tighter X-axis margins. No legend or stacked bars
+here (color = scenario, identified on the X axis), so the legend/label pack changes do not
+apply.
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_combustibles_fosiles_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_combustibles_fosiles_2050_presentation.py --periods 2026 2030 2031 2040 2041 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_combustibles_fosiles_2050_presentation.py --scenarios BAC ISR
+Inputs:
+    TotalTechnologyAnnualActivity (combined CSV); periods default to
+    report_style.ACCUMULATED_PERIODS; scenarios default to
+    report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_combustibles_fosiles_<p0>_<p1>_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_combustibles_fosiles_2050_presentation.py
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ MBEP_PER_PJ = 1.0 / GJ_PER_BEP
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, float]]:
-    """{periodo: {scenario: PJ}} acumulado dentro de cada periodo."""
+    """{period: {scenario: PJ}}, accumulated within each period."""
     df = rs.load(["TotalTechnologyAnnualActivity"], scenarios=scenarios)
     df = df.dropna(subset=["TotalTechnologyAnnualActivity"])
     df = df[df["Scenario"].isin(scenarios)]

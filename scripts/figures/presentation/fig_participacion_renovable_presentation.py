@@ -1,20 +1,20 @@
-"""
-fig_participacion_renovable_presentation.py — PACK PRESENTACIÓN de
-fig_participacion_renovable.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas: letra más grande y
-leyenda en una sola fila (ncol = nº de escenarios; el original usaba
-ncol=2, que con 4 escenarios quedaba en 2 filas; ahora son 2: BAC/ISR). Es un gráfico de LÍNEAS
-(trayectoria por año, sin barras agrupadas por escenario) -> los cambios 2
-y 4 del pack (espaciado entre columnas de escenario / etiquetas dentro de
-barra apilada) no aplican aquí.
+"""Presentation variant of report/fig_participacion_renovable.py (renewable share, %).
 
-Ver fig_participacion_renovable.py para la documentación completa del
-cómputo (idéntica aquí, sin cambios).
+Same data and computation as the report figure (2025-2050 line trajectory); slide styling
+changes: larger fonts and a one-row legend (ncol = number of scenarios; the original used
+ncol=2, which wrapped to 2 rows with 4 scenarios -- now 2: BAC/ISR). This is a line chart
+(one trajectory per year, no scenario-grouped bars), so the bar-spacing and in-segment-label
+pack changes do not apply.
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_participacion_renovable_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_participacion_renovable_presentation.py --years 2025 2030 2035 2040 2045 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_participacion_renovable_presentation.py --scenarios BAC ISR
+Inputs:
+    ProductionByTechnology (combined CSV); years default to DEFAULT_YEARS (2025-2050);
+    scenarios default to report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_participacion_renovable_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_participacion_renovable_presentation.py
+    [--years 2025 2030 2035 2040 2045 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ DEFAULT_YEARS = [y for y in ALL_YEARS if y >= 2025]
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[str, dict[int, float]]:
-    """{scenario: {año: % renovable}} sobre la generación total."""
+    """{scenario: {year: pct renewable}} over total generation."""
     df = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]

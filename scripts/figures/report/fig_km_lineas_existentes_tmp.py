@@ -1,28 +1,25 @@
-"""
-fig_km_lineas_existentes_tmp.py — TEMPORAL. Igual que fig_km_lineas_acumulados.py
-(km de líneas acumulados desde `y0` hasta 2030/2040/2050 por escenario) pero:
+"""Experimental: fig_km_lineas_acumulados.py plus an "Existentes" (existing lines) series.
 
-  1. Añade la serie "Líneas Existentes":
-       km_exist(año) = Σ (ResidualCapacity(año) / Capacity) × Distancia,
-       sobre PWRTRN* + RNWTRN* (mismos techs que "Líneas Planificadas").
-     ResidualCapacity es un STOCK que decae con el tiempo, así que se toma su
-     valor EN el año de la barra (no se acumula en la ventana [y0, año]).
-     Distancia RNW para RNW*, NRNW para PWR/TRN; Capacity/Distancia de
-     CapacityAndDistances.xlsx (por Scenario+país).
-  2. Etiqueta el valor de CADA componente dentro de su tramo de barra (además
-     del total encima) para comparar componentes entre escenarios/años.
-  3. Imprime una tabla larga (año, escenario, componente, km) en consola y la
-     exporta a CSV junto a la figura.
+Adds km_exist(year) = sum((ResidualCapacity(year) / Capacity) * Distance) over
+PWRTRN*/RNWTRN* (the same techs as "Lineas Planificadas"); ResidualCapacity is a stock that
+decays over time, so it is taken AT the bar's year, not accumulated over [y0, year]. Also
+labels each component's value inside its bar segment (in addition to the total on top), and
+prints/exports a long table (year, scenario, component, km) to console and CSV. The other 3
+series keep the original formula (see fig_km_lineas_acumulados.py), accumulated in
+[y0, year].
 
-Las otras 3 series conservan la fórmula del script original:
-  Planificadas         Σ (NewCapacity/Capacity)·Dist, PWRTRN* + RNWTRN*
-  Nuevas No Plan.      Σ (NewCapacity/Capacity)·Dist, RNWNLI* + TRNNLI*
-  Repotenciadas No Pl. Σ (NewCapacity/Capacity)·Dist·1,25, RNWRPO* + TRNRPO*
-(acumuladas en [y0, año], NewCapacity por tech-año = max sobre timeslices).
-
-Uso:
-    PYTHONUTF8=1 python fig_km_lineas_existentes_tmp.py
-    PYTHONUTF8=1 python fig_km_lineas_existentes_tmp.py --y0 2026 --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    NewCapacity, ResidualCapacity (combined CSV), CapacityAndDistances.xlsx; years default
+    to report_style.MULTI_YEARS; scenarios default to report_style.CORE_SCENARIOS
+    (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_km_lineas_existentes_tmp_<y0>_<ymax>.png + a companion CSV
+    (via report_style.save)
+Usage:
+    python scripts/figures/report/fig_km_lineas_existentes_tmp.py
+    [--y0 2026] [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -61,11 +58,7 @@ _COUNTRY_NAMES = {iso3: name for name, iso3 in COUNTRY_ISO3_BY_NAME.items()}
 
 
 def _km_table(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
-    """Filtra techs de Transmisión, cruza con Capacity/Distancia y calcula km.
-
-    Devuelve filas (Scenario, YEAR, TECHNOLOGY, Country, LG, km); el valor por
-    tech-año es el max sobre timeslices (gotcha del dashboard).
-    """
+    """Filter transmission techs, join Capacity/Distance and compute km."""
     df = df[df["TECHNOLOGY"].apply(classify_tech_type) == "Transmisión"].copy()
     df["Country"] = df["TECHNOLOGY"].str[6:9].map(_COUNTRY_NAMES)
     per = (
@@ -85,10 +78,7 @@ def _km_table(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
 
 
 def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {grupo: km, ..., 'total': km}}}.
-
-    Grupos NewCapacity: acumulado en [y0, year]. Existentes: ResidualCapacity en `year`.
-    """
+    """{year: {scenario: {grupo: km, ..., 'total': km}}}."""
     y1 = max(years)
     df = rs.load(["NewCapacity", "ResidualCapacity"], scenarios=scenarios)
     df = df[(df["YEAR"] >= y0) & (df["YEAR"] <= y1) & (df["Scenario"].isin(scenarios))]
@@ -117,6 +107,17 @@ def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[s
 
 
 def build_figure(data: dict, scenarios: list[str], y0: int, years: list[int]):
+    """Draw the grouped, stacked km-by-line-group bar chart and return the Figure.
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        y0: first year of the accumulation window (window is [y0, year] for each bar).
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

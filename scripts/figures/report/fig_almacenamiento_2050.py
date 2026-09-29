@@ -1,20 +1,20 @@
-"""
-fig_almacenamiento_2050.py — Capacidad instalada de almacenamiento por
-escenario en 2030/2040/2050 [GW] (figura de reporte, Entregable 2).
+"""Plot installed storage capacity by scenario for 2030/2040/2050 [GW].
 
-Equivalente estático del chart_03 del dashboard ("Capacidad Instalada de
-Almacenamiento [GW]") agregando los tipos (SDS corta duración + LDS larga
-duración; BDS si algún día aparece) en un solo total por escenario. Parámetro
-TotalCapacityAnnual: una fila por tech-año repetida por timeslice -> dedup por
-Scenario/YEAR/TECHNOLOGY antes de sumar. Barras agrupadas por escenario, con
-una sub-barra por año dentro de cada grupo (report_style.grouped_bar_layout);
-color por escenario (paleta del reporte: rs.SCENARIO_COLORS), constante entre
-años. Más red -> menos almacenamiento requerido (y viceversa en los
-escenarios de Tx restringida).
+Static equivalent of dashboard chart_03 ("Capacidad Instalada de Almacenamiento [GW]"),
+aggregating SDS (short duration) + LDS (long duration; BDS if it ever appears) into one
+total per scenario. Grouped bars by scenario, one sub-bar per year, colored by scenario
+(report_style.SCENARIO_COLORS), constant across years. More transmission generally means
+less storage required (and vice versa in Tx-constrained scenarios).
 
-Uso:
+Inputs:
+    TotalCapacityAnnual (combined CSV; one row per tech-year repeated per timeslice, so it
+    is deduped by Scenario/YEAR/TECHNOLOGY before summing); scenarios default to
+    report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_almacenamiento_2050.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_almacenamiento_2050.py
-    python scripts/figures/report/fig_almacenamiento_2050.py --years 2030 2040 2050 --scenarios BAC ISR
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ _STORAGE_PREFIXES = ("PWRSDS", "PWRLDS", "PWRBDS")
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, float]]:
-    """{year: {scenario: GW}}."""
+    """{year: {scenario: GW}}, deduped total storage capacity."""
     df = rs.load(["TotalCapacityAnnual"], scenarios=scenarios)
     df = df.dropna(subset=["TotalCapacityAnnual"])
     df = df[df["TotalCapacityAnnual"] != 0]

@@ -1,19 +1,22 @@
-"""
-fig_seguridad_energetica_2050_presentation.py — PACK PRESENTACIÓN de
-fig_seguridad_energetica_2050.py. Mismo dato y misma lógica de cómputo;
-solo cambia la presentación visual para diapositivas: letra más grande,
-escenarios (grupos) más juntos y sin holgura excesiva en los extremos del
-eje X. La leyenda (2 entradas: Autóctono / Importado) y la etiqueta de %
-autóctono dentro del tramo ya venían en una sola fila / dentro de barra en
-el original — se mantienen, solo con letra más grande.
+"""Presentation variant of report/fig_seguridad_energetica_2050.py (energy security, %).
 
-Ver fig_seguridad_energetica_2050.py para la documentación completa del
-cómputo (idéntica aquí, sin cambios). Requiere el balance OLADE (ver
-dashboard_config.OLADE_BALANCE_PATH).
+Same data and computation as the report figure (native vs. imported share, regional
+chart_12 logic); slide styling changes only: larger fonts, scenario groups spaced closer
+together, tighter X-axis margins. The 2-entry legend (Autoctono/Importado) and the
+in-segment native-share label were already single-row / in-bar in the original and are
+kept, just larger. Requires the OLADE balance workbook.
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_seguridad_energetica_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_seguridad_energetica_2050_presentation.py --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    UseByTechnology, ProductionByTechnology (combined CSV), the OLADE energy balance
+    workbook (dashboard_config.OLADE_BALANCE_PATH); years default to
+    report_style.MULTI_YEARS; scenarios default to report_style.PRESENTATION_SCENARIOS
+    (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_seguridad_energetica_2050_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_seguridad_energetica_2050_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -36,7 +39,9 @@ from figures.common import report_style as rs
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'auto','imp','total','pct_auto'}}} agregado regional."""
+    """{year: {scenario: {'auto','imp','total','pct_auto'}}}, regional
+    aggregate.
+    """
     df = rs.load(["UseByTechnology", "ProductionByTechnology"], extra_dims=["FUEL"], scenarios=scenarios)
     df = df[(df["YEAR"].isin(years)) & (df["Scenario"].isin(scenarios))].copy()
     df["pref"] = df["TECHNOLOGY"].str[:6]

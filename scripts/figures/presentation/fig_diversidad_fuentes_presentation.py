@@ -1,17 +1,19 @@
-"""
-fig_diversidad_fuentes_presentation.py — PACK PRESENTACIÓN de
-fig_diversidad_fuentes.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas: letra más grande,
-escenarios (grupos) más juntos y sin holgura excesiva en los extremos del
-eje X. Sin leyenda ni barras apiladas en esta figura (color = escenario,
-identificado en el eje X) -> los cambios 3 y 4 del pack no aplican aquí.
+"""Presentation variant of report/fig_diversidad_fuentes.py (effective source count).
 
-Ver fig_diversidad_fuentes.py para la documentación completa del cómputo
-(idéntica aquí, sin cambios).
+Same data and computation as the report figure (1/HHI over generation grouped by source
+family); slide styling changes only: larger fonts, scenario groups spaced closer together,
+tighter X-axis margins. No legend or stacked bars here (color = scenario, identified on the
+X axis).
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_diversidad_fuentes_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_diversidad_fuentes_presentation.py --years 2030 2040 2050
+Inputs:
+    ProductionByTechnology (combined CSV); years default to report_style.MULTI_YEARS;
+    scenarios default to report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_diversidad_fuentes_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_diversidad_fuentes_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from figures.common import report_style as rs
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, float]]:
-    """{year: {scenario: nº efectivo de fuentes (1/HHI)}}."""
+    """{year: {scenario: effective number of sources (1/HHI)}}."""
     df = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]

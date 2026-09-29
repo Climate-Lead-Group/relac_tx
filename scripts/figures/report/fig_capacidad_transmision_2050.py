@@ -1,37 +1,22 @@
-"""
-fig_capacidad_transmision_2050.py — Capacidad instalada de transmisión por
-escenario en 2030/2040/2050 [GW], apilada por grupo de líneas (figura de
-reporte, Entregable 2).
+"""Plot installed transmission capacity by scenario for 2030/2040/2050 [GW].
 
-Equivalente estático del chart_04 del dashboard ("Capacidad Instalada de
-Transmisión [GW]"), filtrado a un set de años, con dos ajustes propios de
-esta figura sobre las líneas repotenciadas y existentes (ver FACTOR_*
-abajo). Ecuaciones a valor nominal:
-  Repotenciadas Planificadas = AMCI            × FACTOR_REPOTENCIADAS (grupo RPO)
-  Repotenciadas No Planif.   = (TCA − AMCI)    × FACTOR_REPOTENCIADAS (grupo RPO)
-  Existentes                 = (TCA − ANC)     − TCA_rpo × FACTOR_EXISTENTES (grupo PLAN)
-  Nuevas Planificadas        = ANC             (grupo PLAN)
-  Nuevas No Planificadas     = TCA             (grupo NLI)
-con TCA=TotalCapacityAnnual, ANC=AccumulatedNewCapacity,
-AMCI=AccumulatedTotalAnnualMinCapacityInvestment y TCA_rpo=TCA del grupo RPO
-(repotenciadas Planificadas + No Planificadas, sin factor, antes de aplicar
-FACTOR_REPOTENCIADAS); valores por tech-año vía max sobre timeslices (mismo
-gotcha que el dashboard). Total = Σ de las 5 categorías ya ajustadas (con
-FACTOR_REPOTENCIADAS=2.25 y FACTOR_EXISTENTES=1.25 el cierre sigue siendo
-exacto porque 2.25−1.25=1, igual que con los factores en 1.0). Las categorías
-sin datos en NINGÚN año/escenario mostrado (típicamente Repotenciadas
-Planificadas) se omiten de la figura y la leyenda.
+Static equivalent of dashboard chart_04 ("Capacidad Instalada de Transmision [GW]"),
+stacked by line group (Repotenciadas Planificadas/No Planificadas, Existentes, Nuevas
+Planificadas/No Planificadas) from TotalCapacityAnnual (TCA), AccumulatedNewCapacity (ANC)
+and AccumulatedTotalAnnualMinCapacityInvestment (AMCI), values taken as max over
+timeslices. Shows the RAW model data, which has a known defect: RP (repowered) lines drop
+in the run's last years; fig_capacidad_transmision_2050_tmp.py applies a cummax fix.
 
-NOTA: este script muestra el dato CRUDO del modelo, que tiene un error: las
-líneas RP (grupo RPO) caen en los últimos años de la corrida. La versión con
-la corrección (cummax por escenario) es fig_capacidad_transmision_2050_tmp.py.
-
-Barras agrupadas por escenario, con una sub-barra apilada por año dentro de
-cada grupo (report_style.grouped_bar_layout).
-
-Uso:
+Inputs:
+    TotalCapacityAnnual, AccumulatedNewCapacity, AccumulatedTotalAnnualMinCapacityInvestment
+    (combined CSV); scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_capacidad_transmision_2050.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_capacidad_transmision_2050.py
-    python scripts/figures/report/fig_capacidad_transmision_2050.py --years 2030 2040 2050 --scenarios BAC ISR
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Categories with no data in any shown year/scenario are omitted from figure/legend.
 """
 
 from __future__ import annotations
@@ -120,6 +105,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed transmission capacity (stacked by line group).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

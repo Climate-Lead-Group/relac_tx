@@ -1,20 +1,22 @@
-"""
-fig_seguridad_energetica_trayectoria_presentation.py — PACK PRESENTACIÓN de
-fig_seguridad_energetica_trayectoria.py. Mismo dato y misma lógica de
-cómputo; solo cambia la presentación visual para diapositivas: letra más
-grande y leyenda en una sola fila (ncol = nº de escenarios; el original
-usaba ncol=2, que con 4 escenarios quedaba en 2 filas; ahora son 2: BAC/ISR). Es un gráfico de
-LÍNEAS (trayectoria por año, sin barras agrupadas por escenario) -> los
-cambios 2 y 4 del pack (espaciado entre columnas de escenario / etiquetas
-dentro de barra apilada) no aplican aquí.
+"""Presentation variant of report/fig_seguridad_energetica_trayectoria.py (native share, %).
 
-Ver fig_seguridad_energetica_trayectoria.py para la documentación completa
-del cómputo (idéntica aquí, sin cambios). Requiere el balance OLADE (ver
-dashboard_config.OLADE_BALANCE_PATH).
+Same data and computation as the report figure (2025-2050 line trajectory, regional
+chart_12 logic); slide styling changes: larger fonts and a one-row legend (ncol = number of
+scenarios; the original used ncol=2, which wrapped to 2 rows with 4 scenarios -- now 2:
+BAC/ISR). This is a line chart, so the bar-spacing and in-segment-label pack changes do not
+apply. Requires the OLADE balance workbook.
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_seguridad_energetica_trayectoria_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_seguridad_energetica_trayectoria_presentation.py --years 2025 2030 2035 2040 2045 2050
+Inputs:
+    UseByTechnology, ProductionByTechnology (combined CSV), the OLADE energy balance
+    workbook (dashboard_config.OLADE_BALANCE_PATH); years default to DEFAULT_YEARS
+    (2025-2050); scenarios default to report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS,
+    BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_seguridad_energetica_trayectoria_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_seguridad_energetica_trayectoria_presentation.py
+    [--years 2025 2030 2035 2040 2045 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -41,7 +43,7 @@ DEFAULT_YEARS = [y for y in ALL_YEARS if y >= 2025]
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[str, dict[int, float]]:
-    """{scenario: {año: % autóctono}} agregado regional."""
+    """{scenario: {year: pct native}}, regional aggregate."""
     df = rs.load(["UseByTechnology", "ProductionByTechnology"], extra_dims=["FUEL"], scenarios=scenarios)
     df = df[(df["YEAR"].isin(years)) & (df["Scenario"].isin(scenarios))].copy()
     df["pref"] = df["TECHNOLOGY"].str[:6]

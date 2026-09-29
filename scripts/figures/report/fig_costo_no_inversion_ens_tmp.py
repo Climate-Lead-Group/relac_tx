@@ -1,27 +1,23 @@
-"""
-fig_costo_no_inversion_ens_tmp.py — SCRIPT TEMPORAL. Variante de
-fig_costo_no_inversion.py que SÍ incluye la Energía no Suministrada (ENS)
-en el costo total, sumada DENTRO del componente "Combustible" (sin leyenda
-nueva: la figura sigue mostrando CAPEX / O&M / Combustible).
+"""Experimental variant of fig_costo_no_inversion.py that adds unserved energy cost.
 
-Diferencias de cómputo respecto a fig_costo_no_inversion.py:
-  - Nuevo sumando ENS = producción del backstop (techs con "BCK") en PJ
-    valorada al VOLL 1.750 USD/MWh (= 1.750/3,6 MUSD/PJ). OJO: NO es el VOLL
-    1.500 USD/MWh de chart_14/15 del dashboard; el valor 1.750 fue fijado a
-    mano para esta corrida temporal (2026-09-01).
-  - La ENS se AGREGA al componente "Combustible" (mismo color/leyenda); el
-    total del escenario y el diferencial vs. la referencia la incluyen.
-  - El OperatingCost del BCK (penalty big-M artificial) se sigue EXCLUYENDO:
-    la ENS se valora solo al VOLL, no al big-M.
+Adds ENS (backstop production, tech names containing "BCK", in PJ) valued at a VOLL of
+1750 USD/MWh (fixed by hand for this run, 2026-09-01; NOT the 1500 USD/MWh used by
+dashboard chart_14/15) inside the existing "Combustible" component -- no new legend entry.
+The backstop's own OperatingCost (an artificial big-M penalty) stays excluded; only the
+VOLL-valued ENS is added. Everything else matches fig_costo_no_inversion.py.
 
-Todo lo demás (CAPEX/O&M, ajuste ÷1,2 de PWRTRN/RNWTRN, acumulación por
-tramo, unidades en billones de USD) es idéntico a fig_costo_no_inversion.py;
-ver ese script para la documentación completa.
-
-Uso:
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); periods
+    default to report_style.ACCUMULATED_PERIODS; scenarios default to
+    report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_costo_no_inversion_ens_<p0>_<p1>_tmp.png (via
+    report_style.save)
+Usage:
     python scripts/figures/report/fig_costo_no_inversion_ens_tmp.py
-    python scripts/figures/report/fig_costo_no_inversion_ens_tmp.py --periods 2026 2030 2031 2040 2041 2050
-    python scripts/figures/report/fig_costo_no_inversion_ens_tmp.py --scenarios BAC ISR --ref BAC
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--ref BAC] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -56,11 +52,9 @@ VOLL_MUSD_PER_PJ = VOLL_USD_PER_MWH / 3.6  # ≈ 486,1 MUSD/PJ
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'CAPEX','O&M','Combustible','ENS','total'}}}
-    (MUSD) acumulado dentro de cada periodo. Igual que fig_costo_no_inversion.py
-    más la ENS (BCK × VOLL), que se suma dentro de 'Combustible'; la clave 'ENS'
-    se conserva solo para el print de consola (ya está incluida en Combustible,
-    NO volver a sumarla)."""
+    """{period: {scenario: {'CAPEX','O&M','Combustible','total'}}} (MUSD);
+    Combustible includes ENS valued at VOLL=1750 USD/MWh.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = rs.load(cols, scenarios=scenarios)
     df = df[df["Scenario"].isin(scenarios)]
@@ -105,6 +99,19 @@ def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[
 
 
 def build_figure(data: dict, scenarios: list[str], periods: list[tuple[int, int]], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots total system cost including ENS in Combustible (CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by period then scenario.
+        scenarios: scenario codes to draw, in display order.
+        periods: (start, end) tuples to show as sub-bars within each group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(p, {}) for p in periods)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(periods))
 

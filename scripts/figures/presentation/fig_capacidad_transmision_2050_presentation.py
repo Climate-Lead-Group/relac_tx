@@ -1,27 +1,22 @@
-"""
-fig_capacidad_transmision_2050_presentation.py — PACK PRESENTACIÓN de
-fig_capacidad_transmision_2050.py. Mismo dato y misma lógica de cómputo;
-solo cambia la presentación visual para diapositivas:
+"""Presentation variant of report/fig_capacidad_transmision_2050.py (transmission capacity).
 
-  1. Letra más grande (ylabel, ticks, labels de grupo, leyenda, valores).
-  2. Escenarios (grupos) más juntos, y menos holgura en los extremos del
-     eje X (group_step + rs.set_grouped_xlim).
-  3. Leyenda en 2 filas (no en 1): con 5 series la fila única quedaba muy
-     larga y agrandaba la figura. Se reordena la leyenda (no el apilado,
-     que conserva el orden original) para que "Líneas Existentes" (la más
-     corta) y "Líneas Repotenciadas No Planificadas" (la más larga) caigan
-     juntas en la fila de 2, y las 3 restantes en la fila de 3 -- así se
-     minimiza el ancho total de la leyenda.
-  4. Valor de CADA categoría anotado dentro de su tramo de barra (el
-     original solo mostraba el total), copiando el formato de
-     fig_km_lineas_existentes_tmp.py.
+Same data and computation as the report figure (stacked by line group); slide styling
+changes: larger fonts, scenario groups spaced closer together, less X-axis margin. Legend
+reflowed to 2 rows instead of 1 (5 series in one row grew the figure too wide); the legend
+order (not the stacking order, which is unchanged) is rearranged so "Lineas Existentes"
+(shortest label) and "Lineas Repotenciadas No Planificadas" (longest) share the 2-entry row,
+minimizing total legend width. Each category's value is now annotated inside its bar
+segment (the report figure only showed the bar total).
 
-Ver fig_capacidad_transmision_2050.py para la documentación completa del
-cómputo (idéntica aquí, sin cambios).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_transmision_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_transmision_2050_presentation.py --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    TotalCapacityAnnual, AccumulatedNewCapacity, AccumulatedTotalAnnualMinCapacityInvestment
+    (combined CSV); scenarios default to report_style.PRESENTATION_SCENARIOS (= BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_capacidad_transmision_2050_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_capacidad_transmision_2050_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -120,6 +115,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed transmission capacity (stacked by line group).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

@@ -1,21 +1,19 @@
-"""
-fig_almacenamiento_2050_presentation.py — PACK PRESENTACIÓN de
-fig_almacenamiento_2050.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas:
+"""Presentation variant of report/fig_almacenamiento_2050.py (installed storage capacity).
 
-  1. Letra más grande (ylabel, ticks, labels de grupo, valores).
-  2. Escenarios (grupos) más juntos: `group_step` reducido en
-     rs.grouped_bar_layout (ver report_style.py).
-  (Sin leyenda ni barras apiladas en esta figura -> los cambios 3 y 4 del
-  pack no aplican aquí; el color de cada barra ya identifica el escenario
-  vía el label de grupo bajo el eje X.)
+Same data and computation as the report figure; only the slide styling changes: larger
+fonts and scenario groups spaced closer together (report_style.grouped_bar_layout
+group_step). No legend or stacked bars here, so the other pack changes (legend layout,
+in-segment labels) do not apply.
 
-Ver fig_almacenamiento_2050.py para la documentación completa del cómputo
-(idéntica aquí, sin cambios).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_almacenamiento_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_almacenamiento_2050_presentation.py --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    TotalCapacityAnnual (combined CSV); scenarios default to
+    report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_almacenamiento_2050_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_almacenamiento_2050_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations

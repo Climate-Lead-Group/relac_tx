@@ -1,21 +1,22 @@
-"""
-fig_ens_tmp.py — SCRIPT TEMPORAL. Figura con SOLO la Energía no Suministrada
-(ENS) en TWh, acumulada por tramo y por escenario (una barra por
-escenario/tramo, color por escenario, sin leyenda de componentes).
+"""Experimental: plot unserved energy only [TWh], accumulated per period, per scenario.
 
-Cómputo:
-  - ENS = producción del backstop (techs con "BCK") vía ProductionByTechnology,
-    en PJ (suma de timeslices/fuels, como chart_15 del dashboard y los demás
-    scripts *_ens_tmp), acumulada dentro de cada tramo y convertida a TWh con
-    el factor de chart_11 (1 PJ = 0,277778 TWh).
-  - La ENS aquí es energía (TWh), no dinero: NO interviene ningún VOLL.
+One bar per scenario/period, colored by scenario, no component legend. ENS = backstop
+production ("BCK" techs) via ProductionByTechnology, in PJ (summed over timeslices/fuels,
+as in dashboard chart_15), accumulated within each period and converted to TWh with the
+chart_11 factor (1 PJ = 0.277778 TWh). This is energy (TWh), not money: no VOLL involved.
+Period layout copied from fig_combustibles_fosiles_ens_tmp.py.
 
-Layout de tramos acumulados calcado de fig_combustibles_fosiles_ens_tmp.py.
-
-Uso:
+Inputs:
+    ProductionByTechnology (combined CSV); periods default to
+    report_style.ACCUMULATED_PERIODS; scenarios default to report_style.CORE_SCENARIOS
+    (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_ens_<p0>_<p1>_tmp.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_ens_tmp.py
-    python scripts/figures/report/fig_ens_tmp.py --periods 2026 2030 2031 2040 2041 2050
-    python scripts/figures/report/fig_ens_tmp.py --scenarios BAC ISR
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -34,9 +35,7 @@ PJ_PER_TWH = 0.277778  # PJ -> TWh (misma constante que chart_11)
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'twh','pj'}}} — ENS acumulada dentro de cada
-    tramo (producción BCK). Incluye entradas en 0.0 para escenarios presentes
-    en el CSV pero sin BCK en el tramo."""
+    """{period: {scenario: {'twh','pj'}}}, accumulated unserved energy within each period."""
     prod = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     prod = prod[prod["Scenario"].isin(scenarios)]
     present = set(prod["Scenario"].unique())

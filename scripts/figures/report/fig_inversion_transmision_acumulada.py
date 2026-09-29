@@ -1,24 +1,19 @@
-"""
-fig_inversion_transmision_acumulada.py — Inversión en transmisión acumulada por
-tramo [MUSD] por escenario (figura de reporte, Entregable 2).
+"""Plot accumulated transmission investment by scenario per period [MUSD].
 
-Réplica de la componente "Transmisión" del chart_05 del dashboard, agregada de
-forma acumulada (no anual) en cada tramo del horizonte (por defecto
-report_style.ACCUMULATED_PERIODS = 2026-2030 / 2031-2040 / 2041-2050):
-  - CapitalInvestment por tech-año (max sobre timeslices, mismo gotcha que el
-    dashboard), tecnologías con classify_tech_type == "Transmisión" (líneas
-    PWRTRN/RNWTRN/RNWNLI/RNWRPO/TRNNLI/TRNRPO; interconectores puros y BCK
-    quedan fuera del clasificador).
-  - El CAPEX de líneas planificadas (PWRTRN/RNWTRN) se divide entre 1,2 (mismo
-    ajuste que el dashboard/Tableau).
-Barras agrupadas por escenario, con una sub-barra por tramo dentro de cada
-grupo (report_style.grouped_bar_layout); color por escenario (paleta del
-reporte: rs.SCENARIO_COLORS), constante entre tramos.
+Replicates the "Transmision" component of dashboard chart_05, aggregated cumulatively (not
+annually) per period: CapitalInvestment by tech-year (max over timeslices), technologies
+with classify_tech_type == "Transmision" (PWRTRN/RNWTRN/RNWNLI/RNWRPO/TRNNLI/TRNRPO; pure
+interconnectors and BCK are outside the classifier); planned-line (PWRTRN/RNWTRN) CAPEX is
+divided by 1.2, same as the dashboard. Grouped bars by scenario, one sub-bar per period.
 
-Uso:
+Inputs:
+    CapitalInvestment (combined CSV); periods default to report_style.ACCUMULATED_PERIODS;
+    scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_inversion_transmision_<p0>_<p1>.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_inversion_transmision_acumulada.py
-    python scripts/figures/report/fig_inversion_transmision_acumulada.py --periods 2026 2030 2031 2040 2041 2050
-    python scripts/figures/report/fig_inversion_transmision_acumulada.py --scenarios BAC ISR
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -39,7 +34,7 @@ from figures.common import report_style as rs
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, float]]:
-    """{periodo: {scenario: MUSD}} acumulado dentro de cada periodo."""
+    """{period: {scenario: MUSD}}, accumulated within each period."""
     df = rs.load(["CapitalInvestment"], scenarios=scenarios)
     df = df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
     df = df[df["Scenario"].isin(scenarios)]

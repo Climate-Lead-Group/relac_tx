@@ -1,25 +1,20 @@
-"""
-fig_costo_unitario_presentation.py — PACK PRESENTACIÓN de
-fig_costo_unitario.py. Mismo dato y misma lógica de cómputo; solo cambia
-la presentación visual para diapositivas:
+"""Presentation variant of report/fig_costo_unitario.py (unit system cost, USD/MWh).
 
-  1. Letra más grande (ylabel, ticks, labels de grupo, leyenda, valores).
-  2. Escenarios (grupos) más juntos, y menos holgura en los extremos del
-     eje X (group_step + rs.set_grouped_xlim).
-  3. Leyenda en una sola fila (ya lo estaba: 3 entradas con ncol=3; se deja
-     explícito y con letra más grande).
-  4. Valor de CADA componente (CAPEX anualizado, O&M, Combustible)
-     anotado dentro de su tramo de barra (el original solo mostraba el
-     total y el delta vs. referencia), copiando el formato de
-     fig_km_lineas_existentes_tmp.py.
+Same data and computation as the report figure (annualized CAPEX + O&M + Combustible over
+total production); slide styling changes: larger fonts, tighter groups, less X-axis margin,
+one-row legend (already was: 3 entries, ncol=3, now explicit and larger), and each
+component's value (annualized CAPEX, O&M, Combustible) annotated inside its bar segment
+(the report figure only showed the total and the delta vs. reference).
 
-Ver fig_costo_unitario.py para la documentación completa del cómputo
-(idéntica aquí, sin cambios).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_presentation.py --years 2030 2040 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_presentation.py --scenarios BAC ISR --ref BAC
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); years default
+    to report_style.MULTI_YEARS; scenarios default to report_style.PRESENTATION_SCENARIOS
+    (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_costo_unitario_presentation.png (via report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_costo_unitario_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--ref BAC] [--out base]
 """
 
 from __future__ import annotations
@@ -58,8 +53,9 @@ PJ_PER_TWH = 0.277778  # PJ -> TWh (misma constante que chart_11)
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}} (USD/MWh).
-    Misma métrica que el chart_11 (ver docstring del script original)."""
+    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}}
+    (USD/MWh).
+    """
     def no_bck(df):
         return df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
 
@@ -108,6 +104,19 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots unit system cost (annualized CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

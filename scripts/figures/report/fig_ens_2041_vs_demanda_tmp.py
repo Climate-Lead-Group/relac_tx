@@ -1,24 +1,23 @@
-"""
-fig_ens_2041_vs_demanda_tmp.py — SCRIPT TEMPORAL. Razón entre la Energía no
-Suministrada (ENS) del año BASE 2041 (valor FIJO por escenario) y la demanda
-de cada año, como serie de tiempo 2041–2050 [%]. Una línea por escenario.
+"""Experimental: ratio of fixed base-year (2041) unserved energy to demand, 2041-2050 [%].
 
-Cómputo:
-  - Numerador (fijo): ENS del año base = producción del backstop (techs con
-    "BCK") vía ProductionByTechnology en PJ, sumada en el año base por
-    escenario (mismo cómputo que fig_ens_tmp.py). NO cambia a lo largo de la
-    serie. OJO: BAC/OPC no tienen BCK en 2041 (su primer BCK aparece en 2045),
-    así que sus líneas salen planas en 0.
-  - Denominador (varía por año): demanda final exógena de electricidad =
-    SpecifiedAnnualDemand (insumo del modelo, fuels ELC por país) sumada por
-    escenario-año en PJ. Idéntica en los 4 escenarios core del snapshot actual.
-  - Razón [%] = ENS_base / demanda_año × 100. Ambos en PJ (la conversión a TWh
-    se cancela; el print de consola sí reporta la ENS base en TWh).
+One line per scenario. Numerator (fixed across the series): base-year ENS = backstop
+production ("BCK" techs) via ProductionByTechnology, summed in the base year per scenario
+(same computation as fig_ens_tmp.py); BAC/OPC have no BCK in 2041 (their first BCK appears
+in 2045), so their lines are flat at 0. Denominator (varies by year): exogenous electricity
+demand = SpecifiedAnnualDemand (ELC fuels) summed per scenario-year, in PJ. Ratio [%] =
+ENS_base / demand_year * 100 (PJ cancels out; the console log reports the base ENS in TWh).
 
-Uso:
+Inputs:
+    ProductionByTechnology, SpecifiedAnnualDemand (combined CSV); base year default 2041;
+    scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_ens_<base_year>_vs_demanda_<y0>_<y1>_tmp.png (via
+    report_style.save)
+Usage:
     python scripts/figures/report/fig_ens_2041_vs_demanda_tmp.py
-    python scripts/figures/report/fig_ens_2041_vs_demanda_tmp.py --base-year 2041 --years 2041 2042 ... 2050
-    python scripts/figures/report/fig_ens_2041_vs_demanda_tmp.py --scenarios BAC ISR
+    [--base-year 2041] [--years 2041 ... 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -40,11 +39,7 @@ DEFAULT_YEARS = list(range(2041, 2051))
 
 
 def compute(base_year: int, years: list[int], scenarios: list[str]) -> tuple[dict[str, dict[int, float]], dict[str, float]]:
-    """({scenario: {año: razón_%}}, {scenario: ENS_base_PJ}).
-
-    Razón = ENS del año base (producción BCK, fija por escenario) / demanda
-    exógena (SpecifiedAnnualDemand) de cada año, en %. Escenarios sin BCK en
-    el año base entran con ENS 0 (línea plana en 0)."""
+    """({scenario: {year: ratio_pct}}, {scenario: base_year_ENS_PJ})."""
     prod = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     prod = prod[(prod["Scenario"].isin(scenarios)) & (prod["YEAR"] == base_year)]
     present = set(prod["Scenario"].unique())

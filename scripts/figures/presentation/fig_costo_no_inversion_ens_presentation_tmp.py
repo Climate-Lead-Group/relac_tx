@@ -1,30 +1,23 @@
-"""
-fig_costo_no_inversion_ens_presentation_tmp.py — SCRIPT TEMPORAL (pack
-presentación). Variante de fig_costo_no_inversion_presentation.py que SÍ
-incluye la Energía no Suministrada (ENS) en el costo total, sumada DENTRO
-del componente "Combustible" (sin leyenda nueva: la figura sigue mostrando
-CAPEX / O&M / Combustible).
+"""Experimental presentation pack: total system cost plus unserved energy (ENS).
 
-Diferencias de cómputo respecto a fig_costo_no_inversion(_presentation).py:
-  - Nuevo sumando ENS = producción del backstop (techs con "BCK") en PJ
-    valorada al VOLL 1.750 USD/MWh (= 1.750/3,6 MUSD/PJ). OJO: NO es el VOLL
-    1.500 USD/MWh de chart_14/15 del dashboard; el valor 1.750 fue fijado a
-    mano para esta corrida temporal (2026-09-01).
-  - La ENS se AGREGA al componente "Combustible" (mismo color/leyenda); el
-    total del escenario, la etiqueta interna del tramo Combustible y el
-    diferencial vs. la referencia la incluyen.
-  - El OperatingCost del BCK (penalty big-M artificial) se sigue EXCLUYENDO:
-    la ENS se valora solo al VOLL, no al big-M.
+Presentation variant of report/fig_costo_no_inversion_ens_tmp.py: adds ENS (backstop
+production, in PJ, valued at VOLL=1750 USD/MWh fixed for this run, 2026-09-01; NOT the
+1500 USD/MWh of dashboard chart_14/15) inside "Combustible", no new legend entry. Visual
+styling (larger fonts, tighter groups, one-row legend, per-component value labels inside
+each bar segment) is inherited from fig_costo_no_inversion_presentation.py.
 
-La presentación visual (letra grande, grupos juntos, leyenda en una fila,
-valor de cada componente dentro de su tramo) es la heredada de
-fig_costo_no_inversion_presentation.py; ver ese script y
-fig_costo_no_inversion.py para la documentación completa.
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_ens_presentation_tmp.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_ens_presentation_tmp.py --periods 2026 2030 2031 2040 2041 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_ens_presentation_tmp.py --scenarios BAC ISR --ref BAC
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); periods
+    default to report_style.ACCUMULATED_PERIODS; scenarios default to
+    report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_costo_no_inversion_ens_<p0>_<p1>_presentation_tmp.png
+    (via report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_costo_no_inversion_ens_presentation_tmp.py
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--ref BAC] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -59,11 +52,9 @@ VOLL_MUSD_PER_PJ = VOLL_USD_PER_MWH / 3.6  # ≈ 486,1 MUSD/PJ
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'CAPEX','O&M','Combustible','ENS','total'}}}
-    (MUSD) acumulado dentro de cada periodo. Igual que
-    fig_costo_no_inversion_presentation.py más la ENS (BCK × VOLL), que se suma
-    dentro de 'Combustible'; la clave 'ENS' se conserva solo para el print de
-    consola (ya está incluida en Combustible, NO volver a sumarla)."""
+    """{period: {scenario: {'CAPEX','O&M','Combustible','ENS','total'}}}
+    (MUSD); Combustible includes the ENS term.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = rs.load(cols, scenarios=scenarios)
     df = df[df["Scenario"].isin(scenarios)]
@@ -108,6 +99,19 @@ def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[
 
 
 def build_figure(data: dict, scenarios: list[str], periods: list[tuple[int, int]], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots total system cost including ENS in Combustible (CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by period then scenario.
+        scenarios: scenario codes to draw, in display order.
+        periods: (start, end) tuples to show as sub-bars within each group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(p, {}) for p in periods)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(periods), group_step=0.80)

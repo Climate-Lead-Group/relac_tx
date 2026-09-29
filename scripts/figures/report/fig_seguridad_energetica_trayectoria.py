@@ -1,25 +1,21 @@
-"""
-fig_seguridad_energetica_trayectoria.py — Energía autóctona / seguridad
-energética [%] por escenario, trayectoria 2025–2050 (figura de reporte,
-Entregable 2).
+"""Plot native energy share [%] by scenario, as a 2025-2050 trajectory.
 
-Gráfico de LÍNEAS (una por escenario, paleta del reporte rs.SCENARIO_COLORS)
-con la participación autóctona agregada regional año a año (2025–2050).
-Misma métrica que fig_seguridad_energetica_2050.py (versión barra, agrupada
-por escenario y año 2030/2040/2050), réplica de la lógica regional del
-chart_12 del dashboard:
-  - Fósil/nuclear: combustible consumido (UseByTechnology) por país y fuel,
-    repartido importado/autóctono con las cuotas de importación de OLADE
-    (load_fossil_import_shares; fallback 1,0 = importado).
-  - Renovable: electricidad generada (ProductionByTechnology) por país = autóctona.
-  - Share autóctono = (fósil local + renovable) / (idem + fósil importado),
-    agregado regional por escenario-año.
+Line chart (one line per scenario, report_style.SCENARIO_COLORS) tracking the regional
+native-energy share year by year. Same metric as fig_seguridad_energetica_2050.py (bar
+version, grouped by scenario/2030-2040-2050), replicating chart_12's regional logic:
+fossil/nuclear consumption (UseByTechnology) split imported/native via OLADE shares
+(load_fossil_import_shares); renewable generation (ProductionByTechnology) counts as
+native; native share = (local fossil + renewable) / (that + imported fossil).
 
-Requiere el balance OLADE (dashboard_config.OLADE_BALANCE_PATH).
-
-Uso:
+Inputs:
+    UseByTechnology, ProductionByTechnology (combined CSV), the OLADE energy balance
+    workbook (dashboard_config.OLADE_BALANCE_PATH); years default to DEFAULT_YEARS
+    (2025-2050); scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_seguridad_energetica_trayectoria.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_seguridad_energetica_trayectoria.py
-    python scripts/figures/report/fig_seguridad_energetica_trayectoria.py --years 2025 2030 2035 2040 2045 2050
+    [--years 2025 2030 2035 2040 2045 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -46,7 +42,7 @@ DEFAULT_YEARS = [y for y in ALL_YEARS if y >= 2025]
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[str, dict[int, float]]:
-    """{scenario: {año: % autóctono}} agregado regional."""
+    """{scenario: {year: pct native}}, regional aggregate."""
     df = rs.load(["UseByTechnology", "ProductionByTechnology"], extra_dims=["FUEL"], scenarios=scenarios)
     df = df[(df["YEAR"].isin(years)) & (df["Scenario"].isin(scenarios))].copy()
     df["pref"] = df["TECHNOLOGY"].str[:6]

@@ -1,21 +1,21 @@
-"""
-fig_km_lineas_acumulados_presentation.py — PACK PRESENTACIÓN de
-fig_km_lineas_acumulados.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas:
+"""Presentation variant of report/fig_km_lineas_acumulados.py (accumulated Tx line km).
 
-  1. Letra más grande (ylabel, ticks, labels de grupo, leyenda, valores).
-  2. Escenarios (grupos) más juntos: `group_step` reducido en
-     rs.grouped_bar_layout (ver report_style.py).
-  3. Leyenda en una sola fila (ncol = nº de categorías presentes).
-  4. Valor de CADA tramo anotado dentro de su segmento de barra (además del
-     total encima), copiando el formato de fig_km_lineas_existentes_tmp.py.
+Same data and computation as the report figure (km accumulated over [y0, year], stacked by
+line group); slide styling changes: larger fonts, scenario groups spaced closer together
+(group_step), one-row legend (ncol = number of categories present), and each segment's
+value annotated inside its bar (in addition to the total on top), copying the format of
+fig_km_lineas_existentes_tmp.py.
 
-Ver fig_km_lineas_acumulados.py para la documentación de la fórmula de
-cómputo (idéntica aquí, sin cambios).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_km_lineas_acumulados_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_km_lineas_acumulados_presentation.py --y0 2026 --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    NewCapacity (combined CSV), CapacityAndDistances.xlsx; years default to
+    report_style.MULTI_YEARS; scenarios default to report_style.PRESENTATION_SCENARIOS
+    (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_km_lineas_<y0>_<ymax>_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_km_lineas_acumulados_presentation.py
+    [--y0 2026] [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -49,7 +49,9 @@ _COUNTRY_NAMES = {iso3: name for name, iso3 in COUNTRY_ISO3_BY_NAME.items()}
 
 
 def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {grupo: km, ..., 'total': km}}} acumulado en [y0, year]."""
+    """{year: {scenario: {grupo: km, ..., 'total': km}}} accumulated in
+    [y0, year].
+    """
     y1 = max(years)
     df = rs.load(["NewCapacity"], scenarios=scenarios)
     df = df[(df["YEAR"] >= y0) & (df["YEAR"] <= y1) & (df["Scenario"].isin(scenarios))]
@@ -91,6 +93,17 @@ def compute(y0: int, years: list[int], scenarios: list[str]) -> dict[int, dict[s
 
 
 def build_figure(data: dict, scenarios: list[str], y0: int, years: list[int]):
+    """Draw the grouped, stacked km-by-line-group bar chart and return the Figure.
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        y0: first year of the accumulation window (window is [y0, year] for each bar).
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

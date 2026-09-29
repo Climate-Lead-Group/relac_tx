@@ -1,29 +1,23 @@
-"""
-fig_capacidad_generacion_tecnologia_2050_presentation.py — Variante de
-fig_capacidad_generacion_2050_presentation.py que, en lugar de apilar solo
-Renovable / No Renovable, desglosa cada tramo en sus tecnologías individuales
-(familia PWR de 6 letras, misma clasificación que classify_source_family /
-SOURCE_FAMILY_NAMES: Solar Fotovoltaica, Hidroeléctrica, Eólica Terrestre,
-Carbón, Gas Natural, etc.).
+"""Plot installed generation capacity by scenario, broken down by tech family, GW.
 
-Mismo filtro base que el original (TotalCapacityAnnual, classify_tech_generation
-para quedarse solo con filas Renovable/No Renovable) — el total de cada barra
-coincide exactamente con el del gráfico de 2 colores. Dentro de eso se agrupa
-además por familia de tecnología para el desglose.
+Presentation-only variant of fig_capacidad_generacion_2050_presentation.py (no report/
+counterpart): instead of a 2-color Renewable/Non-renewable stack, each bar is broken down
+by individual technology family (the 6-letter PWR code, via classify_source_family /
+SOURCE_FAMILY_NAMES: Solar PV, Hydro, Onshore Wind, Coal, Natural Gas, etc.); bar totals
+match the 2-color figure exactly. Renewable sub-techs stack at the bottom (RENEWABLE_CODES
+order), non-renewable ones on top (NON_RENEWABLE_CODES order). Only technologies with
+capacity > 0 in the requested years/scenarios are drawn/legended; a segment is only
+value-labeled if it exceeds ~8% of its bar (to avoid 16 illegible labels).
 
-Apilado: abajo las sub-tecnologías renovables (orden de RENEWABLE_CODES),
-arriba las no renovables (orden de NON_RENEWABLE_CODES) — conserva la
-intuición visual ren/no-ren del gráfico original. Solo se dibujan/aparecen en
-leyenda las tecnologías con capacidad > 0 en los años/escenarios pedidos.
-
-Etiquetas: total en GW encima de cada barra (igual que el original); dentro
-de cada segmento solo se etiqueta el valor si el segmento supera ~8% de la
-barra (evita saturar con 16 etiquetas ilegibles) — los segmentos chicos se
-identifican solo por la leyenda.
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_generacion_tecnologia_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_generacion_tecnologia_2050_presentation.py --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    TotalCapacityAnnual (combined CSV); scenarios default to
+    report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_capacidad_generacion_tecnologia_2050_presentation.png
+    (via report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_capacidad_generacion_tecnologia_2050_presentation.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -76,7 +70,9 @@ TECH_COLORS = {
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'by_tech': {code: gw}, 'ren','no_ren','total','pct'}}}."""
+    """{year: {scenario: {'by_tech': {code: gw}, 'ren','no_ren','total',
+    'pct'}}}.
+    """
     df = rs.load(["TotalCapacityAnnual"], scenarios=scenarios)
     df = df.dropna(subset=["TotalCapacityAnnual"])
     df = df[df["TotalCapacityAnnual"] != 0]
@@ -112,6 +108,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed generation capacity broken down by technology family.
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

@@ -1,18 +1,19 @@
-"""
-fig_generacion_anual_2050_presentation.py — PACK PRESENTACIÓN de
-fig_generacion_anual_2050.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas: letra más grande,
-escenarios (grupos) más juntos y sin holgura excesiva en los extremos del
-eje X. La leyenda (2 entradas: Renovable / No Renovable) y la etiqueta de
-% renovable dentro del tramo ya venían en una sola fila / dentro de barra
-en el original — se mantienen, solo con letra más grande.
+"""Presentation variant of report/fig_generacion_anual_2050.py (annual generation, TWh).
 
-Ver fig_generacion_anual_2050.py para la documentación completa del
-cómputo (idéntica aquí, sin cambios).
+Same data and computation as the report figure (Renewable/Non-renewable stack, plus
+renewable share); slide styling changes only: larger fonts, scenario groups spaced closer
+together, tighter X-axis margins. The 2-entry legend and the in-segment renewable-share
+label were already single-row / in-bar in the original and are kept, just larger.
 
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_generacion_anual_2050_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_generacion_anual_2050_presentation.py --years 2030 2040 2045
+Inputs:
+    ProductionByTechnology (combined CSV); years default to report_style.MULTI_YEARS;
+    scenarios default to report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_generacion_anual_2050_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_generacion_anual_2050_presentation.py
+    [--years 2030 2040 2045] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -60,6 +61,18 @@ def compute_generation(years: list[int], scenarios: list[str]) -> dict[int, dict
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots annual generation (Renewable/Non-renewable stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

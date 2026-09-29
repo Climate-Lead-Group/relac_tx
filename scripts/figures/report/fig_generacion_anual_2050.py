@@ -1,25 +1,19 @@
-"""
-fig_generacion_anual_2050.py — Figura de reporte (Entregable 2, "Generación
-anual por escenario en 2030/2040/2050 (TWh) y participación renovable").
+"""Plot annual generation by scenario for 2030/2040/2050 [TWh], plus renewable share.
 
-Reproduce la Figura 55 del Entregable 2 como figura ESTÁTICA y trazable, leyendo
-del mismo oráculo que el dashboard (RELAC_TX_Combined_Inputs_Outputs.csv via
-dashboard_config) — NO es un recorte manual del dashboard.
+Reproduces Entregable 2 Figure 55 as a static, reproducible figure: static, report-style
+equivalent of the dashboard's "chart02 - Generacion Anual [TWh]", filtered to a set of
+years and the core scenarios. Source: ProductionByTechnology (PJ) / 3.6 -> TWh, classified
+Renewable/Non-renewable with classify_tech_generation (same as the dashboard). Grouped bars
+by scenario, one stacked sub-bar (Renewable/Non-renewable) per year within each group.
 
-Equivalente estático, en estilo de reporte, del "chart02 – Generación Anual [TWh]"
-de build_dashboard_nonsupplied.py, filtrado a un set de años y a los 4
-escenarios core. Barras agrupadas por escenario, con una sub-barra apilada
-(Renovable / No Renovable) por año dentro de cada grupo
-(report_style.grouped_bar_layout).
-
-Fuente de datos : ProductionByTechnology (PJ) -> /3.6 -> TWh
-Clasificación   : classify_tech_generation (Renovable / No Renovable), idéntica al dashboard
-Escenarios      : BAC->OPT, ISR->ETT (SCENARIO_ALIAS; solo estos dos desde 2026-09-16)
-
-Uso:
+Inputs:
+    ProductionByTechnology (combined CSV); years default to report_style.MULTI_YEARS;
+    scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_generacion_anual_2050.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_generacion_anual_2050.py
-    python scripts/figures/report/fig_generacion_anual_2050.py --years 2030 2040 2045
-    python scripts/figures/report/fig_generacion_anual_2050.py --scenarios BAC ISR
+    [--years 2030 2040 2045] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -40,11 +34,7 @@ from figures.common import report_style as rs
 
 
 def compute_generation(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'ren','no_ren','total','pct'}}} (TWh).
-
-    Misma lógica que chart02: ProductionByTechnology (PJ) sumado a nivel de
-    timeslice por tech-año, /3.6 a TWh, clasificado Renovable/No Renovable.
-    """
+    """{year: {scenario: {'ren','no_ren','total','pct'}}} (TWh)."""
     df = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]
@@ -71,6 +61,18 @@ def compute_generation(years: list[int], scenarios: list[str]) -> dict[int, dict
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots annual generation (Renewable/Non-renewable stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

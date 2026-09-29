@@ -1,23 +1,19 @@
-"""
-fig_diversidad_fuentes.py — Nº efectivo de fuentes de generación (1/HHI) por
-escenario en 2030/2040/2050 (figura de reporte, Entregable 2).
+"""Plot the effective number of generation sources (1/HHI) by scenario for 2030/2040/2050.
 
-Equivalente estático del chart_13 del dashboard ("Resiliencia — diversidad de
-fuentes"):
-  - Generación anual (ProductionByTechnology, suma sobre países y timeslices)
-    por FAMILIA de fuente (classify_source_family: código PWR de 6 letras;
-    excluye almacenamiento, líneas y backstop).
-  - HHI = Σ shareᵢ² sobre las familias; Nº efectivo de fuentes = 1/HHI.
-Más alto = matriz más diversa (ninguna fuente domina; una amenaza cualquiera
-alcanza solo una porción limitada del suministro).
+Static equivalent of dashboard chart_13: annual generation (ProductionByTechnology, summed
+over countries and timeslices) grouped by source family (classify_source_family, a 6-letter
+PWR code; excludes storage, lines and backstop); HHI = sum(share_i^2) over families;
+effective number of sources = 1/HHI. Higher = more diverse matrix (no single source
+dominates, so any one threat only reaches a limited share of supply).
 
-Barras agrupadas por escenario, con una sub-barra por año dentro de cada grupo
-(report_style.grouped_bar_layout); color por escenario (paleta del reporte:
-rs.SCENARIO_COLORS, igual que fig_almacenamiento_2050.py), constante entre años.
-
-Uso:
+Inputs:
+    ProductionByTechnology (combined CSV); years default to report_style.MULTI_YEARS;
+    scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_diversidad_fuentes.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_diversidad_fuentes.py
-    python scripts/figures/report/fig_diversidad_fuentes.py --years 2030 2040 2050
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -38,7 +34,7 @@ from figures.common import report_style as rs
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, float]]:
-    """{year: {scenario: nº efectivo de fuentes (1/HHI)}}."""
+    """{year: {scenario: effective number of sources (1/HHI)}}."""
     df = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]

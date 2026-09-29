@@ -1,32 +1,24 @@
-"""
-fig_capacidad_transmision_2050_tmp.py — TEMPORAL: versión de
-fig_capacidad_transmision_2050.py CON la corrección del error del modelo en
-las líneas RP. El script original muestra el dato crudo; este aplica el
-máximo acumulado (ver abajo) y escribe outputs con sufijo _tmp (no pisa la
-figura oficial).
+"""Experimental variant of fig_capacidad_transmision_2050.py with the RP-line cummax fix.
 
-Corrección de un error del modelo: TotalCapacityAnnual de las líneas RP
-(grupo RPO) cae en los últimos años de la corrida (desde 2044 en ISR/VSR;
-solo en 2050 en BAC/OPC), cuando una línea repotenciada no puede
-"des-repotenciarse". Por eso la serie anual agregada de TCA_rpo de cada
-escenario se reemplaza por su máximo acumulado (cummax) sobre TODOS los años
-del modelo (no solo los mostrados: el pico de BAC ocurre en 2049, que no se
-grafica). Esto corrige a la vez Repotenciadas No Planificadas (dejan de
-caer) y Existentes (dejan de inflarse, porque restan TCA_rpo). El cummax es
-por escenario, sin mezclar escenarios, y no toca PLAN ni NLI.
+The model lets repowered (RP / RPO group) TotalCapacityAnnual drop in the run's last years
+(a line cannot "un-repower"); this fixes it by replacing each scenario's annual RPO series
+with its cumulative max (cummax) over ALL model years, not just the ones shown. That also
+fixes the downstream "Repotenciadas No Planificadas" and "Existentes" categories, which are
+derived from the RPO total. Everything else (equations, factors, max-over-timeslices) is
+identical to fig_capacidad_transmision_2050.py.
 
-NOTA (2026-09-02): la caída se observó en el snapshot del CSV de agosto; en
-el CSV regenerado el 2026-09-02 ya NO aparece a nivel agregado, así que hoy
-este script da lo mismo que el original y el cummax queda como salvaguarda
-por si el error reaparece en futuras corridas.
-
-Resto del cómputo idéntico al original (ver su docstring): ecuaciones a
-valor nominal con FACTOR_REPOTENCIADAS/FACTOR_EXISTENTES, valores por
-tech-año vía max sobre timeslices, cierre exacto del total.
-
-Uso:
+Inputs:
+    TotalCapacityAnnual, AccumulatedNewCapacity, AccumulatedTotalAnnualMinCapacityInvestment
+    (combined CSV); scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_capacidad_transmision_2050_tmp.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_capacidad_transmision_2050_tmp.py
-    python scripts/figures/report/fig_capacidad_transmision_2050_tmp.py --years 2030 2040 2050 --scenarios BAC ISR
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
+    - As of the 2026-09-02 CSV the raw drop no longer appears at the aggregate level, so
+      today this script matches the original; the cummax stays as a safeguard.
 """
 
 from __future__ import annotations
@@ -127,6 +119,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed transmission capacity (stacked by line group, cummax-fixed).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(len(scenarios), len(years))
 

@@ -1,18 +1,19 @@
-"""
-fig_participacion_renovable.py — Participación renovable en la generación [%]
-por escenario, 2025–2050 (figura de reporte, Entregable 2).
+"""Plot the renewable share of generation [%] by scenario, as a 2025-2050 trajectory.
 
-Gráfico de LÍNEAS (una por escenario, paleta del reporte rs.SCENARIO_COLORS)
-con la trayectoria del % renovable año a año (2025–2050). Misma métrica que
-la etiqueta "%" del chart_02 del dashboard y de fig_generacion_anual_2050:
-ProductionByTechnology (PJ, nivel timeslice -> suma por año), clasificado
-Renovable / No Renovable con classify_tech_generation (backstop excluido);
-% = Renovable / (Renovable + No Renovable).
+Line chart (one line per scenario, report_style.SCENARIO_COLORS) tracking the year-by-year
+renewable share (2025-2050). Same metric as the "%" label of chart_02 and
+fig_generacion_anual_2050.py: ProductionByTechnology (PJ, timeslice level, summed per
+year), classified Renewable/Non-renewable with classify_tech_generation (backstop
+excluded); pct = Renewable / (Renewable + Non-renewable).
 
-Uso:
+Inputs:
+    ProductionByTechnology (combined CSV); years default to DEFAULT_YEARS (2025-2050);
+    scenarios default to report_style.CORE_SCENARIOS (BAC+ISR).
+Outputs:
+    outputs/Figures/Report/fig_participacion_renovable.png (via report_style.save)
+Usage:
     python scripts/figures/report/fig_participacion_renovable.py
-    python scripts/figures/report/fig_participacion_renovable.py --years 2025 2030 2035 2040 2045 2050
-    python scripts/figures/report/fig_participacion_renovable.py --scenarios BAC ISR
+    [--years 2025 2030 2035 2040 2045 2050] [--scenarios BAC ISR] [--out base]
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ DEFAULT_YEARS = [y for y in ALL_YEARS if y >= 2025]
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[str, dict[int, float]]:
-    """{scenario: {año: % renovable}} sobre la generación total."""
+    """{scenario: {year: pct renewable}} over total generation."""
     df = rs.load(["ProductionByTechnology"], scenarios=scenarios)
     df = df.dropna(subset=["ProductionByTechnology"])
     df = df[df["ProductionByTechnology"] != 0]

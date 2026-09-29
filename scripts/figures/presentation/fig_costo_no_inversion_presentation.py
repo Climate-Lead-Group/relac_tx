@@ -1,25 +1,22 @@
-"""
-fig_costo_no_inversion_presentation.py — PACK PRESENTACIÓN de
-fig_costo_no_inversion.py. Mismo dato y misma lógica de cómputo; solo
-cambia la presentación visual para diapositivas:
+"""Presentation variant of report/fig_costo_no_inversion.py (total system cost, BUSD).
 
-  1. Letra más grande (ylabel, ticks, labels de grupo, leyenda, valores).
-  2. Escenarios (grupos) más juntos, y menos holgura en los extremos del
-     eje X (group_step + rs.set_grouped_xlim).
-  3. Leyenda en una sola fila (ya lo estaba: 3 entradas con ncol=3; se deja
-     explícito y con letra más grande).
-  4. Valor de CADA componente (CAPEX, O&M, Combustible; la Energía no
-     Suministrada se ignora) anotado dentro de su tramo de barra (el original solo
-     mostraba el total y el delta vs. referencia), copiando el formato de
-     fig_km_lineas_existentes_tmp.py.
+Same data and computation as the report figure (CAPEX + O&M + Combustible, chart_14 logic,
+accumulated per period); slide styling changes: larger fonts, tighter groups, less X-axis
+margin, one-row legend (already was: 3 entries, ncol=3, now explicit and larger), and each
+component's value (CAPEX, O&M, Combustible; ENS is not part of this figure) annotated
+inside its bar segment (the report figure only showed the total and the delta vs.
+reference).
 
-Ver fig_costo_no_inversion.py para la documentación completa del cómputo
-(idéntica aquí, sin cambios).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_presentation.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_presentation.py --periods 2026 2030 2031 2040 2041 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_no_inversion_presentation.py --scenarios BAC ISR --ref BAC
+Inputs:
+    CapitalInvestment, OperatingCost (combined CSV); periods default to
+    report_style.ACCUMULATED_PERIODS; scenarios default to
+    report_style.PRESENTATION_SCENARIOS (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_costo_no_inversion_<p0>_<p1>_presentation.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_costo_no_inversion_presentation.py
+    [--periods 2026 2030 2031 2040 2041 2050] [--scenarios BAC ISR] [--ref BAC] [--out base]
 """
 
 from __future__ import annotations
@@ -51,8 +48,9 @@ MUSD_PER_BILLON = 1_000_000.0  # 1 billón (10^12 USD) = 1.000.000 MUSD (10^6 US
 
 
 def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[int, int], dict[str, dict]]:
-    """{periodo: {scenario: {'CAPEX','O&M','Combustible','total'}}}
-    (MUSD) acumulado dentro de cada periodo. Réplica de la lógica de costo del chart_14."""
+    """{period: {scenario: {'CAPEX','O&M','Combustible','total'}}} (MUSD),
+    replicating chart_14's cost logic.
+    """
     cols = ["CapitalInvestment", "OperatingCost"]
     df = rs.load(cols, scenarios=scenarios)
     df = df[df["Scenario"].isin(scenarios)]
@@ -87,6 +85,19 @@ def compute(periods: list[tuple[int, int]], scenarios: list[str]) -> dict[tuple[
 
 
 def build_figure(data: dict, scenarios: list[str], periods: list[tuple[int, int]], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots total system cost (CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by period then scenario.
+        scenarios: scenario codes to draw, in display order.
+        periods: (start, end) tuples to show as sub-bars within each group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(p, {}) for p in periods)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(periods), group_step=0.80)

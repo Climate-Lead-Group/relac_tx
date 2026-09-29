@@ -1,44 +1,25 @@
-"""
-fig_costo_unitario_ens_presentation_tmp.py — SCRIPT TEMPORAL (pack
-presentación). Variante de fig_costo_unitario_presentation.py que SÍ incluye
-la Energía no Suministrada (ENS) en el costo unitario.
+"""Experimental presentation pack: unit system cost plus unserved energy (ENS).
 
-Diferencias de cómputo respecto a fig_costo_unitario(_presentation).py:
-  - Nuevo sumando ENS = producción del backstop (techs con "BCK") en PJ
-    valorada al VOLL 1.750 USD/MWh (= 1.750/3,6 MUSD/PJ). OJO: NO es el VOLL
-    1.500 USD/MWh de chart_14/15 del dashboard; el valor 1.750 fue fijado a
-    mano para esta corrida temporal (2026-09-01).
-  - La ENS se AGREGA al componente "Combustible" (mismo color/leyenda, SIN
-    cuarta leyenda "Energía no Suministrada"); el total del escenario, la
-    etiqueta interna del tramo Combustible y el diferencial vs. la referencia
-    la incluyen.
-  - El OperatingCost del BCK (penalty big-M artificial) se sigue EXCLUYENDO:
-    la ENS se valora solo al VOLL, no al big-M.
-  - Denominador = producción total INCLUYENDO la del BCK [TWh], es decir la
-    demanda total (atendida + no atendida). Si se prefiere dividir solo por la
-    energía realmente suministrada, usar --den-sin-bck.
-  - Costo unitario = (CAPEX anualizado + O&M + [Combustible+ENS]) / Producción.
+Presentation variant of report/fig_costo_unitario_ens_tmp.py: adds ENS (backstop
+production, in PJ, valued at VOLL=1750 USD/MWh fixed for this run, 2026-09-01) inside
+"Combustible"; the backstop's own OperatingCost (big-M penalty) stays excluded. Denominator
+is total production INCLUDING the backstop's by default (served + unserved demand); pass
+--den-sin-bck to divide by served energy only. Visual styling (larger fonts, tighter
+groups, one-row legend, per-component value labels inside each bar segment) is inherited
+from fig_costo_unitario_presentation.py.
 
-Presentación visual (heredada de la versión de presentación):
-
-  1. Letra más grande (ylabel, ticks, labels de grupo, leyenda, valores).
-  2. Escenarios (grupos) más juntos, y menos holgura en los extremos del
-     eje X (group_step + rs.set_grouped_xlim).
-  3. Leyenda en una sola fila (ya lo estaba: 3 entradas con ncol=3; se deja
-     explícito y con letra más grande).
-  4. Valor de CADA componente (CAPEX anualizado, O&M, Combustible con la ENS
-     ya incluida) anotado dentro de su tramo de barra (el original solo
-     mostraba el total y el delta vs. referencia), copiando el formato de
-     fig_km_lineas_existentes_tmp.py.
-
-Ver fig_costo_unitario.py para la documentación del cómputo base (CAPEX
-anualizado al vuelo con CRF, O&M/Combustible vía classify_tech_type).
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_ens_presentation_tmp.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_ens_presentation_tmp.py --years 2030 2040 2050
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_ens_presentation_tmp.py --scenarios BAC ISR --ref BAC
-    PYTHONUTF8=1 python Figures_Presentation/fig_costo_unitario_ens_presentation_tmp.py --den-sin-bck
+Inputs:
+    CapitalInvestment, OperatingCost, ProductionByTechnology (combined CSV); years default
+    to report_style.MULTI_YEARS; scenarios default to report_style.PRESENTATION_SCENARIOS
+    (= CORE_SCENARIOS, BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_costo_unitario_ens_presentation_tmp.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_costo_unitario_ens_presentation_tmp.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--ref BAC] [--den-sin-bck] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
 """
 
 from __future__ import annotations
@@ -82,10 +63,9 @@ VOLL_MUSD_PER_PJ = VOLL_USD_PER_MWH / 3.6  # ≈ 486,1 MUSD/PJ
 
 
 def compute(years: list[int], scenarios: list[str], den_sin_bck: bool = False) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','ENS','total'}}} (USD/MWh).
-    Métrica del chart_11 + ENS (BCK × VOLL) sumada dentro de 'Combustible'; la
-    clave 'ENS' se conserva solo para el print de consola (ya está incluida en
-    Combustible, NO volver a sumarla)."""
+    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','ENS',
+    'total'}}} (USD/MWh); Combustible includes ENS at VOLL=1750 USD/MWh.
+    """
     def is_bck(df):
         return df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)
 
@@ -143,6 +123,19 @@ def compute(years: list[int], scenarios: list[str], den_sin_bck: bool = False) -
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int], ref: str = "BAC"):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots unit system cost including ENS in Combustible (annualized CAPEX/O&M/Combustible stack).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+        ref: scenario used as the baseline for the delta-vs-reference annotation.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)

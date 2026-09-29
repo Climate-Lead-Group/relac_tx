@@ -1,23 +1,24 @@
-"""
-fig_capacidad_transmision_2050_presentation_tmp.py — TEMPORAL: PACK
-PRESENTACIÓN de fig_capacidad_transmision_2050_tmp.py (la versión CON la
-corrección cummax de las líneas RP; el script presentation original muestra
-el dato crudo). Outputs con sufijo _tmp: no pisa la figura oficial.
+"""Experimental presentation pack for the RP-line cummax fix (transmission capacity).
 
-Corrección (ver docstring de fig_capacidad_transmision_2050_tmp.py): la
-serie anual agregada de TCA del grupo RPO de cada escenario se reemplaza por
-su máximo acumulado (cummax) sobre TODOS los años del modelo, porque el
-modelo hace caer las líneas repotenciadas en los últimos años (error).
-NOTA (2026-09-02): en el CSV regenerado ese día la caída ya NO aparece a
-nivel agregado; el cummax queda como salvaguarda.
+Presentation variant of report/fig_capacidad_transmision_2050_tmp.py, the version WITH the
+cummax fix for repowered (RP/RPO) lines dropping in the run's last years (see that script's
+docstring); the non-tmp presentation script shows the raw data. Visual styling is identical
+to fig_capacidad_transmision_2050_presentation.py: larger fonts, tighter groups, 2-row
+reordered legend, per-category value labels inside each bar segment.
 
-Presentación idéntica a fig_capacidad_transmision_2050_presentation.py:
-letra grande, grupos juntos, leyenda en 2 filas reordenada, valor de cada
-categoría anotado dentro de su tramo.
-
-Uso:
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_transmision_2050_presentation_tmp.py
-    PYTHONUTF8=1 python Figures_Presentation/fig_capacidad_transmision_2050_presentation_tmp.py --years 2030 2040 2050 --scenarios BAC ISR
+Inputs:
+    TotalCapacityAnnual, AccumulatedNewCapacity, AccumulatedTotalAnnualMinCapacityInvestment
+    (combined CSV); scenarios default to report_style.PRESENTATION_SCENARIOS (= BAC+ISR).
+Outputs:
+    outputs/Figures/Presentation/fig_capacidad_transmision_2050_presentation_tmp.png (via
+    report_style.save)
+Usage:
+    python scripts/figures/presentation/fig_capacidad_transmision_2050_presentation_tmp.py
+    [--years 2030 2040 2050] [--scenarios BAC ISR] [--out base]
+Notes:
+    - Experimental variant, listed as false in run_figures.yaml (skipped unless --only).
+    - As of the 2026-09-02 CSV the raw drop no longer appears at the aggregate level; the
+      cummax stays as a safeguard.
 """
 
 from __future__ import annotations
@@ -128,6 +129,18 @@ def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]
 
 
 def build_figure(data: dict, scenarios: list[str], years: list[int]):
+    """Draw the grouped bar chart and return the Figure.
+
+    Plots installed transmission capacity (stacked by line group, cummax-fixed).
+
+    Args:
+        data: nested dict from compute(), keyed by year then scenario.
+        scenarios: scenario codes to draw, in display order.
+        years: years to show as sub-bars within each scenario group.
+
+    Returns:
+        The matplotlib Figure; the caller saves it via report_style.save.
+    """
     scenarios = [s for s in scenarios if any(s in data.get(y, {}) for y in years)]
     group_centers, sub_positions = rs.grouped_bar_layout(
         len(scenarios), len(years), group_step=0.80)
