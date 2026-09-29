@@ -108,8 +108,8 @@ CHAIN_ORDER = [
 ]
 
 def chain_suffixes(params, scenario_name, upto=None):
-    """Sufijos activos en orden canonico. upto=<suffix> corta ANTES de ese eslabon
-    (para que un patcher conozca el nombre de su archivo de ENTRADA)."""
+    """Active suffixes in canonical order. upto=<suffix> cuts BEFORE that link
+    (so a patcher can know the name of its INPUT file)."""
     out = []
     for flag, key, default in CHAIN_ORDER:
         suffix = params.get(key, default)
@@ -125,13 +125,13 @@ def chained_base(params, scenario_name, upto=None):
     return f"{base}_{'_'.join(parts)}" if parts else base
 
 def scenario_base(params, scenario_name):
-    """Escenario base cuyo A2 sirve de referencia (sets identicos). Base de si mismo."""
+    """Base scenario whose A2 serves as the reference (identical sets). Base of itself."""
     return params.get('derived_scenarios', {}).get(scenario_name, scenario_name)
 
 def solve_universe(params, HERE, base_scenarios):
-    """Escenarios a resolver: solve_scenarios del YAML si existe; si no, los base.
-    Valida que cada uno tenga su datafile final en Executables/<S>_0/ (los derivados
-    lo reciben de las etapas VEGCON/transforms; si falta, esas etapas no corrieron)."""
+    """Scenarios to solve: the YAML's solve_scenarios if present; otherwise the base ones.
+    Validates that each one has its final datafile in Executables/<S>_0/ (derived
+    scenarios get it from the VEGCON/transforms stages; if missing, those stages did not run)."""
     universe = list(params.get('solve_scenarios') or base_scenarios)
     for s in universe:
         txt = os.path.join(ROOT, params['executables'], s + '_0',
@@ -648,7 +648,7 @@ def run_activity_upper_limit_patcher(params, scenario_name):
 
 
 def run_preflight_separation_gate(params, HERE):
-    """Gate read-only (1 sola vez). exit!=0 => abortar ANTES de escribir pisos."""
+    """Read-only gate (run once). exit!=0 => abort BEFORE writing any floors."""
     if not params.get('preflight_separation_active', False):
         return
     script = os.path.normpath(os.path.join(ROOT, params['preflight_separation_script']))
@@ -660,8 +660,8 @@ def run_preflight_separation_gate(params, HERE):
                          "antes de continuar (ver reporte arriba).")
 
 def run_dispatch_floors_patcher(params, scenario_name, HERE):
-    """Etapa B: pisos de despacho fosil. Llama write_floors.py SIN cambios internos;
-    produce el sibling _FLOORED.txt en Executables/<S>_0/."""
+    """Stage B: fossil dispatch floors. Calls write_floors.py with NO internal changes;
+    produces the sibling _FLOORED.txt in Executables/<S>_0/."""
     if not params.get('dispatch_floors_active', False):
         return
     scens = params.get('dispatch_floors_scenarios', [])
@@ -685,8 +685,8 @@ def run_dispatch_floors_patcher(params, scenario_name, HERE):
 
 
 def run_veg_tx_stage(params, HERE, scenarios):
-    """Etapa C (barrera): una sola llamada a veg_tx_constraints. Requiere que TODOS
-    los escenarios base tengan su _FLOORED.txt (etapa B completada)."""
+    """Stage C (barrier): a single call to veg_tx_constraints. Requires that ALL
+    base scenarios have their _FLOORED.txt (stage B completed)."""
     if not params.get('veg_tx_active', False):
         return
     exe_dir = os.path.join(ROOT, params['executables'])
@@ -708,8 +708,8 @@ def run_veg_tx_stage(params, HERE, scenarios):
 
 
 def run_scenario_transforms(params, HERE):
-    """Etapa D (barrera): transforms ordenados sobre Executables. Cada script se llama
-    con --executables-dir; exit!=0 aborta. Extensible via YAML (scenario_transforms)."""
+    """Stage D (barrier): ordered transforms over Executables. Each script is called
+    with --executables-dir; exit!=0 aborts. Extensible via YAML (scenario_transforms)."""
     transforms = params.get('scenario_transforms', [])
     if not transforms:
         return
@@ -799,10 +799,10 @@ def run_sync_patched_csvs(params, scenario_name, base_output_path):
 
 
 def sync_inputs_for_solve(params, HERE, solve_list):
-    """Post-distribucion: para cada escenario a resolver, garantiza una carpeta
-    A2_otoole/<S> cuyos CSVs reflejan el txt FINAL (_FLOORED_VEGCON) que consume
-    el solver. Derivados: copia del A2 de su base + sync. Bases: re-sync in place
-    (la etapa A ya habia sincronizado, pero SIN los cambios FLOORED/VEGCON)."""
+    """Post-distribution: for each scenario to solve, ensures an A2_otoole/<S>
+    folder whose CSVs reflect the FINAL txt (_FLOORED_VEGCON) that the solver
+    consumes. Derived scenarios: copy of their base's A2 + sync. Base scenarios:
+    re-sync in place (stage A had already synced, but WITHOUT the FLOORED/VEGCON changes)."""
     if not params.get('sync_patched_csvs_active', False):
         return
     if not params['A2_otoole_outputs'] and params['write_txt_model']:
@@ -1221,15 +1221,15 @@ def concatenate_all_scenarios(HERE, params):
     """
     Iterates over all scenario folders in `base_input_path` (excluding 'Default'),
     reads *_Input.csv and *_Output.csv files, adds scenario metadata columns, concatenates
-    them into single CSV files for inputs, outputs y combined, y devuelve sus rutas.
+    them into single CSV files for inputs, outputs and combined, and returns their paths.
 
     Args:
         params (dict):
           - executables (str): Path to the base directory containing scenario folders.
-          - prefix_final_files (str): Carpeta/ruta donde guardar los resultados.
-          - inputs_file (str): Nombre base para el CSV de inputs.
-          - outputs_file (str): Nombre base para el CSV de outputs.
-          - combined_file (str, opcional): Nombre base para el CSV combinado inputs+outputs.
+          - prefix_final_files (str): Folder/path where the results are saved.
+          - inputs_file (str): Base name for the inputs CSV.
+          - outputs_file (str): Base name for the outputs CSV.
+          - combined_file (str, optional): Base name for the combined inputs+outputs CSV.
     Returns:
         tuple: (input_csv_path, output_csv_path, combined_csv_path)
     """

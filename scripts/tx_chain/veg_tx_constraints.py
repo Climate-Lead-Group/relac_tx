@@ -368,15 +368,15 @@ def i_region(y):
 
 
 def i_comp(y):
-    """v14: trayectoria de la COMPARADORA (BAC/OPC). Exponencial del MISMO ancla
-    (3300 USD2023 @2022) al endpoint I_COMP_2050=20000 @2050 (~6.64%/ano).
-    Misma identidad contable que el envelope; solo cambia la trayectoria."""
+    """v14: trajectory of the COMPARATOR (BAC/OPC). Exponential from the SAME anchor
+    (3300 USD2023 @2022) to the endpoint I_COMP_2050=20000 @2050 (~6.64%/year).
+    Same accounting identity as the envelope; only the trajectory changes."""
     return ANCHOR_MUSD * (I_COMP_2050 / ANCHOR_MUSD) ** ((y - ANCHOR_YEAR) / (2050 - ANCHOR_YEAR))
 
 
 def refopt_nli_cap(y):
-    """Tope suave de NLI para REF/OPT: rampa lineal 2030->2050 (MUSD/ano). Evita el
-    pico de un solo ano; deja que el modelo reparta la inversion (grafica mas limpia)."""
+    """Soft NLI ceiling for REF/OPT: linear ramp 2030->2050 (MUSD/year). Avoids a
+    single-year spike; lets the model spread out the investment (cleaner chart)."""
     if y < NLI_FIRST_YEAR:
         return 0.0
     f = (y - NLI_FIRST_YEAR) / (LAST_YEAR - NLI_FIRST_YEAR)
@@ -397,8 +397,8 @@ def rpo_pct(y):
 
 
 def rpo_pct_country(c, y):
-    """rpo_pct con boost por pais (RPO_BOOST), solo hasta RPO_BOOST_UNTIL (ventana
-    pre-NLI). Paises no listados: identico a rpo_pct(y) en todos los anos."""
+    """rpo_pct with a per-country boost (RPO_BOOST), only up to RPO_BOOST_UNTIL (the
+    pre-NLI window). Countries not listed: identical to rpo_pct(y) in every year."""
     b = RPO_BOOST.get(c, 1.0) if y <= RPO_BOOST_UNTIL else 1.0
     return rpo_pct(y) * b
 
@@ -411,8 +411,8 @@ def final_shares():
 
 
 def load_needs(csv_path):
-    """v14: lee NewCapacity.csv de la corrida de NECESIDAD (BSR: NLI sin tope, RPO
-    pinneada): filas NLI 2030+. -> dict (tech, ano) -> GW."""
+    """v14: read NewCapacity.csv from the NEED run (BSR: uncapped NLI, pinned RPO):
+    NLI rows from 2030 on. -> dict (tech, year) -> GW."""
     rows = {}
     with open(csv_path, newline="", encoding="utf-8") as fh:
         for r in _csvmod.DictReader(fh):
@@ -424,10 +424,10 @@ def load_needs(csv_path):
 
 
 def waterfill(w, need_musd, B):
-    """v14: water-filling ESTATICO (mismo algoritmo que nli_prerun_check): cada pais
-    recibe min(necesidad, rebanada); el sobrante de los que necesitan menos se
-    re-vierte a los que siguen cortos, proporcional a su peso ORIGINAL, hasta
-    converger. Redistribucion pura: devuelve pesos que suman 1.0 (conservacion)."""
+    """v14: STATIC water-filling (same algorithm as nli_prerun_check): each country
+    receives min(need, slice); the surplus from countries that need less is
+    poured back to those still short, proportional to their ORIGINAL weight, until
+    convergence. Pure redistribution: returns weights that sum to 1.0 (conservation)."""
     alloc = dict.fromkeys(w, 0.0)
     rem, active = B, set(w)
     for _ in range(50):
@@ -464,9 +464,9 @@ def ren_share(year, ren_2030):
 
 
 def growth_factor(c):
-    """v4: multiplicador del presupuesto NLI por crecimiento de demanda. Solo growers
-    (> mediana); el resto queda en 1.0. factor = 1 + alpha*(growth-1).
-    v8: CHL bypasea la guarda de mediana (delivery-bound puro, g<mediana)."""
+    """v4: NLI budget multiplier by demand growth. Only growers
+    (> median); the rest stay at 1.0. factor = 1 + alpha*(growth-1).
+    v8: CHL bypasses the median guard (pure delivery-bound, g<median)."""
     g = DEMAND_GROWTH.get(c, 1.0)
     if c == "PER":
         return 1.0 + ALPHA_PER * (g - 1.0)        # grower + delivery-bound
@@ -476,8 +476,8 @@ def growth_factor(c):
 
 
 def ramp_nli_cap(y):
-    """v4: tope-rampa de NLI para BAC/OPC (MUSD/ano). Capa bajo en 2030 (mata el pico)
-    y sube linealmente a 2050 -> deja espacio a la inversion tardia."""
+    """v4: NLI ramp-ceiling for BAC/OPC (MUSD/year). Caps low in 2030 (kills the
+    spike) and rises linearly to 2050 -> leaves room for late investment."""
     if y < NLI_FIRST_YEAR:
         return 0.0
     f = (y - NLI_FIRST_YEAR) / (LAST_YEAR - NLI_FIRST_YEAR)
@@ -513,7 +513,7 @@ def read_map(lines, span):
 # Paso 0: SWAP del piso
 # --------------------------------------------------------------------------
 def load_min(src):
-    """{(tech, year): value} del piso, solo familias Tx, del datafile."""
+    """{(tech, year): value} of the floor, Tx families only, from the datafile."""
     lines = src.read_text(encoding="utf-8").splitlines(keepends=True)
     spans = parse_blocks(lines)
     if MININV not in spans:
@@ -523,8 +523,8 @@ def load_min(src):
 
 
 def compute_swap(ref_min, opt_min):
-    """Donde REF>OPT (ano>=SWAP_FIRST_YEAR): OPT recibe el mayor, REF el menor.
-    Devuelve (opt_override, twins_override, movers)."""
+    """Where REF>OPT (year>=SWAP_FIRST_YEAR): OPT gets the larger value, REF the smaller.
+    Returns (opt_override, twins_override, movers)."""
     opt_over, twin_over, movers = {}, {}, []
     keys = set(ref_min) | set(opt_min)
     for (t, y) in keys:
@@ -540,7 +540,7 @@ def compute_swap(ref_min, opt_min):
 
 
 def redate_floor(mp):
-    """Aplica BIPOLE_REDATE a un mapa de piso {(tech,year): GW}: mueve GW de 'from' a 'to'."""
+    """Apply BIPOLE_REDATE to a floor map {(tech,year): GW}: moves GW from 'from' to 'to'."""
     mp = dict(mp)
     for tech, gw, fr, to in BIPOLE_REDATE:
         mp[(tech, fr)] = mp.get((tech, fr), 0.0) - gw
@@ -549,7 +549,7 @@ def redate_floor(mp):
 
 
 def bipole_cells(base):
-    """Solo las celdas re-fechadas (override para los twins, que conservan su base)."""
+    """Only the redated cells (override for the twins, which keep their base value)."""
     ov = {}
     for tech, gw, fr, to in BIPOLE_REDATE:
         ov[(tech, fr)] = base.get((tech, fr), 0.0) - gw
@@ -561,15 +561,15 @@ def bipole_cells(base):
 # Paso 1: costo real + calibracion
 # --------------------------------------------------------------------------
 def true_base_costs(cc_txt):
-    """costo unitario real = costo del .txt / multiplicador de nivel actual (x2)."""
+    """Real unit cost = .txt cost / current level multiplier (x2)."""
     return {t: v / LEVEL_MULT_CURRENT for t, v in cc_txt.items()}
 
 
 def calibrate(floor_map, true_base):
-    """Factor de escala m sobre el costo REAL, tal que el PROMEDIO de la inversion
-    comprometida (piso planificado de la REF) en la ventana CALIB_WINDOW iguale el
-    ancla:  m = CALIB_ANCHOR_MUSD / promedio_{ventana}( piso x costo_real )
-    Cerrado (no busqueda). Algunos anos quedan +/- del promedio. Devuelve (m, diag)."""
+    """Scale factor m on the REAL cost, such that the AVERAGE committed investment
+    (REF's planned floor) over the CALIB_WINDOW window equals the anchor:
+    m = CALIB_ANCHOR_MUSD / average_{window}( floor x real_cost )
+    Closed form (no search). Some years land +/- of the average. Returns (m, diag)."""
     y0, y1 = CALIB_WINDOW
     per_year = {}
     for y in range(y0, y1 + 1):
@@ -586,7 +586,7 @@ def calibrate(floor_map, true_base):
 
 
 def cost_final(true_base, tech, year, calib):
-    """costo real x calibracion x escalada (+0.3%/ano desde 2025)."""
+    """Real cost x calibration x escalation (+0.3%/year from 2025)."""
     b = true_base[tech] * calib
     if year < COST_ESC_FROM:
         return b
@@ -765,8 +765,8 @@ def build_mods(lines, mode, gshares, ren_c, calib, min_override, planned_ceiling
                     mod["TotalAnnualMaxCapacity"][(tech, y)] = cumul_gw
 
     def _need_musd_by_country():
-        """v14: necesidad revelada por pais (MUSD), costeada con los costos de ESTE
-        datafile (cost_final), no con un costo unitario proxy."""
+        """v14: revealed need per country (MUSD), costed with THIS datafile's costs
+        (cost_final), not a proxy unit cost."""
         d = {}
         for (t, y), gw in (need_rows or {}).items():
             if t in true_base:
@@ -830,8 +830,8 @@ def build_mods(lines, mode, gshares, ren_c, calib, min_override, planned_ceiling
 
 
 def apply_and_write(name, src, mod):
-    """Escribe la copia: sobre-escribe filas existentes, inserta faltantes.
-    Min: valor 0 -> elimina la fila (default 0 = sin piso). RPO MaxCap -> elimina."""
+    """Write the copy: overwrites existing rows, inserts missing ones.
+    Min: value 0 -> drops the row (default 0 = no floor). RPO MaxCap -> dropped."""
     lines = src.read_text(encoding="utf-8").splitlines(keepends=True)
     out, cur, seen = [], None, set()
     for ln in lines:
@@ -905,7 +905,7 @@ FEAS_PARAMS = ("ResidualCapacity", "TotalAnnualMinCapacity", "TotalAnnualMaxCapa
 
 
 def read_params(path, params):
-    """Lector general (independiente de TARGET_PARAMS): {param: {(tech,year): val}}."""
+    """General-purpose reader (independent of TARGET_PARAMS): {param: {(tech,year): val}}."""
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     out, cur = {p: {} for p in params}, None
     for ln in lines:
@@ -929,10 +929,10 @@ def read_params(path, params):
 
 
 def feasibility_scan(dst):
-    """Busca los patrones de infactibilidad de OSeMOSYS en el .txt escrito, para
-    TODAS las tecnologias (no solo Tx). Un -1 = 'sin limite' (centinela), se ignora.
-    Devuelve {categoria: [violaciones]}; categorias '[warn]' son potenciales
-    (la retirada por OperationalLife podria salvarlas). Independiente del preflight."""
+    """Search the written .txt for OSeMOSYS infeasibility patterns, across
+    ALL technologies (not just Tx). A -1 means 'no limit' (sentinel) and is ignored.
+    Returns {category: [violations]}; '[warn]' categories are potential
+    (retirement via OperationalLife could still save them). Independent of the preflight."""
     P = read_params(dst, FEAS_PARAMS)
     resid = P["ResidualCapacity"]
     minc, maxc = P["TotalAnnualMinCapacity"], P["TotalAnnualMaxCapacity"]
@@ -991,8 +991,8 @@ def feasibility_scan(dst):
 # preflight de piso comprometido (lee los .txt escritos; prueba OPT>=REF>=VEG)
 # --------------------------------------------------------------------------
 def committed_musd(dst, true_base_for_cost):
-    """inversion comprometida (piso) por ano, leida del .txt escrito, al costo
-    ya escrito en ese mismo archivo."""
+    """Committed investment (floor) per year, read from the written .txt, at the cost
+    already written in that same file."""
     lines = dst.read_text(encoding="utf-8").splitlines(keepends=True)
     spans = parse_blocks(lines)
     mn, _ = read_map(lines, spans[MININV]) if MININV in spans else ({}, {})
@@ -1005,7 +1005,7 @@ def committed_musd(dst, true_base_for_cost):
 
 
 def allowed_musd(dst):
-    """envelope permitido (piso + techos NLI/RPO) por ano, al costo del .txt."""
+    """Allowed envelope (floor + NLI/RPO ceilings) per year, at the .txt's cost."""
     lines = dst.read_text(encoding="utf-8").splitlines(keepends=True)
     spans = parse_blocks(lines)
     cc, _ = read_map(lines, spans["CapitalCost"])
@@ -1338,8 +1338,8 @@ def main():
 
 
 def preflight_veg(name, dst):
-    """Lee el .txt del vegetativo: NLI da la trayectoria, RPO no se auto-detiene,
-    capacidad no decrece. Devuelve (series, n_pass, n_fail)."""
+    """Read the vegetativo's .txt: NLI drives the trajectory, RPO does not self-stop,
+    capacity does not decrease. Returns (series, n_pass, n_fail)."""
     lines = dst.read_text(encoding="utf-8").splitlines(keepends=True)
     spans = parse_blocks(lines)
     cc, _ = read_map(lines, spans["CapitalCost"])

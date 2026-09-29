@@ -79,12 +79,12 @@ VALUE_TOL = 1e-9  # tolerancia para la verificacion de round-trip de floats
 
 
 def param_path(scenario: str) -> Path:
-    """Ruta al A-O_Parametrization.xlsx del escenario."""
+    """Path to the scenario's A-O_Parametrization.xlsx."""
     return A1_OUTPUTS / f'A1_Outputs_{scenario}' / 'A-O_Parametrization.xlsx'
 
 
 def header_map(ws, header_row: int) -> dict[str, int]:
-    """{encabezado_stripped: col} para celdas no vacias de `header_row`."""
+    """{stripped_header: col} for the non-empty cells of `header_row`."""
     hmap: dict[str, int] = {}
     for col in range(1, ws.max_column + 1):
         v = ws.cell(header_row, col).value
@@ -97,7 +97,7 @@ def header_map(ws, header_row: int) -> dict[str, int]:
 
 
 def year_cols_from_header(ws, header_row: int) -> dict[int, int]:
-    """{año: col} para los encabezados que son años (int o str-digito) en rango."""
+    """{year: col} for headers that are years (int or digit-string) within range."""
     year_cols: dict[int, int] = {}
     for col in range(1, ws.max_column + 1):
         v = ws.cell(header_row, col).value
@@ -109,7 +109,7 @@ def year_cols_from_header(ws, header_row: int) -> dict[int, int]:
 
 
 def locate_cols(ws, header_row: int) -> dict[str, int]:
-    """Columnas de Tech / Parameter / Projection.Mode por nombre de encabezado."""
+    """Tech / Parameter / Projection.Mode columns by header name."""
     hmap = header_map(ws, header_row)
     missing = [h for h in ('Tech', 'Parameter', 'Projection.Mode') if h not in hmap]
     if missing:
@@ -120,7 +120,7 @@ def locate_cols(ws, header_row: int) -> dict[str, int]:
 
 
 def build_row_index(ws, tech_col: int, param_col: int, header_row: int = 1):
-    """{(tech, param): fila} en una pasada. Devuelve (index, duplicados)."""
+    """{(tech, param): row} in a single pass. Returns (index, duplicates)."""
     index: dict[tuple[str, str], int] = {}
     dups: list[tuple[str, str]] = []
     for r in range(header_row + 1, ws.max_row + 1):
@@ -136,12 +136,12 @@ def build_row_index(ws, tech_col: int, param_col: int, header_row: int = 1):
 
 
 def find_logistic_table(ws) -> tuple[int, int]:
-    """Localiza la tabla LOGISTIC. Devuelve (title_row, header_row).
+    """Locate the LOGISTIC table. Returns (title_row, header_row).
 
-    Busca en la col A un titulo que contenga TODOS los tokens de
-    TITLE_MUST_CONTAIN y NINGUNO de TITLE_MUST_NOT_CONTAIN (mayusculas,
-    substring -> tolera el espaciado irregular y el em-dash). El header es la
-    primera fila siguiente cuya col A == 'Tech.ID'.
+    Searches col A for a title that contains ALL tokens of TITLE_MUST_CONTAIN
+    and NONE of TITLE_MUST_NOT_CONTAIN (uppercased substring match -> tolerates
+    irregular spacing and the em-dash). The header is the first following row
+    whose col A == 'Tech.ID'.
     """
     title_row = None
     for r in range(1, ws.max_row + 1):
@@ -170,16 +170,16 @@ def find_logistic_table(ws) -> tuple[int, int]:
 
 
 def _read_param_rows(ws, header_row: int, stop_at_blank: bool, source: str):
-    """Lee filas con Parameter == PARAM desde header_row+1. Devuelve (table, year_cols).
+    """Read rows with Parameter == PARAM from header_row+1. Returns (table, year_cols).
 
-        table = {tech: {'proj_mode': valor_colG, 'years': {año: float}}}
+        table = {tech: {'proj_mode': col-G value, 'years': {year: float}}}
 
-    stop_at_blank=True  -> corta en la primera fila con Tech vacio (tablas
-                           apiladas; tabla LOGISTIC de la fuente A).
-    stop_at_blank=False -> recorre toda la hoja saltando filas con Tech vacio o
-                           Parameter != PARAM (hoja dedicada de la fuente B).
-    Celdas de año vacias se omiten; una celda de año string (formula no
-    cacheada) -> error.
+    stop_at_blank=True  -> stops at the first row with an empty Tech (stacked
+                           tables; source A's LOGISTIC table).
+    stop_at_blank=False -> scans the whole sheet, skipping rows with an empty
+                           Tech or Parameter != PARAM (source B's dedicated sheet).
+    Empty year cells are skipped; a string year cell (uncached formula) ->
+    error.
     """
     cols = locate_cols(ws, header_row)
     year_cols = year_cols_from_header(ws, header_row)
@@ -215,7 +215,10 @@ def _read_param_rows(ws, header_row: int, stop_at_blank: bool, source: str):
 
 
 def read_input_table(path: Path):
-    """Fuente A: tabla LOGISTIC de la hoja 'Export'. Devuelve (table, title_row, header_row, years)."""
+    """Source A: LOGISTIC table from the 'Export' sheet.
+
+    Returns (table, title_row, header_row, years).
+    """
     if not path.exists():
         raise FileNotFoundError(f'No existe el tool de entrada: {path}')
     wb = openpyxl.load_workbook(path, data_only=True)
@@ -233,7 +236,7 @@ def read_input_table(path: Path):
 
 
 def find_flat_header_row(ws, max_scan: int = 10) -> int:
-    """Primera fila (<= max_scan) cuya col A == 'Tech.ID' (header de tabla plana)."""
+    """First row (<= max_scan) whose col A == 'Tech.ID' (flat table header)."""
     for r in range(1, min(max_scan, ws.max_row) + 1):
         if str(ws.cell(r, 1).value).strip() == 'Tech.ID':
             return r
@@ -241,7 +244,7 @@ def find_flat_header_row(ws, max_scan: int = 10) -> int:
 
 
 def read_complementary_table(path: Path, sheet: str = COMPLEMENTARY_SHEET):
-    """Fuente B: tabla plana de la hoja `sheet`. Devuelve (table, header_row, years)."""
+    """Source B: flat table from sheet `sheet`. Returns (table, header_row, years)."""
     if not path.exists():
         raise FileNotFoundError(f'No existe el complementario: {path}')
     wb = openpyxl.load_workbook(path, data_only=True)
@@ -259,7 +262,7 @@ def read_complementary_table(path: Path, sheet: str = COMPLEMENTARY_SHEET):
 
 
 def verify_scenario(pth: Path, table: dict) -> int:
-    """Reabre con data_only=True y verifica valores + Projection.Mode escritos."""
+    """Reopen with data_only=True and verify the written values + Projection.Mode."""
     wb = openpyxl.load_workbook(pth, data_only=True)
     try:
         ws = wb[TARGET_SHEET]
@@ -287,7 +290,7 @@ def verify_scenario(pth: Path, table: dict) -> int:
 
 
 def _norm(v):
-    """Normaliza para comparar Projection.Mode (None/'' equivalentes)."""
+    """Normalize for Projection.Mode comparison (None/'' are equivalent)."""
     if v is None:
         return ''
     return str(v).strip()
@@ -295,9 +298,9 @@ def _norm(v):
 
 def write_scenario(scenario: str, table: dict, apply_changes: bool,
                    do_backup: bool = True) -> tuple[int, int, int]:
-    """Escribe (o previsualiza) los valores de la tabla en el escenario.
+    """Write (or preview) the table's values into the scenario.
 
-    Devuelve (techs_actualizadas, celdas_escritas, violaciones_verificacion).
+    Returns (techs_updated, cells_written, verification_violations).
     """
     pth = param_path(scenario)
     print(f'\n========== ESCENARIO {scenario} ==========')

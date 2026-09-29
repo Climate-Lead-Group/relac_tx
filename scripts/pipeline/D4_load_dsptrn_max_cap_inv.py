@@ -92,7 +92,7 @@ PARAM = 'TotalAnnualMaxCapacityInvestment'
 
 
 def param_path(scenario: str) -> Path:
-    """Ruta al A-O_Parametrization.xlsx del escenario destino (INV, OPT, ...)."""
+    """Path to the target scenario's A-O_Parametrization.xlsx (INV, OPT, ...)."""
     return A1_OUTPUTS / f'A1_Outputs_{scenario}' / 'A-O_Parametrization.xlsx'
 
 # --- Configuracion comun (todos los escenarios) ----------------------------
@@ -143,13 +143,13 @@ YEARS = list(range(2023, 2051))
 
 
 def factor_for_year(year: int, cfg: dict, country: str | None = None) -> float:
-    """Factor de tope para los anos topados (2026..2050), segun config `cfg`.
+    """Ceiling factor for the capped years (2026..2050), per config `cfg`.
 
-    2027..2030  -> FLAT_FACTOR (1.0): cap = NewCapacity_BAU exacto, sin descuento.
-    2031..2050  -> lineal cfg['cap_start_factor'] -> cfg['cap_end_factor'],
-                   SALVO paises exentos (cfg['exempt_countries']): esos usan
+    2027..2030  -> FLAT_FACTOR (1.0): cap = exact NewCapacity_BAU, no discount.
+    2031..2050  -> linear cfg['cap_start_factor'] -> cfg['cap_end_factor'],
+                   EXCEPT for exempt countries (cfg['exempt_countries']): those use
                    cfg['exempt_restore_factor'] (1.0) + head-room
-                   cfg['exempt_margin'], o sea mantienen la senda BAU completa.
+                   cfg['exempt_margin'], i.e. they keep the full BAU path.
     """
     if year <= FLAT_FACTOR_THROUGH_YEAR:
         return FLAT_FACTOR
@@ -161,19 +161,19 @@ def factor_for_year(year: int, cfg: dict, country: str | None = None) -> float:
 
 
 def country_of(tech: str) -> str:
-    """ISO3 embebido en un codigo de transmision length-11 (chars 6:9).
+    """ISO3 embedded in a length-11 transmission code (chars 6:9).
 
-    Layout: PREFIX(6) + COUNTRY(3) + 'XX'. Todos los TRN_PREFIXES miden 6.
+    Layout: PREFIX(6) + COUNTRY(3) + 'XX'. Every TRN_PREFIXES entry is 6 chars.
     """
     return tech[6:9]
 
 
 def load_bau_new_capacity(csv_path: Path) -> dict[tuple[str, int], float]:
-    """Lee NewCapacity de BAU para las familias TRN del CSV combinado.
+    """Read BAU's NewCapacity for the TRN families from the combined CSV.
 
-    Devuelve {(tech, year) -> new_capacity_GW} solo para valores > 0. Si hay
-    filas repetidas para un (tech, year) se queda con el maximo no nulo
-    (NewCapacity no se reparte entre modos/timeslices).
+    Returns {(tech, year) -> new_capacity_GW} only for values > 0. If there are
+    repeated rows for a (tech, year), keeps the maximum non-null value
+    (NewCapacity is not split across modes/timeslices).
     """
     if not csv_path.exists():
         raise FileNotFoundError(f'No existe: {csv_path}')
@@ -226,9 +226,9 @@ def build_row_index(ws) -> dict[tuple[str, str], int]:
 
 
 def run_scenario(scenario: str, cfg: dict, bau: dict, apply_changes: bool) -> int:
-    """Aplica (o previsualiza) el tope de transmision para un escenario.
+    """Apply (or preview) the transmission ceiling for a scenario.
 
-    Devuelve el numero de violaciones detectadas en verificacion (0 en dry-run).
+    Returns the number of violations detected on verification (0 in dry-run).
     """
     pth = param_path(scenario)
     print(f'\n========== ESCENARIO {scenario} ==========')

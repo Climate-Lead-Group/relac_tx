@@ -91,9 +91,9 @@ EXPECTED_TECHS = len(PREFIX_TO_KIND) * len(IAR)
 # Helpers
 # ---------------------------------------------------------------------------
 def iar_for(tech):
-    """Devuelve el IAR para un codigo de tech de transmision, o None si no aplica.
+    """Return the IAR for a transmission tech code, or None if it does not apply.
 
-    tech = <PREFIJO 6 chars><PAIS 3 chars>XX  (p.ej. 'RNWTRNARGXX')
+    tech = <PREFIX 6 chars><COUNTRY 3 chars>XX  (e.g. 'RNWTRNARGXX')
     """
     if not isinstance(tech, str) or len(tech) < 9:
         return None
@@ -110,9 +110,9 @@ def iar_for(tech):
 
 
 def find_cols(ws):
-    """Lee la fila 1 (headers) y devuelve un dict header->indice (1-based).
+    """Read row 1 (headers) and return a dict header->index (1-based).
 
-    Tambien agrega 'YEARS' -> {anio: col} para los headers numericos.
+    Also adds 'YEARS' -> {year: col} for the numeric headers.
     """
     cols = {}
     years = {}
@@ -143,7 +143,7 @@ def require(cols, name, path):
 # Actualizadores
 # ---------------------------------------------------------------------------
 def update_base_year(path, dry_run, make_backup):
-    """Escribe Value.Fuel.I (col 'Value.Fuel.I') = IAR en cada fila de transmision."""
+    """Write Value.Fuel.I (col 'Value.Fuel.I') = IAR in every transmission row."""
     wb = openpyxl.load_workbook(path)
     if SHEET not in wb.sheetnames:
         wb.close()
@@ -182,7 +182,7 @@ def update_base_year(path, dry_run, make_backup):
 
 
 def update_projections(path, dry_run, make_backup):
-    """Escribe IAR en 2023..2050 SOLO en filas de transmision con Direction='Input'."""
+    """Write IAR in 2023..2050 ONLY on transmission rows with Direction='Input'."""
     wb = openpyxl.load_workbook(path)
     if SHEET not in wb.sheetnames:
         wb.close()

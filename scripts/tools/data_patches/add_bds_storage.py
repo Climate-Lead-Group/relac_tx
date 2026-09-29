@@ -113,10 +113,10 @@ def dst_fuel(c: str) -> str:
 
 
 def transform_text(v, c: str):
-    """Aplica los renames SDS->BDS a un valor de celda (solo strings).
+    """Apply the SDS->BDS renames to a cell value (strings only).
 
-    NO transforma Fuel.Name (los escritores lo fijan explícitamente con el
-    nombre real del nodo destino leído de Base_Year).
+    Does NOT transform Fuel.Name (the writers set it explicitly with the
+    real destination-node name read from Base_Year).
     """
     if not isinstance(v, str):
         return v
@@ -134,18 +134,18 @@ def transform_text(v, c: str):
 # Helpers openpyxl
 # =====================================================================
 def header_map(ws) -> dict[str, int]:
-    """{str(header): índice de columna 1-based} de la fila 1."""
+    """{str(header): 1-based column index} from row 1."""
     return {str(c.value): i for i, c in enumerate(ws[1], start=1)
             if c.value is not None}
 
 
 def year_columns(hmap: dict[str, int]) -> list[str]:
-    """Headers que son años (dígitos), en orden de columna."""
+    """Headers that are years (digits), in column order."""
     return sorted((h for h in hmap if h.isdigit()), key=lambda h: hmap[h])
 
 
 def rows_where(ws, col_idx: int, value) -> list[int]:
-    """Índices de fila 1-based (sin header) donde col_idx == value."""
+    """1-based row indices (excluding header) where col_idx == value."""
     out = []
     for r in range(2, ws.max_row + 1):
         if ws.cell(row=r, column=col_idx).value == value:
@@ -154,8 +154,8 @@ def rows_where(ws, col_idx: int, value) -> list[int]:
 
 
 def purge_rows(ws, col_idx: int, prefixes: tuple[str, ...]) -> int:
-    """Borra (de abajo hacia arriba) filas cuyo valor en col_idx empiece
-    con alguno de los prefijos. Devuelve cuántas borró."""
+    """Delete (bottom-up) rows whose value in col_idx starts with
+    any of the prefixes. Returns how many it deleted."""
     removed = 0
     for r in range(ws.max_row, 1, -1):
         v = ws.cell(row=r, column=col_idx).value
@@ -166,7 +166,7 @@ def purge_rows(ws, col_idx: int, prefixes: tuple[str, ...]) -> int:
 
 
 def next_id(ws, col_idx: int) -> int:
-    """max(valores enteros de la columna) + 1 (ignora no numéricos)."""
+    """max(integer values of the column) + 1 (ignores non-numeric ones)."""
     best = 0
     for r in range(2, ws.max_row + 1):
         v = ws.cell(row=r, column=col_idx).value
@@ -179,15 +179,15 @@ def next_id(ws, col_idx: int) -> int:
 # Descubrimiento, fuel names y pre-validación
 # =====================================================================
 def discover_scenarios(base_dir: Path) -> list[Path]:
-    """Carpetas A1_Outputs/A1_Outputs_* ordenadas (todos los escenarios)."""
+    """Sorted A1_Outputs/A1_Outputs_* folders (all scenarios)."""
     return sorted(p for p in Path(base_dir).glob(A1_GLOB) if p.is_dir())
 
 
 def fuel_names_from_base_year(path: Path) -> dict[str, str]:
-    """{fuel_code: Fuel.Name de la PRIMERA ocurrencia} en todo el workbook.
+    """{fuel_code: Fuel.Name of the FIRST occurrence} across the whole workbook.
 
-    Criterio first-occurrence de B1: hojas en orden del workbook; dentro de
-    cada hoja, columna Fuel.I top-down y luego Fuel.O top-down.
+    First-occurrence criterion, same as B1: sheets in workbook order; within
+    each sheet, column Fuel.I top-down then Fuel.O top-down.
     """
     names: dict[str, str] = {}
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -224,7 +224,7 @@ def _count_rows(path: Path, sheet: str, col_name: str, value: str) -> int:
 
 def validate_inputs(base_dir: Path, scen_dirs: list[Path],
                     countries: list[str]) -> list[str]:
-    """Valida TODO antes de escribir NADA. Devuelve lista de errores."""
+    """Validate EVERYTHING before writing ANYTHING. Returns a list of errors."""
     errors: list[str] = []
     base_dir = Path(base_dir)
 
@@ -309,12 +309,12 @@ def validate_inputs(base_dir: Path, scen_dirs: list[Path],
 def _clone_rows(ws, h: dict[str, int], key_col_name: str,
                 countries: list[str], id_col: str | None = None,
                 post=None) -> tuple[int, int]:
-    """Patrón compartido purge-and-reinsert.
+    """Shared purge-and-reinsert pattern.
 
-    - Borra filas cuyo key_col empiece con el prefijo destino (PWRBDS/BDS).
-    - Por país (sorted): localiza filas fuente (key_col == código SDS),
-      clona aplicando transform_text y el hook `post(new_vals, c)` si existe.
-    - id_col: nombre de columna de ID a reasignar (max+1+índice de país).
+    - Deletes rows whose key_col starts with the destination prefix (PWRBDS/BDS).
+    - Per country (sorted): locates source rows (key_col == SDS code),
+      clones them applying transform_text and the `post(new_vals, c)` hook if given.
+    - id_col: name of the ID column to reassign (max+1+country index).
     """
     key_col = h[key_col_name]
     is_storage_key = key_col_name == 'STORAGE'
@@ -339,7 +339,7 @@ def _clone_rows(ws, h: dict[str, int], key_col_name: str,
 
 def write_base_year(wb, countries: list[str],
                     fuel_names: dict[str, str]) -> tuple[int, int]:
-    """A-O_AR_Model_Base_Year / Secondary: 2 filas por país (IAR m1, OAR m2)."""
+    """A-O_AR_Model_Base_Year / Secondary: 2 rows per country (IAR m1, OAR m2)."""
     ws = wb['Secondary']
     h = header_map(ws)
 
@@ -355,7 +355,7 @@ def write_base_year(wb, countries: list[str],
 
 def write_projections(wb, countries: list[str],
                       fuel_names: dict[str, str]) -> tuple[int, int]:
-    """A-O_AR_Projections / Secondary: 2 filas por país (Input 1, Output 0.85)."""
+    """A-O_AR_Projections / Secondary: 2 rows per country (Input 1, Output 0.85)."""
     ws = wb['Secondary']
     h = header_map(ws)
 
@@ -366,15 +366,15 @@ def write_projections(wb, countries: list[str],
 
 
 def write_param_fhp(wb, countries: list[str]) -> tuple[int, int]:
-    """A-O_Parametrization / Fixed Horizon Parameters: 2 filas por país."""
+    """A-O_Parametrization / Fixed Horizon Parameters: 2 rows per country."""
     ws = wb['Fixed Horizon Parameters']
     return _clone_rows(ws, header_map(ws), 'Tech', countries, id_col='Tech.ID')
 
 
 def write_param_sectechs(wb, countries: list[str]) -> tuple[int, int]:
-    """A-O_Parametrization / Secondary Techs: 11 filas por país.
+    """A-O_Parametrization / Secondary Techs: 11 rows per country.
 
-    ResidualCapacity y TotalAnnualMinCapacityInvestment nacen en cero (D3).
+    ResidualCapacity and TotalAnnualMinCapacityInvestment start at zero (D3).
     """
     ws = wb['Secondary Techs']
     h = header_map(ws)
@@ -391,7 +391,7 @@ def write_param_sectechs(wb, countries: list[str]) -> tuple[int, int]:
 
 
 def write_param_varcost(wb, countries: list[str]) -> tuple[int, int]:
-    """A-O_Parametrization / VariableCost: 1 fila por país (modo 2, 0)."""
+    """A-O_Parametrization / VariableCost: 1 row per country (mode 2, 0)."""
     ws = wb['VariableCost']
     return _clone_rows(ws, header_map(ws), 'Tech', countries, id_col='Tech.ID')
 
@@ -400,7 +400,7 @@ def write_param_varcost(wb, countries: list[str]) -> tuple[int, int]:
 # Escritores globales
 # =====================================================================
 def write_xtra(wb, countries: list[str]) -> dict[str, tuple[int, int]]:
-    """A-Xtra_Storage.xlsx: 3 hojas (FHP, CapitalCostStorage, TechnologyStorage)."""
+    """A-Xtra_Storage.xlsx: 3 sheets (FHP, CapitalCostStorage, TechnologyStorage)."""
     out: dict[str, tuple[int, int]] = {}
 
     ws = wb['Fixed Horizon Parameters']
@@ -430,10 +430,10 @@ def write_xtra(wb, countries: list[str]) -> dict[str, tuple[int, int]]:
 
 
 def patch_config_a(text: str, countries: list[str]) -> tuple[str, int]:
-    """Inserta BDS{C}XX01 en xtra_scen.Storage de Config_MOMF_T1_A.yaml.
+    """Insert BDS{C}XX01 into xtra_scen.Storage of Config_MOMF_T1_A.yaml.
 
-    Edición TEXTUAL (preserva comentarios/formato). Idempotente: primero
-    elimina toda línea BDS existente y reinserta según `countries`.
+    TEXTUAL edit (preserves comments/formatting). Idempotent: first removes
+    every existing BDS line and reinserts according to `countries`.
     """
     lines = text.splitlines(keepends=True)
     lines = [l for l in lines if not l.startswith("  - 'BDS")]
@@ -451,7 +451,7 @@ def patch_config_a(text: str, countries: list[str]) -> tuple[str, int]:
 
 
 def patch_config_ab(text: str) -> tuple[str, int]:
-    """Config_MOMF_T1_AB.yaml: BDS en delay prefixes + PWRBDS en excludes."""
+    """Config_MOMF_T1_AB.yaml: BDS in delay prefixes + PWRBDS in excludes."""
     edits = 0
     lines = text.splitlines(keepends=True)
     lines = [l for l in lines if l.strip() != '- BDS']
@@ -480,9 +480,9 @@ def patch_config_ab(text: str) -> tuple[str, int]:
 # Orquestación
 # =====================================================================
 def run(countries=None, dry_run=None, backup=None, base_dir=None) -> int:
-    """Aplica la clonación SDS->BDS. None = usar la config del módulo.
+    """Apply the SDS->BDS cloning. None = use the module's config.
 
-    Devuelve 0 si OK, 1 si la pre-validación falla (nada escrito).
+    Returns 0 on success, 1 if pre-validation fails (nothing written).
     """
     countries = sorted(COUNTRIES if countries is None else countries)
     dry_run = DRY_RUN if dry_run is None else dry_run

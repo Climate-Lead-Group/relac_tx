@@ -80,7 +80,7 @@ def rows_for(rows: list[dict[str, str]], workbook_key: str) -> list[dict[str, st
 
 
 def targets(include_templates: bool = True) -> list[tuple[str, Path, bool]]:
-    """(clave del CSV, ruta, es_plantilla). Las plantillas reciben la hoja vacía (solo encabezado)."""
+    """(CSV key, path, is_template). Templates receive the sheet empty (header only)."""
     out: list[tuple[str, Path, bool]] = []
     for scen in SCENARIOS:
         for key in ("A-O_Parametrization", "A-O_Demand"):
@@ -93,7 +93,7 @@ def targets(include_templates: bool = True) -> list[tuple[str, Path, bool]]:
 
 
 def write_sheet(wb: openpyxl.Workbook, rows: list[dict[str, str]]) -> None:
-    """Elimina la hoja `Fuentes` si existe y la recrea al final del libro."""
+    """Delete the `Fuentes` sheet if it exists and recreate it at the end of the workbook."""
     if SHEET_NAME in wb.sheetnames:
         del wb[SHEET_NAME]
     ws = wb.create_sheet(SHEET_NAME)  # al final

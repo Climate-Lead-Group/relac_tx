@@ -76,7 +76,7 @@ COL_PROJPARAM = 8   # H: Projection.Parameter
 
 
 def read_floors(xlsx_path):
-    """Lee el Excel de nueva capacidad -> {tech: {year: value}} (solo 2040-2050)."""
+    """Read the new-capacity Excel -> {tech: {year: value}} (2040-2050 only)."""
     wb = openpyxl.load_workbook(xlsx_path, data_only=True)
     ws = wb[FLOORS_SHEET]
     hdr = [c.value for c in ws[1]]
@@ -103,7 +103,7 @@ def read_floors(xlsx_path):
 
 
 def find_row(ws, tech, param):
-    """Devuelve el indice de la unica fila (tech, param); error si 0 o >1."""
+    """Return the index of the single (tech, param) row; error if 0 or >1 matches."""
     matches = [
         r for r in range(2, ws.max_row + 1)
         if ws.cell(r, COL_TECH).value == tech and ws.cell(r, COL_PARAM).value == param
@@ -114,7 +114,7 @@ def find_row(ws, tech, param):
 
 
 def year_columns(ws):
-    """{year:int -> col_idx} a partir de la fila 1."""
+    """{year:int -> col_idx} built from row 1."""
     out = {}
     for c in range(1, ws.max_column + 1):
         h = ws.cell(1, c).value
@@ -124,7 +124,7 @@ def year_columns(ws):
 
 
 def apply_cells(ws, row_idx, target, ycols, changes, scen, tech, param):
-    """Escribe {year: value} en la fila; registra old->new. Devuelve n escritos."""
+    """Write {year: value} into the row; log old->new. Returns the number written."""
     n = 0
     for yr, val in sorted(target.items()):
         col = ycols.get(yr)
@@ -206,7 +206,7 @@ def process_scenario(scen, floors, do_floors, do_tx, dry_run, changes):
 
 
 def verify(floors, do_floors, do_tx):
-    """Relee los archivos y confirma los valores finales. Devuelve n errores."""
+    """Reread the files and confirm the final values. Returns the number of errors."""
     errors = []
     for scen in TX_SCENARIOS:
         path = BASE_PATH / f"A1_Outputs_{scen}" / "A-O_Parametrization.xlsx"
