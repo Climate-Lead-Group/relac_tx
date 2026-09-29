@@ -1,14 +1,21 @@
-"""
-Script para generar una tabla de Excel con flujos de energía entre países.
-Genera un archivo .xlsx con las columnas:
-- Año
-- País Salida
-- País Entrada
-- Energía (GWh)
-- Notas
-- Fuente
+"""Build the bilateral electricity-flows table for the 20 known LAC interconnections.
 
-Opcionalmente, puede llenar los datos desde un archivo fuente existente.
+For each year in [YEAR_START, YEAR_END] and each TRNxxxYYzzz code in INTERCONNECTION_TECHS,
+generates two rows (bidirectional) with columns Año, País Salida, País Entrada,
+Energía (GWh), Notas, Fuente. Optionally fills known values from SOURCE_FILE first, then
+fills any still-empty "Energía (GWh)" cell from datos_flujos_internet.DATOS_INTERNET.
+
+Inputs:
+    inputs/reference/Matriz Balance energético/Matriz_Bilateral_Electricidad.xlsx
+        (sheet "Intercambios Bilaterales"; optional, skipped with a warning if absent)
+    datos_flujos_internet.DATOS_INTERNET (import)
+Outputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_interconexiones.xlsx
+        (sheet "Flujos de Energía")
+Usage:
+    python scripts/experimental/matriz_balance/generar_tabla_flujos_energia.py
+Notes:
+    - Country pairs and their ISO-3 codes come from INTERCONNECTION_TECHS / COUNTRY_NAMES.
 """
 
 import pandas as pd
@@ -83,9 +90,15 @@ OUTPUT_FILE = "flujos_energia_interconexiones.xlsx"
 # ============================================================================
 
 def extract_countries_from_tech(tech_code: str) -> tuple[str, str]:
-    """
-    Extrae los códigos ISO-3 de países de una tecnología de interconexión.
-    Ejemplo: TRNARGXXBOLXX -> ('ARG', 'BOL')
+    """Extract the two ISO-3 country codes from an interconnection tech code.
+
+    Example: "TRNARGXXBOLXX" -> ("ARG", "BOL") (characters 3-5 and 8-10).
+
+    Args:
+        tech_code: OSeMOSYS transmission tech code, format TRNXXXYYZZZ.
+
+    Returns:
+        (origin_country_code, destination_country_code).
     """
     country1 = tech_code[3:6]  # Posiciones 3-5
     country2 = tech_code[8:11]  # Posiciones 8-10
@@ -97,9 +110,18 @@ def generate_energy_flows_table(
     interconnections: list[str],
     country_names: dict[str, str]
 ) -> pd.DataFrame:
-    """
-    Genera un DataFrame con todas las combinaciones de flujos de energía.
-    Cada interconexión genera dos filas por año (bidireccional).
+    """Build one row per direction and year for every interconnection tech code.
+
+    Each interconnection generates two rows per year (bidirectional), with "Energía (GWh)",
+    "Notas" and "Fuente" left as None to be filled later.
+
+    Args:
+        years: calendar years to generate rows for.
+        interconnections: OSeMOSYS TRN tech codes (see INTERCONNECTION_TECHS).
+        country_names: ISO-3 code -> country name lookup (see COUNTRY_NAMES).
+
+    Returns:
+        DataFrame with columns Año, País Salida, País Entrada, Energía (GWh), Notas, Fuente.
     """
     rows = []
 
@@ -134,8 +156,14 @@ def generate_energy_flows_table(
 
 
 def load_source_data(source_path: Path, sheet_name: str) -> pd.DataFrame:
-    """
-    Carga los datos del archivo fuente.
+    """Load the bilateral-flows source workbook and rename its columns to the target schema.
+
+    Args:
+        source_path: path to the source .xlsx (SOURCE_FILE).
+        sheet_name: sheet to read (SOURCE_SHEET).
+
+    Returns:
+        DataFrame with columns renamed to País Salida / País Entrada / Energía (GWh).
     """
     df = pd.read_excel(source_path, sheet_name=sheet_name)
     # Renombrar columnas para que coincidan con la tabla destino
@@ -151,9 +179,18 @@ def fill_from_source(
     target_df: pd.DataFrame,
     source_df: pd.DataFrame
 ) -> pd.DataFrame:
-    """
-    Llena los datos de la tabla destino con los valores del archivo fuente.
-    Hace match por Año, País Salida y País Entrada.
+    """Fill target rows from the source table by matching (Año, País Salida, País Entrada).
+
+    Args:
+        target_df: base table from generate_energy_flows_table(); not modified in place.
+        source_df: table loaded by load_source_data().
+
+    Returns:
+        Copy of target_df with "Energía (GWh)", "Notas" and "Fuente" filled where a match
+        exists in source_df.
+
+    Side effects:
+        Prints how many rows were filled and lists (up to 10) unmatched keys.
     """
     # Crear una copia para no modificar el original
     result_df = target_df.copy()
@@ -197,9 +234,20 @@ def fill_from_source(
 
 
 def fill_from_internet_data(target_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Llena los datos de la tabla destino con los valores recopilados de internet.
-    Llena registros que no tienen valor de energía (aunque tengan notas del archivo fuente).
+    """Fill still-empty "Energía (GWh)" cells from datos_flujos_internet.DATOS_INTERNET.
+
+    Only rows whose "Energía (GWh)" is still NaN after fill_from_source() are updated; notes
+    and source are refreshed alongside a new energy value.
+
+    Args:
+        target_df: table produced by fill_from_source() (or generate_energy_flows_table());
+            not modified in place.
+
+    Returns:
+        Copy of target_df with additional cells filled from DATOS_INTERNET.
+
+    Side effects:
+        Prints fill/update counts and the remaining count of empty "Energía (GWh)" cells.
     """
     from datos_flujos_internet import DATOS_INTERNET
 
@@ -234,8 +282,14 @@ def fill_from_internet_data(target_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_to_excel(df: pd.DataFrame, output_path: Path) -> None:
-    """
-    Guarda el DataFrame en un archivo Excel con formato.
+    """Write df to output_path as sheet "Flujos de Energía" with fixed column widths.
+
+    Args:
+        df: table to write.
+        output_path: destination .xlsx path.
+
+    Side effects:
+        Writes output_path to disk, overwriting any existing file.
     """
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='Flujos de Energía', index=False)
@@ -255,7 +309,11 @@ def save_to_excel(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def main():
-    """Función principal."""
+    """Generate the flows table, fill it from SOURCE_FILE and internet data, and save it.
+
+    Side effects:
+        Writes OUTPUT_FILE under P.MATRIZ_BALANCE; prints progress and a preview to stdout.
+    """
     # Generar lista de años
     years = list(range(YEAR_START, YEAR_END + 1))
     base_path = P.MATRIZ_BALANCE

@@ -1,15 +1,25 @@
-"""
-Método 4: Estimación de flujos bilaterales por optimización con restricciones.
+"""Method 4: estimate bilateral flows via constrained optimization with a gravity-model prior.
 
-- NO usa datos bilaterales (solo datos agregados OLADE)
-- Usa modelo gravitacional como prior para distribución razonable
-- Minimiza error en importaciones Y exportaciones simultáneamente
-- Atribuye diferencia import/export LAC a comercio México-USA
-- 17 interconexiones verificadas como reales
+Does not use the bilateral flows table, only OLADE aggregate totals (MATRIZ_FILE). For each
+year, builds a bounded least-squares problem (scipy.optimize.lsq_linear, method "bvls") whose
+variables are directed flows on each edge in INTERCONNECTIONS plus Mexico-USA and
+Brazil-external variables; OLADE import/export totals are soft (heavily penalized) constraints
+rather than hard ones, since OLADE's own neighbor-to-neighbor figures can be internally
+inconsistent (e.g. Ecuador's exports vs. Colombia's imports), and a gravity-model prior
+regularizes pairs with little OLADE signal. calcular_flujos_fisicos() then re-expresses the
+17 PHYSICAL_INTERCONNECTIONS lines, routing SIEPAC transit flows over SIEPAC_ADJACENCY.
 
-Nota: Las restricciones OLADE son suaves (penalizadas en el objetivo)
-porque los datos OLADE pueden tener inconsistencias internas entre
-países vecinos (ej: exportaciones de Ecuador ≠ importaciones de Colombia).
+Inputs:
+    inputs/reference/Matriz Balance energético/Matriz_ImportExport_PorPais.xlsx
+        (sheet "Matriz_Completa")
+Outputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_estimados_optimizacion.xlsx
+        (sheets "Flujos Bilaterales", "Flujos por Interconexión")
+Usage:
+    python scripts/experimental/matriz_balance/estimar_flujos_optimizacion.py
+Notes:
+    - One of four independent estimation methods; does not depend on the others' output.
+    - Requires scipy (scipy.optimize.lsq_linear), in addition to pandas/openpyxl.
 """
 
 import pandas as pd
@@ -115,18 +125,22 @@ SIEPAC_ADJACENCY = {
 # ============================================================================
 
 def construir_problema(exportaciones: dict, importaciones: dict, paises_con_datos: set):
-    """
-    Construye el problema de optimización para un año específico.
+    """Build the optimization problem (edges, index maps and prior) for one year.
+
+    Args:
+        exportaciones: OLADE export total (GWh) per country for this year.
+        importaciones: OLADE import total (GWh) per country for this year.
+        paises_con_datos: countries with an OLADE row for this year.
 
     Returns:
-        edges: lista de tuplas (país_origen, país_destino)
-        outflow_indices: {país: [indices de variables de salida]}
-        inflow_indices: {país: [indices de variables de entrada]}
-        prior: vector de prior gravitacional
-        paises_activos: lista ordenada de países activos
-        ext_indices: dict con índices de flujos externos
-            - mex_usa_imp/exp: flujos México ↔ Exterior (USA)
-            - bra_ext_imp/exp: flujos Brasil ↔ Exterior (Venezuela/Guyana)
+        (edges, outflow_indices, inflow_indices, prior, paises_activos, ext_indices):
+        edges is the list of (origin, destination) directed flow variables (INTERCONNECTIONS
+        pairs with both countries present, plus "EXT" edges for Mexico-USA and
+        Brazil-external trade); outflow_indices/inflow_indices map each country to its edge
+        indices; prior is the gravity-model prior vector (export_i * import_j / total_trade);
+        paises_activos is the sorted list of countries with at least one edge; ext_indices
+        gives the edge index of each external flow (mex_usa_imp/exp, bra_ext_imp/exp), or
+        None where that country has no data.
     """
     # Filtrar interconexiones: solo las que tienen ambos países con datos
     edges = []
@@ -201,15 +215,26 @@ def construir_problema(exportaciones: dict, importaciones: dict, paises_con_dato
 
 def resolver_optimizacion(edges, outflow_indices, inflow_indices, prior,
                           paises_activos, exportaciones, importaciones):
-    """
-    Resuelve como mínimos cuadrados limitados (bounded least squares).
+    """Solve the flow estimate as a bounded least-squares problem (x >= 0).
 
-    Minimiza: || A @ x - b ||²
-    Sujeto a: x >= 0
+    Minimizes ||A @ x - b||^2 where A and b stack three blocks: matching each country's OLADE
+    export total (weight w_olade=1000), matching its OLADE import total (w_olade=1000), and
+    staying close to the gravity-model prior (w_prior=0.01, regularization). Solved with
+    scipy.optimize.lsq_linear(method="bvls").
 
-    Donde A y b codifican:
-    - Coincidencia con OLADE (peso alto)
-    - Cercanía al prior gravitacional (peso bajo, regularización)
+    Args:
+        edges: directed flow variables, as returned by construir_problema().
+        outflow_indices: country -> list of edge indices leaving it.
+        inflow_indices: country -> list of edge indices entering it.
+        prior: gravity-model prior vector, same order as edges.
+        paises_activos: countries with at least one edge, in a fixed order.
+        exportaciones: OLADE export total (GWh) per country.
+        importaciones: OLADE import total (GWh) per country.
+
+    Returns:
+        (solution, success, max_exp_err, max_imp_err): the non-negative flow solution,
+        whether lsq_linear reported success, and the largest residual (GWh) against the
+        export and import targets respectively.
     """
     n_vars = len(edges)
     n_paises = len(paises_activos)
@@ -266,7 +291,18 @@ def resolver_optimizacion(edges, outflow_indices, inflow_indices, prior,
 
 
 def flujos_a_dataframe(edges, solution, año, ext_indices):
-    """Convierte la solución del optimizador al formato DataFrame estándar."""
+    """Convert the optimizer solution into the standard bilateral-flows DataFrame.
+
+    Args:
+        edges: directed flow variables, as returned by construir_problema().
+        solution: flow values from resolver_optimizacion(), same order as edges.
+        año: year to stamp on the output rows.
+        ext_indices: unused here; edges touching "EXT" are skipped (reported separately).
+
+    Returns:
+        DataFrame with one row per country pair in INTERCONNECTIONS: Año, País 1, País 2,
+        Importaciones/Exportaciones/Flujo Neto/Flujo Total País 1 (GWh), Notas, Fuente.
+    """
     # Agrupar flujos por par de países (según INTERCONNECTIONS)
     flujos_bilaterales = {}
 
@@ -315,7 +351,25 @@ def flujos_a_dataframe(edges, solution, año, ext_indices):
 
 def verificar_resultados(df_año, exportaciones, importaciones, edges, solution,
                          ext_indices):
-    """Verifica que los resultados coincidan con OLADE."""
+    """Print a per-country comparison of estimated vs. OLADE import/export totals.
+
+    For Mexico and Brazil, also adds their external (EXT) flow variables before comparing.
+
+    Args:
+        df_año: bilateral estimates for one year, from flujos_a_dataframe().
+        exportaciones: OLADE export total (GWh) per country for this year.
+        importaciones: OLADE import total (GWh) per country for this year.
+        edges: directed flow variables, as returned by construir_problema().
+        solution: flow values from resolver_optimizacion(), same order as edges.
+        ext_indices: edge index of each external flow (mex_usa_imp/exp, bra_ext_imp/exp).
+
+    Returns:
+        (errors_imp, errors_exp): lists of absolute percentage errors for countries with a
+        nonzero OLADE import / export total, respectively.
+
+    Side effects:
+        Prints one line per country and the max error to stdout.
+    """
     paises = sorted(set(
         p for orig, dest in edges for p in [orig, dest]
         if p != "EXT"
@@ -382,7 +436,7 @@ def verificar_resultados(df_año, exportaciones, importaciones, edges, solution,
 
 
 def _bfs_shortest_path(source, target):
-    """BFS para encontrar ruta más corta en la red física SIEPAC."""
+    """Find the shortest path between source and target in SIEPAC_ADJACENCY (BFS)."""
     queue = deque([(source, [source])])
     visited = {source}
     while queue:
@@ -397,7 +451,7 @@ def _bfs_shortest_path(source, target):
 
 
 def _precompute_siepac_routes():
-    """Pre-calcula rutas más cortas entre todos los pares SIEPAC."""
+    """Precompute the shortest SIEPAC_ADJACENCY route for every pair in SIEPAC_COUNTRIES."""
     routes = {}
     for i, p1 in enumerate(SIEPAC_COUNTRIES):
         for p2 in SIEPAC_COUNTRIES[i+1:]:
@@ -412,12 +466,19 @@ SIEPAC_ROUTES = _precompute_siepac_routes()
 
 
 def calcular_flujos_fisicos(df_bilateral, año):
-    """
-    Calcula flujos por interconexión física, incluyendo tránsito SIEPAC.
+    """Aggregate bilateral estimates onto the 17 PHYSICAL_INTERCONNECTIONS lines.
 
-    Para pares SIEPAC no adyacentes (ej: Panamá→Guatemala), el flujo se
-    rutea por la ruta más corta en la red física, sumando tránsito en cada
-    línea intermedia.
+    For SIEPAC pairs that are not directly adjacent (e.g. Panamá-Guatemala), the flow is
+    routed over the shortest path in SIEPAC_ADJACENCY (via SIEPAC_ROUTES), adding transit
+    volume to every intermediate line.
+
+    Args:
+        df_bilateral: bilateral estimates (all years), from flujos_a_dataframe().
+        año: year to filter on.
+
+    Returns:
+        DataFrame with one row per line in PHYSICAL_INTERCONNECTIONS: Año, País A, País B,
+        Flujo A->B/B->A/Neto A->B/Total (GWh).
     """
     siepac_set = set(SIEPAC_COUNTRIES)
 
@@ -491,6 +552,17 @@ def calcular_flujos_fisicos(df_bilateral, año):
 # ============================================================================
 
 def main():
+    """Run Method 4 for every OLADE year and write the flows and physical-lines workbook.
+
+    Loads MATRIZ_FILE, builds and solves the optimization problem per year
+    (construir_problema(), resolver_optimizacion()), converts each solution to bilateral
+    estimates, aggregates them onto physical lines via calcular_flujos_fisicos() (adding a
+    2025 average of prior years), and prints a verification against OLADE totals.
+
+    Side effects:
+        Writes OUTPUT_FILE under P.MATRIZ_BALANCE, overwriting any existing file; prints
+        progress and verification tables to stdout.
+    """
     base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos OLADE...")

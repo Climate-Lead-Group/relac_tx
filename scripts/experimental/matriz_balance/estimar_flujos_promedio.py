@@ -1,12 +1,21 @@
-"""
-Script para estimar flujos bilaterales promediando dos estimaciones.
+"""Method 2: estimate bilateral flows as the average of export-based and import-based shares.
 
-Calcula:
-1. Estimación basada en exportaciones OLADE
-2. Estimación basada en importaciones OLADE
-3. Promedio de ambas
+For each year and country pair, computes two independent estimates from the bilateral flows
+table (one distributing each country's OLADE export total by outbound share, one distributing
+its OLADE import total by inbound share) and averages them, balancing the error between
+imports and exports.
 
-Esto balancea los errores entre importaciones y exportaciones.
+Inputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_interconexiones.xlsx
+    inputs/reference/Matriz Balance energético/Matriz_ImportExport_PorPais.xlsx
+        (sheet "Matriz_Completa")
+Outputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_estimados_promedio.xlsx
+        (sheet "Flujos Promedio")
+Usage:
+    python scripts/experimental/matriz_balance/estimar_flujos_promedio.py
+Notes:
+    - One of four independent estimation methods; does not depend on the others' output.
 """
 
 import pandas as pd
@@ -48,7 +57,16 @@ INTERCONNECTIONS = [
 
 
 def calcular_proporciones_exportacion(df_flujos: pd.DataFrame, año: int) -> dict:
-    """Proporciones por país de salida."""
+    """Compute each exporting country's share of exports going to each partner.
+
+    Args:
+        df_flujos: bilateral flows table for all years.
+        año: year to filter on.
+
+    Returns:
+        {exporting_country: {importing_country: share}}; countries with no data split the
+        share equally among their partners.
+    """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
     proporciones = {}
 
@@ -71,7 +89,16 @@ def calcular_proporciones_exportacion(df_flujos: pd.DataFrame, año: int) -> dic
 
 
 def calcular_proporciones_importacion(df_flujos: pd.DataFrame, año: int) -> dict:
-    """Proporciones por país de entrada."""
+    """Compute each importing country's share of imports coming from each partner.
+
+    Args:
+        df_flujos: bilateral flows table for all years.
+        año: year to filter on.
+
+    Returns:
+        {importing_country: {exporting_country: share}}; countries with no data split the
+        share equally among their partners.
+    """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
     proporciones = {}
 
@@ -98,7 +125,17 @@ def estimar_flujos_promedio(
     df_matriz: pd.DataFrame,
     año: int
 ) -> pd.DataFrame:
-    """Estima flujos promediando dos estimaciones."""
+    """Estimate bilateral flows for one year as the average of export- and import-based shares.
+
+    Args:
+        df_flujos: bilateral flows table for all years.
+        df_matriz: OLADE per-country matrix for all years.
+        año: year to process.
+
+    Returns:
+        DataFrame with one row per country pair in INTERCONNECTIONS: Año, País 1, País 2,
+        Importaciones/Exportaciones/Flujo Neto/Flujo Total País 1 (GWh), Notas, Fuente.
+    """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
     matriz_año = df_matriz[df_matriz["Año"] == año]
 
@@ -194,6 +231,16 @@ def estimar_flujos_promedio(
 
 
 def main():
+    """Run Method 2 for every OLADE year and write the averaged-estimate workbook.
+
+    Loads FLUJOS_FILE and MATRIZ_FILE, estimates bilateral flows per year via
+    estimar_flujos_promedio(), concatenates the results, and prints a verification comparing
+    the averaged estimate vs. OLADE import and export totals.
+
+    Side effects:
+        Writes OUTPUT_FILE under P.MATRIZ_BALANCE, overwriting any existing file; prints
+        progress and verification tables to stdout.
+    """
     base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos...")

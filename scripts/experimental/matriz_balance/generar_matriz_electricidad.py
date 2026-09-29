@@ -1,24 +1,21 @@
-"""
-Script Maestro para Generar Matriz de Electricidad
-===================================================
+"""Master script: build the per-country/year electricity import/export matrix from OLADE.
 
-Este script ejecuta todo el proceso completo:
-1. Extrae datos de PRODUCCIÓN, IMPORTACIÓN y EXPORTACIÓN del Excel de OLADE
-2. Detecta las unidades de cada hoja y convierte a GWh si es necesario
-3. Genera la matriz final de electricidad por país y año
+Step 1 extracts PRODUCCIÓN, IMPORTACIÓN and EXPORTACIÓN rows for the "ELECTRICIDAD" product
+from each of OLADE's per-country/year sheets, detects the sheet's unit (2021: GWh; 2023:
+10^15 J / PJ) and converts to GWh via PJ_TO_GWH = 277.778. Step 2 derives the net balance and
+a per-country summary.
 
-IMPORTANTE: El archivo de OLADE tiene diferentes unidades según el año:
-- 2021: GWh
-- 2023: 10¹⁵ J (PJ - Petajoules)
-
-Conversión: 1 PJ = 277.778 GWh
-
-Uso:
-    python generar_matriz_electricidad.py
-
-Archivos generados:
-    - Matriz_Completa_Con_Produccion.xlsx (intermedio)
-    - Matriz_ImportExport_PorPais.xlsx (resultado final)
+Inputs:
+    inputs/reference/Matriz Balance energético/OLADE - Matriz de balance energético - Anual.xlsx
+Outputs:
+    .../Matriz_Completa_Con_Produccion.xlsx (intermediate, sheet "Consolidado")
+    .../Matriz_ImportExport_PorPais.xlsx (final; sheets "Matriz_Completa", "Resumen_Por_País")
+Usage:
+    python scripts/experimental/matriz_balance/generar_matriz_electricidad.py
+Notes:
+    - No `if __name__ == "__main__":` guard: importing this module runs the whole extraction
+      and overwrites its output files as a side effect.
+    - Paths resolved via common.relac_paths.MATRIZ_BALANCE.
 """
 
 import pandas as pd

@@ -1,8 +1,22 @@
-"""
-Script para estimar flujos bilaterales a partir de los datos de OLADE.
+"""Method 1: estimate bilateral flows by distributing OLADE totals using import proportions.
 
-PRIORIZA IMPORTACIONES: Distribuye las importaciones OLADE entre países vecinos.
-Para México, penaliza la diferencia a intercambio con USA.
+For each year, distributes each importing country's OLADE import total across its trading
+partners in proportion to their share of that country's total in the bilateral flows table
+(flujos_energia_interconexiones.xlsx); export is inferred as the partner's import share. For
+Mexico, also reports the gap between OLADE bilateral totals and its trade with the US (not
+modeled as a flow).
+
+Inputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_interconexiones.xlsx
+    inputs/reference/Matriz Balance energético/Matriz_ImportExport_PorPais.xlsx
+        (sheet "Matriz_Completa")
+Outputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_estimados_olade_final.xlsx
+        (sheet "Flujos Bilaterales OLADE")
+Usage:
+    python scripts/experimental/matriz_balance/estimar_flujos_desde_olade.py
+Notes:
+    - One of four independent estimation methods; does not depend on the others' output.
 """
 
 import pandas as pd
@@ -44,9 +58,15 @@ INTERCONNECTIONS = [
 
 
 def calcular_proporciones_importacion(df_flujos: pd.DataFrame, año: int) -> dict:
-    """
-    Proporciones por país de entrada (para distribuir importaciones).
-    Returns: {país_entrada: {país_salida: proporción}}
+    """Compute each importing country's share of imports coming from each partner.
+
+    Args:
+        df_flujos: bilateral flows table (flujos_energia_interconexiones.xlsx) for all years.
+        año: year to filter on.
+
+    Returns:
+        {importing_country: {exporting_country: share}}; countries with no data split
+        the share equally among their partners.
     """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
     proporciones = {}
@@ -75,8 +95,16 @@ def estimar_flujos_bilateral(
     df_matriz: pd.DataFrame,
     año: int
 ) -> pd.DataFrame:
-    """
-    Estima flujos bilaterales basándose en importaciones OLADE.
+    """Estimate bilateral flows for one year from OLADE import totals and import proportions.
+
+    Args:
+        df_flujos: bilateral flows table for all years.
+        df_matriz: OLADE per-country matrix (Matriz_ImportExport_PorPais.xlsx) for all years.
+        año: year to process.
+
+    Returns:
+        DataFrame with one row per country pair in INTERCONNECTIONS: Año, País 1, País 2,
+        Importaciones/Exportaciones/Flujo Neto/Flujo Total País 1 (GWh), Notas, Fuente.
     """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
     matriz_año = df_matriz[df_matriz["Año"] == año]
@@ -160,8 +188,16 @@ def estimar_flujos_bilateral(
 
 
 def calcular_diferencia_mexico_usa(df_resultado: pd.DataFrame, df_matriz: pd.DataFrame, año: int) -> dict:
-    """
-    Calcula la diferencia de México con USA para importaciones y exportaciones.
+    """Compute Mexico's OLADE totals minus its LAC-bilateral totals (attributed to US trade).
+
+    Args:
+        df_resultado: bilateral estimates produced by estimar_flujos_bilateral() for año.
+        df_matriz: OLADE per-country matrix for all years.
+        año: year to compute.
+
+    Returns:
+        dict with import_usa, export_usa, import_bilateral, export_bilateral, import_olade
+        and export_olade (all GWh).
     """
     # Importaciones de México
     mexico_p1 = df_resultado[(df_resultado["Año"] == año) & (df_resultado["País 1"] == "México")]
@@ -189,6 +225,16 @@ def calcular_diferencia_mexico_usa(df_resultado: pd.DataFrame, df_matriz: pd.Dat
 
 
 def main():
+    """Run Method 1 for every OLADE year and write the estimated-flows workbook.
+
+    Loads FLUJOS_FILE and MATRIZ_FILE, estimates bilateral flows per year via
+    estimar_flujos_bilateral(), concatenates the results, and prints a verification
+    comparing estimated vs. OLADE import totals and the Mexico-US differences.
+
+    Side effects:
+        Writes OUTPUT_FILE under P.MATRIZ_BALANCE, overwriting any existing file; prints
+        progress and verification tables to stdout.
+    """
     base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos...")

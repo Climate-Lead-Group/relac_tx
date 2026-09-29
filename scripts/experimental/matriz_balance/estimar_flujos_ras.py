@@ -1,8 +1,21 @@
-"""
-Script para estimar flujos bilaterales usando el método RAS (bi-proporcional).
+"""Method 3: estimate bilateral flows with the RAS bi-proportional adjustment algorithm.
 
-El método RAS ajusta iterativamente los flujos para minimizar las diferencias
-tanto en importaciones como en exportaciones respecto a OLADE.
+Starts from the bilateral flows table as an initial matrix and iteratively rescales its rows
+(exports) and columns (imports) to match both OLADE totals simultaneously, up to
+MAX_ITERATIONS iterations or until the largest cell change drops below TOLERANCE GWh.
+
+Inputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_interconexiones.xlsx
+    inputs/reference/Matriz Balance energético/Matriz_ImportExport_PorPais.xlsx
+        (sheet "Matriz_Completa")
+Outputs:
+    inputs/reference/Matriz Balance energético/flujos_energia_estimados_ras.xlsx
+        (sheet "Flujos RAS")
+Usage:
+    python scripts/experimental/matriz_balance/estimar_flujos_ras.py
+Notes:
+    - One of four independent estimation methods; does not depend on the others' output.
+    - MAX_ITERATIONS = 500, TOLERANCE = 0.01 GWh.
 """
 
 import pandas as pd
@@ -48,8 +61,16 @@ INTERCONNECTIONS = [
 
 
 def crear_matriz_inicial(df_flujos: pd.DataFrame, año: int) -> tuple:
-    """
-    Crea matriz inicial de flujos y listas de países.
+    """Build the initial country x country flow matrix for one year.
+
+    Args:
+        df_flujos: bilateral flows table for all years.
+        año: year to filter on.
+
+    Returns:
+        (matriz, paises, pais_to_idx): the initial n x n matrix (known GWh values, or 1.0 as
+        a placeholder for pairs with no data so RAS can still adjust them), the sorted list
+        of countries, and a country-name -> matrix-index lookup.
     """
     df_año = df_flujos[df_flujos["Año"] == año].copy()
 
@@ -82,11 +103,21 @@ def metodo_ras(
     exportaciones_objetivo: np.ndarray,
     importaciones_objetivo: np.ndarray
 ) -> tuple:
-    """
-    Aplica el método RAS (bi-proporcional) para balancear la matriz.
+    """Apply the RAS bi-proportional algorithm to balance the flow matrix against both targets.
+
+    Alternates rescaling rows to match exportaciones_objetivo and columns to match
+    importaciones_objetivo until the largest cell change is below TOLERANCE or
+    MAX_ITERATIONS is reached.
+
+    Args:
+        matriz_inicial: initial n x n flow matrix (see crear_matriz_inicial()).
+        exportaciones_objetivo: OLADE export total per country (row targets), same order as
+            the matrix.
+        importaciones_objetivo: OLADE import total per country (column targets), same order.
 
     Returns:
-        matriz_balanceada, convergido, num_iteraciones
+        (matriz_balanceada, convergido, num_iteraciones): the balanced matrix, whether it
+        converged within MAX_ITERATIONS, and the number of iterations run.
     """
     matriz = matriz_inicial.copy()
     n = len(matriz)
@@ -130,8 +161,16 @@ def matriz_a_dataframe(
     paises: list,
     año: int
 ) -> pd.DataFrame:
-    """
-    Convierte matriz balanceada a DataFrame con formato bilateral.
+    """Convert the balanced matrix into the standard bilateral-flows DataFrame.
+
+    Args:
+        matriz: balanced flow matrix from metodo_ras().
+        paises: country list matching the matrix's row/column order.
+        año: year to stamp on the output rows.
+
+    Returns:
+        DataFrame with one row per country pair in INTERCONNECTIONS: Año, País 1, País 2,
+        Importaciones/Exportaciones/Flujo Neto/Flujo Total País 1 (GWh), Notas, Fuente.
     """
     rows = []
 
@@ -197,6 +236,16 @@ def matriz_a_dataframe(
 
 
 def main():
+    """Run the RAS method for every OLADE year and write the balanced-estimate workbook.
+
+    Loads FLUJOS_FILE and MATRIZ_FILE, builds and balances the flow matrix per year via
+    crear_matriz_inicial() and metodo_ras(), converts each to a DataFrame, concatenates the
+    results, and prints a verification comparing the RAS estimate vs. OLADE totals.
+
+    Side effects:
+        Writes OUTPUT_FILE under P.MATRIZ_BALANCE, overwriting any existing file; prints
+        progress and verification tables to stdout.
+    """
     base_path = P.MATRIZ_BALANCE
 
     print("Cargando datos...")

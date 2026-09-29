@@ -1,6 +1,11 @@
-"""
-Datos de flujos de energía recopilados de internet.
-Estos datos complementan los del archivo Matriz_Bilateral_Electricidad.xlsx
+"""Hardcoded bilateral electricity-flow observations collected manually from public sources.
+
+Complements the data in Matriz_Bilateral_Electricidad.xlsx: DATOS_INTERNET maps
+(year, exporting country, importing country) to an observed or estimated GWh value, a note
+and the source URL, for years and country pairs that file does not cover.
+
+Notes:
+    - Library only: imported by generar_tabla_flujos_energia.py, not run directly.
 """
 
 # Diccionario de datos recopilados de internet
