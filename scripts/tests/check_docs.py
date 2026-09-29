@@ -24,13 +24,16 @@ Usage:
     python scripts/tests/check_docs.py --paths scripts/common scripts/pipeline
     python scripts/tests/check_docs.py --compare-ast main  # docstring-only diff vs a git ref
     python scripts/tests/check_docs.py --selftest          # run the built-in fixture tests
+
+Notes:
+    - Outside a git checkout, untracked scratch files are included (tracked_py_files falls back
+      to rglob when `git ls-files` is unavailable).
 """
 from __future__ import annotations
 
 import argparse
 import ast
 import fnmatch
-import os
 import subprocess
 import sys
 import tempfile
@@ -86,10 +89,11 @@ def tracked_py_files(root: Path, roots: list[str]) -> list[Path]:
     files: list[Path] = []
     try:
         out = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--", *roots],
-            check=True, capture_output=True, text=True,
+            ["git", "-C", str(root), "ls-files", "-z", "--", *roots],
+            check=True, capture_output=True, text=True, encoding="utf-8",
         ).stdout
-        files = [root / line for line in out.splitlines() if line.endswith(".py")]
+        # -z / NUL-separated so non-ASCII paths are not quoted (unlike the default newline output).
+        files = [root / p for p in out.split("\0") if p.endswith(".py")]
     except (subprocess.CalledProcessError, FileNotFoundError):
         for r in roots:
             files.extend(p for p in (root / r).rglob("*.py"))
@@ -100,7 +104,7 @@ def tracked_py_files(root: Path, roots: list[str]) -> list[Path]:
 
 def parse(path: Path) -> ast.Module | None:
     try:
-        return ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
+        return ast.parse(path.read_text(encoding="utf-8-sig", errors="replace"), filename=str(path))
     except SyntaxError:
         return None
 
@@ -129,6 +133,25 @@ def scripts_section(text: str) -> str:
     return rest if nxt < 0 else rest[:nxt]
 
 
+def scripts_table_names(table: str) -> set[str]:
+    """Return the first-column script name/path of each Markdown table row in `table`.
+
+    Only the first `| ... |` cell of each row counts as naming a script (e.g. `` `x.py` `` or
+    `` `sub/x.py` ``); mentions of a filename elsewhere in the table (another column, prose) do
+    not. Header and separator rows (`---`) are skipped.
+    """
+    names: set[str] = set()
+    for line in table.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cell = line[1:].split("|", 1)[0].strip().strip("`").strip()
+        if not cell or set(cell) <= {"-", ":"}:
+            continue
+        names.add(cell)
+    return names
+
+
 def check_readmes(by_dir: dict[Path, list[Path]], root: Path, paths_filter: list[Path]) -> list[str]:
     errors: list[str] = []
     for d, pys in sorted(by_dir.items()):
@@ -143,9 +166,9 @@ def check_readmes(by_dir: dict[Path, list[Path]], root: Path, paths_filter: list
         for sec in REQUIRED_README_SECTIONS:
             if sec not in text:
                 errors.append(f"{rel}/README.md: missing section '{sec}'")
-        table = scripts_section(text)
+        names = scripts_table_names(scripts_section(text))
         for py in pys:
-            if py.name not in table:
+            if not any(n == py.name or n.endswith("/" + py.name) for n in names):
                 errors.append(f"{rel}/README.md: '## Scripts' does not list {py.name}")
     for r in README_ROOTS:
         d = root / r
@@ -259,7 +282,7 @@ def compare_ast(root: Path, ref: str, roots: list[str]) -> list[str]:
     """Files changed vs `ref` whose logic (AST minus docstrings) differs. New files are skipped."""
     out = subprocess.run(
         ["git", "-C", str(root), "diff", "--name-only", ref, "--", *roots],
-        check=True, capture_output=True, text=True,
+        check=True, capture_output=True, text=True, encoding="utf-8",
     ).stdout
     findings: list[str] = []
     for rel in [l for l in out.splitlines() if l.endswith(".py")]:
@@ -267,13 +290,16 @@ def compare_ast(root: Path, ref: str, roots: list[str]) -> list[str]:
         if not work.exists():
             findings.append(f"{rel}: deleted in working tree")
             continue
-        show = subprocess.run(["git", "-C", str(root), "show", f"{ref}:{rel}"], capture_output=True, text=True)
+        show = subprocess.run(
+            ["git", "-C", str(root), "show", f"{ref}:{rel}"],
+            capture_output=True, text=True, encoding="utf-8",
+        )
         if show.returncode != 0:
             print(f"note: {rel} is new (not in {ref}); skipped")
             continue
         try:
             a = ast.dump(strip_docstrings(ast.parse(show.stdout)))
-            b = ast.dump(strip_docstrings(ast.parse(work.read_text(encoding="utf-8", errors="replace"))))
+            b = ast.dump(strip_docstrings(ast.parse(work.read_text(encoding="utf-8-sig", errors="replace"))))
         except SyntaxError as exc:
             findings.append(f"{rel}: SyntaxError ({exc})")
             continue
@@ -284,6 +310,16 @@ def compare_ast(root: Path, ref: str, roots: list[str]) -> list[str]:
 
 # --------------------------------------------------------------------------- driver
 def run(root: Path, paths: list[str], summary: bool) -> int:
+    """Run the README/module/function checks and print the findings (or a coverage summary).
+
+    Args:
+        root: repo root (as returned by repo_root()).
+        paths: repo-relative paths to limit the check to; empty means everything.
+        summary: if True, print per-folder coverage counts and return 0 instead of findings.
+
+    Returns:
+        0 if there are no findings (or summary was requested), 1 otherwise.
+    """
     files = tracked_py_files(root, CODE_ROOTS)
     filt = [root / p for p in paths]
     counts = import_counts(files)
@@ -346,7 +382,9 @@ def selftest() -> int:
         _write(root / "scripts/pkg/a.py", '"""Real summary."""\n\ndef long_fn():\n' + "    x = 1\n" * 35 + "\n\ndef short_fn():\n    return 1\n")
         _write(root / "scripts/pkg/b.py", '"""Created on 2021\n@author: someone\n"""\nX = 1\n')
         _write(root / "scripts/pkg/ignored.py", "no docstring at all\n")
-        _write(root / "scripts/pkg/README.md", "# scripts/pkg\n\n## Scripts\n\n| Script |\n|---|\n| `a.py` |\n| `sub/c.py` |\n\n## How to run\n\n## Gotchas\n")
+        # a.py's row mentions "b.py" in prose (a different column) on purpose: the first-column
+        # match must still flag b.py as unlisted rather than matching that prose mention.
+        _write(root / "scripts/pkg/README.md", "# scripts/pkg\n\n## Scripts\n\n| Script | Notes |\n|---|---|\n| `a.py` | wraps b.py |\n| `sub/c.py` | - |\n\n## How to run\n\n## Gotchas\n")
         _write(root / "scripts/pkg/sub/c.py", '"""C."""\nX = 1\n')   # covered by parent README (listed there)
         # lib: every public def needs a docstring; private and nested ignored
         _write(root / "scripts/lib/util.py", '"""Lib."""\n\ndef pub():\n    def inner():\n        pass\n    return 1\n\ndef _priv():\n    return 2\n\nclass K:\n    def m(self):\n        return 3\n    def _h(self):\n        return 4\n')
@@ -364,14 +402,15 @@ def selftest() -> int:
         by_dir = folders_needing_readme(files, root)
         r_errs = check_readmes(by_dir, root, [])
         case("readme_missing_script_row", any("does not list b.py" in e for e in r_errs), str(r_errs))
+        case("readme_first_column_match_ignores_prose_mention", any("does not list b.py" in e for e in r_errs), str(r_errs))
         case("readme_covered_by_parent_listed_in_parent", not any("pkg/sub" in e or "c.py" in e for e in r_errs), str(r_errs))
         case("readme_root_missing", any(e.startswith("inputs/README.md") for e in r_errs), str(r_errs))
-        errs_a, req_a, doc_a = check_module(root / "scripts/pkg/a.py", root, counts)
+        errs_a, _, _ = check_module(root / "scripts/pkg/a.py", root, counts)
         case("long_public_def_required", any("long_fn" in e for e in errs_a), str(errs_a))
         case("short_public_def_not_required", not any("short_fn" in e for e in errs_a), str(errs_a))
         errs_b, _, _ = check_module(root / "scripts/pkg/b.py", root, counts)
         case("authorship_only_module_docstring", any("authorship-only" in e for e in errs_b), str(errs_b))
-        errs_u, req_u, _ = check_module(root / "scripts/lib/util.py", root, counts)
+        errs_u, _, _ = check_module(root / "scripts/lib/util.py", root, counts)
         names = " ".join(errs_u)
         case("library_all_public_required", "pub" in names and "K" in names and "K.m" in names, names)
         case("library_private_and_nested_ignored", "_priv" not in names and "inner" not in names and "_h" not in names, names)
