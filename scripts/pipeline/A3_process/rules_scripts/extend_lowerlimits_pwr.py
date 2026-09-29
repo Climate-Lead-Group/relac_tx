@@ -10,7 +10,8 @@ anchor thermal fleets on observed 2024 dispatch.
 Only cells from `modify_from_year` (default MODIFY_FROM_YEAR = 2026) onward are written, so
 years 2023-2025 stay identical across scenarios (see sync_historical_from_bau.py); the 2024
 value itself, used as the flat-floor source, is never overwritten. By default only empty or
-zero cells are filled; --force-overwrite rewrites every 2025..2050 cell of a qualifying row
+zero cells are filled; --force-overwrite rewrites every cell of a qualifying row from
+max(modify_from_year, 2025) through 2050 (2026..2050 with the default modify_from_year)
 regardless of prior content. --include-types restricts the extension to PWR techs whose type
 code (chars 4-6 of the tech code, e.g. "HYD" in PWRHYDBRAXX) is in the given comma-separated
 list; without it every PWR row qualifies. Whenever a row is touched, its Projection.Mode

@@ -3,7 +3,7 @@
 Scripts that modified the xlsx files in `inputs/` (formerly `t1_confection/`) between 2026-07-23 and
 2026-09-01 and that were not yet in the repo. They are versioned here as **reproducible history**,
 not to be run again: **all of their changes are ALREADY applied in `inputs/`** (restored from
-`stash@{0}` on 2026-09-08, see `docs/superpowers/plans/2026-09-08-diagnostico-estado-C-solves.md`).
+`stash@{0}` on 2026-09-08, see `docs/superpowers/plans/2026-09-08-diagnostico-estado-C-solves.md`, spec kept on the author's disk only; not in git).
 If run in apply mode against the current `inputs/`, the ones with a precondition fail ("already
 applied") and the idempotent ones rewrite the same values; even so, **do not run them with
 `--apply` / `DRY_RUN=False` without a real need** (e.g. after an A3 run that regenerates the A-O
@@ -25,6 +25,7 @@ original; only the path constants and the "Usage" lines changed.
 | `patch_rpo_operationallife.py` | `OperationalLife` 20 → 50 in every row whose Tech contains `RPO` (`RNWRPO*`, `TRNRPO*`: 38 techs). Precondition: all at 20; otherwise the scenario is left untouched. | `A-O_Parametrization.xlsx` / Fixed Horizon Parameters, col. H (4 scenarios) | 2026-09-01 (backups `.bak_20260901_*` in the stash) | dry-run by default; `--apply` writes. Currently reports `NO SE SUSTITUYE: Value = 50` (already applied) |
 | `patch_rnwtrnbraxx_residualcapacity.py` | `ResidualCapacity` of `RNWTRNBRAXX` 52.990319556 → 85.40 in I..AJ (2023-2050). Precondition: all 28 cells at 52.99. | `A-O_Parametrization.xlsx` / Demand Techs, row 676 (4 scenarios) | 2026-09-02 | dry-run by default; `--apply` writes. Currently reports `NO SE SUSTITUYE: = 85.4` (already applied) |
 | `add_fuentes_sheet.py` | Adds/replaces the documentation sheet **`Fuentes`** (source, origin file/sheet and transformation per data block) at the end of each workbook, reading the master table `inputs/config/data_sources.csv` (`Archivo` column accepts `A|B`). Idempotent. No year columns → `sync_historical_from_bau.py` skips it; `B1_Compiler.py` excludes it the same way as `growth_formula`. | `A-O_Parametrization.xlsx` and `A-O_Demand.xlsx` for the 4 scenarios; `A2_Extra_Inputs/A-Xtra_Storage.xlsx`; templates `inputs/Miscellaneous/{A-O_Parametrization,A-O_Demand,A-Xtra_Storage}.xlsx` (title + header only, no rows: the templates have no data) | 2026-09-14 (78 / 23 / 5 rows per workbook type) | dry-run by default; `--apply` writes; `--no-templates` skips `Miscellaneous/`. Test: `python scripts/tools/data_patches/test_add_fuentes_sheet.py` |
+| `test_add_fuentes_sheet.py` | Test suite for `add_fuentes_sheet.py`, run against temporary copies; never touches `inputs/` (sheet content, idempotency, `Archivo` filter, B1-style reads, template header-only rows). | same files as `add_fuentes_sheet.py` (copied to a temp dir) | none in the real tree; temp copies only | `python scripts/tools/data_patches/test_add_fuentes_sheet.py` |
 
 ## How to run
 

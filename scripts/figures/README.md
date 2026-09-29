@@ -1,7 +1,8 @@
 # scripts/figures — static figures and dashboard
 
 Code for the report/presentation figures and the dashboard. Outputs go to `outputs/Figures/`
-(never next to the script). Spec: `docs/superpowers/specs/2026-09-16-figures-into-scripts-outputs-design.md`.
+(never next to the script). Spec: `docs/superpowers/specs/2026-09-16-figures-into-scripts-outputs-design.md` (spec kept on the
+author's disk only; not in git).
 
 ```
 scripts/figures/

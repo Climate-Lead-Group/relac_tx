@@ -50,7 +50,15 @@ PJ_PER_TWH = 0.277778  # PJ -> TWh (misma constante que chart_11)
 
 
 def compute(years: list[int], scenarios: list[str]) -> dict[int, dict[str, dict]]:
-    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}} (USD/MWh)."""
+    """{year: {scenario: {'CAPEX anualizado','O&M','Combustible','total'}}} (USD/MWh).
+
+    Same metric as chart_11. Reads CapitalInvestment/OperatingCost (dedup to one row per
+    tech-year via max(), same gotcha as chart_14/chart_05/chart_07) and splits OperatingCost
+    into 'O&M' (infrastructure techs: Generación/Transmisión/Almacenamiento) and 'Combustible'
+    (the rest, e.g. MIN* fuel-supply techs) via classify_tech_type(), as in
+    fig_costo_no_inversion. 'CAPEX anualizado' is recomputed on the fly (see the module
+    docstring).
+    """
     def no_bck(df):
         return df[~df["TECHNOLOGY"].astype(str).str.contains("BCK", na=False)]
 

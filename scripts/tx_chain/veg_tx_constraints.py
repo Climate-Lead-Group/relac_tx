@@ -44,7 +44,7 @@ Notes:
 
     2. NLI ENVELOPE -- unplanned new lines (families TRNNLI, RNWNLI). Total vegetativo
        (planned + RPO + NLI) Tx investment is capped at the regional trajectory
-       I_region(year) = ANCHOR_MUSD=3300.0 (line 171) x (1+ENV_GROWTH=0.01, line 315)
+       i_region(year) = ANCHOR_MUSD=3300.0 x (1+ENV_GROWTH=0.01)
        ** (year-2022), i.e. ~3.6k @2030 -> 4.4k @2050 MUSD. Planned lines (= OPT plan)
        and RPO consume the envelope FIRST; NLI receives only the remainder:
        nli_budget = max(0, I_region - planned_cost - rpo_cost). The remainder is split

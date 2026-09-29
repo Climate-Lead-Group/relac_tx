@@ -52,8 +52,9 @@ Usage:
   python test_outputs.py --csv NEW.csv --cf-basis total   # node-level idle incl. residual
   python test_outputs.py --csv NEW.csv --gate        # FLOOR-FIX GATE (pass/fail)
 Notes:
-    - Read-only; requires an already-solved combined inputs+outputs CSV on disk. Do not run
-      without one -- this script does not generate a solve itself.
+    - Requires an already-solved combined inputs+outputs CSV on disk. Do not run without one --
+      this script does not generate a solve itself. In non-gate mode it writes the 4 CSVs listed
+      under Outputs above; --gate does not write anything.
 """
 
 from __future__ import annotations

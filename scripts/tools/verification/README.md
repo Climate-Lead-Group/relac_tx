@@ -4,7 +4,8 @@ Procedure to demonstrate that B1 and the B2 pre-solver chain produce exactly the
 new layout (branch `restructure/inputs-scripts-outputs`) as in the old one (`clean-sirelac` @
 `c8f0efc`). The solver is not run. Corresponds to Tasks 1, 18 and 19 of the plan
 `docs/superpowers/plans/2026-09-07-restructure-inputs-scripts-outputs.md`; the acceptance criterion
-is **zero differences** (spec §9.2 and §12).
+is **zero differences** (spec §9.2 and §12). The plan doc above is kept on the author's disk only;
+not in git.
 
 Machine requirements: a clone of the repo with both branches, the `OG-MOMF-env` conda environment
 (created by `run.py`), `otoole` and `glpsol` on the PATH (B2 uses them even without solving the

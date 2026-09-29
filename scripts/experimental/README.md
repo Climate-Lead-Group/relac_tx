@@ -1,7 +1,10 @@
 # scripts/experimental — exploratory scripts outside the pipeline
 
 Not part of the A3 -> B1 -> B2 pipeline; nothing here is imported or invoked by
-`scripts/pipeline/`, `dvc.yaml` or any `Config_MOMF_T1_*.yaml`. The only sub-folder,
+`scripts/pipeline/`, `dvc.yaml` or any `Config_MOMF_T1_*.yaml`. One output file is still live
+data, though: `flujos_energia_estimados_optimizacion.xlsx` (written by
+`estimar_flujos_optimizacion.py`) is read by `scripts/tools/Z_AUX_D1b_set_trn_limits_from_flows.py`,
+which `scripts/pipeline/D2_update_secondary_techs.py` imports — see Gotchas. The only sub-folder,
 `matriz_balance/`, estimates bilateral electricity flows between the 19 LAC countries from OLADE's
 aggregate country totals plus manually-collected bilateral data, using four independent estimation
 methods (proportional-to-OLADE, averaged, RAS bi-proportional, constrained optimization). Process
@@ -49,7 +52,12 @@ python scripts/experimental/matriz_balance/estimar_flujos_optimizacion.py      #
 ## Gotchas
 
 - Nothing here is called by `scripts/pipeline/`, `dvc.yaml` or any `Config_MOMF_T1_*.yaml` (checked
-  by grep); treat every script as a manual, standalone analysis tool.
+  by grep); treat every script as a manual, standalone analysis tool. One exception on the data
+  side: `flujos_energia_estimados_optimizacion.xlsx`, the output of
+  `estimar_flujos_optimizacion.py`, is read by the live D1b/D2 chain
+  (`scripts/tools/Z_AUX_D1b_set_trn_limits_from_flows.py:~500`, imported by
+  `scripts/pipeline/D2_update_secondary_techs.py`) — re-running `estimar_flujos_optimizacion.py`
+  changes what `D2_update_secondary_techs.py` writes into `Secondary_Techs_Editor.xlsx` downstream.
 - All reads/writes go to `inputs/reference/Matriz Balance energético/`
   (`common.relac_paths.MATRIZ_BALANCE`), not `outputs/experimental/`: `relac_paths.EXPERIMENTAL_OUT`
   is defined but unused by any script in this folder today.

@@ -14,9 +14,10 @@ DVC `executing` stage. Its `__main__` block runs, per scenario, in this order:
    `activity_upper_limit_active`.
 9. dispatch floors, `scripts/fix_dispatch/write_floors.py` -- if `dispatch_floors_active`
    (optionally scoped to `dispatch_floors_scenarios`). When `dispatch_floors_active` is
-   True, a read-only preflight separation check runs once before the scenario loop and,
-   only if `preflight_separation_active` is also True, can abort the whole run if it
-   exits non-zero.
+   True, `run_preflight_separation_gate` is invoked once before the scenario loop, but it
+   returns immediately unless `preflight_separation_active` is also True; only then does it
+   run the read-only preflight separation check and abort the whole run if that check exits
+   non-zero.
 10. `sync_patched_csvs_from_txt.py` -- if `sync_patched_csvs_active`; overwrites the A2
     otoole CSVs from the final patched `.txt`. Runs BEFORE the solve, right after the
     patcher chain and before `generate_combined_input_file`, so the combined

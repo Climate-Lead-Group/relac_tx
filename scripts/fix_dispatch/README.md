@@ -65,4 +65,10 @@ python scripts/fix_dispatch/fig_floor_effect.py        # before/after figure
   not reproducible by re-running B2 alone (BAU+OPT only, produced from a floored otoole CSV, not a
   floored `.txt`).
 - None of these scripts write to a live `A-O_*.xlsx` or A2 otoole input; the only writes into
-  `outputs/Executables/` are the `_FLOORED.txt` siblings from `write_floors.py`.
+  `outputs/Executables/` are from `write_floors.py`: the `_FLOORED.txt` siblings plus a one-time
+  `.bak` backup of the original preprocessed `.txt` (skipped on `--dry-run`, and only written once
+  per file).
+- `build_summary.py` reads columns `"tier"`, `"cf_basis"` and `"scenario_source"` from
+  `candidate_floors.csv`, but the current `make_candidates.py` writes `"profile"`, `"cf_source"`
+  and `"cf_quality"` instead — running `build_summary.py` against the current schema raises a
+  `KeyError` (documented in its own module docstring; the bug itself is out of scope here).
